@@ -1,1 +1,8 @@
-{}
+{
+  "name": "writespace",
+  "private": true,
+  "scripts": {
+    "lint:fix": "npm run lint --prefix backend",
+    "lint": "npm run lint --prefix backend"
+  }
+}

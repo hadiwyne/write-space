@@ -62,7 +62,7 @@ export class UsersController {
     if (!file || !file.buffer) {
       throw new BadRequestException('No image file provided');
     }
-    return this.usersService.saveAvatar(user.id, file.buffer, file.mimetype, file.originalname);
+    return this.usersService.saveAvatar(user.id, file.buffer, file.mimetype);
   }
 
   @Get(':username/follow/status')

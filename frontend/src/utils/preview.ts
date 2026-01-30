@@ -1,8 +1,8 @@
 import DOMPurify from 'dompurify'
 import { marked } from 'marked'
 
-const ALLOWED_TAGS = ['p', 'br', 'strong', 'em', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'a', 'img', 'blockquote', 'code', 'pre', 'span', 'div', 'hr']
-const ALLOWED_ATTR = ['href', 'src', 'alt', 'class']
+const ALLOWED_TAGS = ['p', 'br', 'strong', 'em', 'u', 's', 'mark', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'a', 'img', 'blockquote', 'code', 'pre', 'span', 'div', 'hr']
+const ALLOWED_ATTR = ['href', 'src', 'alt', 'class', 'style', 'target', 'rel']
 
 export type ContentType = 'MARKDOWN' | 'HTML' | 'WYSIWYG'
 

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { marked } from 'marked';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
 const DOMPurify = require('isomorphic-dompurify') as { sanitize: (html: string, options?: object) => string };
 
 @Injectable()

@@ -14,7 +14,7 @@
         <input ref="wordInputRef" type="file" accept=".docx" class="hidden" @change="onWordUpload" />
         <input ref="imageInputRef" type="file" accept="image/*" class="hidden" @change="onImageUpload" />
         <button type="button" class="btn btn-sm btn-outline" @click="wordInputRef?.click()">Import Word</button>
-        <button type="button" class="btn btn-sm btn-outline" @click="imageInputRef?.click()">Insert image</button>
+        <button v-if="contentType !== 'WYSIWYG'" type="button" class="btn btn-sm btn-outline" @click="imageInputRef?.click()">Insert image</button>
         <button v-if="draftId" type="button" class="btn btn-sm btn-outline" @click="loadVersions">Version history</button>
         <span v-if="lastSavedAt" class="saved-hint">Saved {{ lastSavedAt }}</span>
       </div>
@@ -34,7 +34,14 @@
       </div>
       <div class="form-group editor-row">
         <div class="editor-pane">
+          <RichTextEditor
+            v-if="contentType === 'WYSIWYG'"
+            ref="richEditorRef"
+            v-model="content"
+            @image-upload="onRichEditorImageUpload"
+          />
           <textarea
+            v-else
             ref="editorRef"
             v-model="content"
             placeholder="Write your story…"
@@ -69,6 +76,7 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/api/client'
 import { renderPreview, type ContentType } from '@/utils/preview'
+import RichTextEditor from '@/components/RichTextEditor.vue'
 
 const router = useRouter()
 const title = ref('')
@@ -88,6 +96,7 @@ const versionsLoading = ref(false)
 const wordInputRef = ref<HTMLInputElement | null>(null)
 const imageInputRef = ref<HTMLInputElement | null>(null)
 const editorRef = ref<HTMLTextAreaElement | null>(null)
+const richEditorRef = ref<InstanceType<typeof RichTextEditor> | null>(null)
 const previewHtml = computed(() => renderPreview(content.value, contentType.value))
 
 function tags(): string[] {
@@ -238,6 +247,17 @@ async function onImageUpload(e: Event) {
     } else {
       content.value += insert
     }
+  } catch {
+    error.value = 'Failed to upload image'
+  }
+}
+
+async function onRichEditorImageUpload(file: File) {
+  try {
+    const formData = new FormData()
+    formData.append('image', file)
+    const { data } = await api.post<{ url: string }>('/posts/upload-image', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+    richEditorRef.value?.addImage(data.url)
   } catch {
     error.value = 'Failed to upload image'
   }

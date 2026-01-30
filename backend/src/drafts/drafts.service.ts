@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, ForbiddenException, ConflictException } from '@nestjs/common';
-import { ContentType, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SaveDraftDto } from './dto/save-draft.dto';
 
@@ -34,7 +34,7 @@ export class DraftsService {
   }
 
   async restore(id: string, versionId: string, userId: string) {
-    const draft = await this.findOne(id, userId);
+    await this.findOne(id, userId);
     const versionDraft = await this.prisma.draft.findUnique({ where: { id: versionId } });
     if (!versionDraft || versionDraft.previousVersionId !== id || versionDraft.userId !== userId) {
       throw new NotFoundException('Version not found');

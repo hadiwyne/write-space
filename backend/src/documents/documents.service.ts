@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
 const mammoth = require('mammoth') as {
   convertToHtml: (input: { buffer: Buffer }, options?: object) => Promise<{ value: string; messages: { type: string; message: string }[] }>;
 };

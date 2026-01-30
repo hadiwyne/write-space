@@ -3,11 +3,23 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { mkdir, writeFile } from 'fs/promises';
 import { join } from 'path';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
 const DOMPurify = require('isomorphic-dompurify') as { sanitize: (html: string, options?: object) => string };
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from '../auth/dto/register.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+
+const userSelectWithoutPassword = {
+  id: true,
+  email: true,
+  username: true,
+  displayName: true,
+  bio: true,
+  profileHTML: true,
+  avatarUrl: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
 
 @Injectable()
 export class UsersService {
@@ -16,12 +28,19 @@ export class UsersService {
     private config: ConfigService,
   ) {}
 
+  /** For auth: returns only id, email, passwordHash so we can verify then fetch user without hash. */
   async findByEmail(email: string) {
-    return this.prisma.user.findUnique({ where: { email } });
+    return this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true, email: true, passwordHash: true },
+    });
   }
 
   async findById(id: string) {
-    return this.prisma.user.findUnique({ where: { id } });
+    return this.prisma.user.findUnique({
+      where: { id },
+      select: userSelectWithoutPassword,
+    });
   }
 
   async findMe(id: string) {
@@ -69,6 +88,7 @@ export class UsersService {
     const passwordHash = await bcrypt.hash(dto.password, 10);
     return this.prisma.user.create({
       data: { email: dto.email, username: dto.username, passwordHash },
+      select: userSelectWithoutPassword,
     });
   }
 
@@ -90,15 +110,11 @@ export class UsersService {
         avatarUrl: dto.avatarUrl,
         ...(profileHTML !== undefined && { profileHTML }),
       },
+      select: userSelectWithoutPassword,
     });
   }
 
-  async saveAvatar(
-    userId: string,
-    buffer: Buffer,
-    mimeType: string,
-    originalName: string,
-  ) {
+  async saveAvatar(userId: string, buffer: Buffer, mimeType: string) {
     const ext = mimeType === 'image/jpeg' ? '.jpg' : mimeType === 'image/png' ? '.png' : mimeType === 'image/gif' ? '.gif' : '.webp';
     const filename = `${userId}-${Date.now()}${ext}`;
     const uploadsDir = join(process.cwd(), 'uploads', 'avatars');
@@ -109,16 +125,7 @@ export class UsersService {
     return this.prisma.user.update({
       where: { id: userId },
       data: { avatarUrl },
-      select: {
-        id: true,
-        email: true,
-        username: true,
-        displayName: true,
-        bio: true,
-        avatarUrl: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: userSelectWithoutPassword,
     });
   }
 }
