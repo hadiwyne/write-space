@@ -8,7 +8,6 @@
       <div class="form-group editor-toolbar">
         <select v-model="contentType" class="format-select">
           <option value="MARKDOWN">Markdown</option>
-          <option value="LATEX">LaTeX</option>
           <option value="HTML">HTML</option>
           <option value="WYSIWYG">Rich text (HTML)</option>
         </select>
@@ -45,7 +44,7 @@
         </div>
         <div class="preview-pane">
           <div class="preview-label">Preview</div>
-          <div class="preview-content katex-body" v-html="previewHtml"></div>
+          <div class="preview-content" v-html="previewHtml"></div>
         </div>
       </div>
       <div class="form-group">
@@ -66,11 +65,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/api/client'
 import { renderPreview, type ContentType } from '@/utils/preview'
-import 'katex/dist/katex.min.css'
 
 const router = useRouter()
 const title = ref('')
@@ -90,7 +88,6 @@ const versionsLoading = ref(false)
 const wordInputRef = ref<HTMLInputElement | null>(null)
 const imageInputRef = ref<HTMLInputElement | null>(null)
 const editorRef = ref<HTMLTextAreaElement | null>(null)
-
 const previewHtml = computed(() => renderPreview(content.value, contentType.value))
 
 function tags(): string[] {

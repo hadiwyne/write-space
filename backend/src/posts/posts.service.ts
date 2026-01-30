@@ -6,7 +6,6 @@ import { join } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { MarkdownRenderer } from './renderers/markdown.renderer';
 import { HtmlRenderer } from './renderers/html.renderer';
-import { LatexRenderer } from './renderers/latex.renderer';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 
@@ -17,7 +16,6 @@ export class PostsService {
     private config: ConfigService,
     private markdown: MarkdownRenderer,
     private html: HtmlRenderer,
-    private latex: LatexRenderer,
   ) {}
 
   private renderContent(content: string, type: ContentType): string {
@@ -27,8 +25,6 @@ export class PostsService {
       case ContentType.HTML:
       case ContentType.WYSIWYG:
         return this.html.render(content);
-      case ContentType.LATEX:
-        return this.latex.render(content);
       default:
         return this.html.render(content);
     }
