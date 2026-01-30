@@ -50,7 +50,7 @@ export class PostsService {
 
   async findAll(limit = 20, offset = 0) {
     return this.prisma.post.findMany({
-      where: { isPublished: true },
+      where: { isPublished: true, archivedAt: null },
       orderBy: { publishedAt: 'desc' },
       take: limit,
       skip: offset,
@@ -73,9 +73,11 @@ export class PostsService {
     return post;
   }
 
-  async findOnePublic(id: string) {
+  async findOnePublic(id: string, userId?: string) {
     const post = await this.findOne(id);
+    const isAuthor = userId && post.authorId === userId;
     if (!post.isPublished) throw new NotFoundException('Post not found');
+    if (post.archivedAt && !isAuthor) throw new NotFoundException('Post not found');
     await this.prisma.post.update({ where: { id }, data: { viewCount: { increment: 1 } } });
     return this.findOne(id);
   }
@@ -110,12 +112,47 @@ export class PostsService {
     return { deleted: true };
   }
 
+  async archive(id: string, userId: string) {
+    const post = await this.prisma.post.findUnique({ where: { id } });
+    if (!post) throw new NotFoundException('Post not found');
+    if (post.authorId !== userId) throw new ForbiddenException('Not your post');
+    await this.prisma.post.update({
+      where: { id },
+      data: { archivedAt: new Date() },
+    });
+    return { archived: true };
+  }
+
+  async unarchive(id: string, userId: string) {
+    const post = await this.prisma.post.findUnique({ where: { id } });
+    if (!post) throw new NotFoundException('Post not found');
+    if (post.authorId !== userId) throw new ForbiddenException('Not your post');
+    await this.prisma.post.update({
+      where: { id },
+      data: { archivedAt: null },
+    });
+    return { archived: false };
+  }
+
   async findByAuthor(username: string, limit = 20, offset = 0) {
     const user = await this.prisma.user.findUnique({ where: { username } });
     if (!user) throw new NotFoundException('User not found');
     return this.prisma.post.findMany({
-      where: { authorId: user.id, isPublished: true },
+      where: { authorId: user.id, isPublished: true, archivedAt: null },
       orderBy: { publishedAt: 'desc' },
+      take: limit,
+      skip: offset,
+      include: {
+        author: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
+        _count: { select: { likes: true, comments: true } },
+      },
+    });
+  }
+
+  async findArchivedByUser(userId: string, limit = 50, offset = 0) {
+    return this.prisma.post.findMany({
+      where: { authorId: userId, isPublished: true, archivedAt: { not: null } },
+      orderBy: { archivedAt: 'desc' },
       take: limit,
       skip: offset,
       include: {

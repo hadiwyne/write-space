@@ -24,6 +24,21 @@
         <i class="pi pi-comment"></i>
         {{ (post._count && post._count.comments) || 0 }}
       </span>
+      <div v-if="showActions" class="card-actions">
+        <template v-if="archivedMode">
+          <button type="button" class="card-action card-unarchive" v-tooltip.bottom="'Restore to profile'" @click.stop="onUnarchive">
+            <i class="pi pi-refresh"></i>
+          </button>
+        </template>
+        <template v-else>
+          <button type="button" class="card-action card-archive" v-tooltip.bottom="'Archive'" @click.stop="onArchive">
+            <i class="pi pi-folder"></i>
+          </button>
+        </template>
+        <button type="button" class="card-action card-delete" v-tooltip.bottom="'Delete'" @click.stop="onDelete">
+          <i class="pi pi-trash"></i>
+        </button>
+      </div>
     </footer>
   </article>
 </template>
@@ -31,7 +46,23 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { apiBaseUrl } from '@/api/client'
-const props = defineProps({ post: { type: Object, required: true } })
+
+const props = defineProps({
+  post: { type: Object, required: true },
+  showActions: { type: Boolean, default: false },
+  archivedMode: { type: Boolean, default: false },
+})
+const emit = defineEmits<{ (e: 'archive', postId: string): void; (e: 'delete', postId: string): void; (e: 'unarchive', postId: string): void }>()
+
+function onArchive() {
+  emit('archive', props.post.id)
+}
+function onDelete() {
+  emit('delete', props.post.id)
+}
+function onUnarchive() {
+  emit('unarchive', props.post.id)
+}
 function avatarSrc(url: string | null | undefined) {
   if (!url) return ''
   if (url.startsWith('http')) return url
@@ -63,7 +94,13 @@ function formatDate(s: string | undefined) {
 .title { font-size: 1.25rem; margin: 0 0 0.25rem; }
 .excerpt { color: var(--gray-700); font-size: 0.9375rem; margin: 0 0 0.5rem; }
 .tag { font-size: 0.8125rem; color: var(--primary); margin-right: 0.5rem; }
-.card-footer { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--gray-100); font-size: 0.8125rem; color: var(--gray-700); display: flex; gap: 1rem; }
+.card-footer { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--gray-100); font-size: 0.8125rem; color: var(--gray-700); display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
 .stat { display: inline-flex; align-items: center; gap: 0.35rem; }
 .stat .pi { font-size: 0.95rem; }
+.card-actions { margin-left: auto; display: flex; align-items: center; gap: 0.25rem; }
+.card-action { padding: 0.25rem 0.5rem; background: none; border: none; color: var(--gray-500); cursor: pointer; border-radius: var(--radius); }
+.card-action .pi { font-size: 0.95rem; }
+.card-action:hover { background: var(--gray-100); color: var(--gray-700); }
+.card-delete:hover { color: #dc2626; }
+.card-unarchive:hover { color: var(--primary); }
 </style>

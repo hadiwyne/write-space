@@ -22,6 +22,9 @@
               <router-link to="/settings" class="dropdown-item" role="menuitem" @click="closeDropdown">
                 <i class="pi pi-cog"></i> Settings
               </router-link>
+              <router-link to="/archived" class="dropdown-item" role="menuitem" @click="closeDropdown">
+                <i class="pi pi-folder"></i> Archived
+              </router-link>
               <div class="dropdown-divider"></div>
               <button type="button" class="dropdown-item dropdown-item-danger" role="menuitem" @click="logout">
                 <i class="pi pi-sign-out"></i> Log out

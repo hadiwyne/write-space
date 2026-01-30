@@ -12,6 +12,7 @@ const router = createRouter({
     { path: '/posts/:id', name: 'Post', component: () => import('@/views/PostView.vue') },
     { path: '/posts/:id/edit', name: 'EditPost', component: () => import('@/views/EditPostView.vue'), meta: { auth: true } },
     { path: '/u/:username', name: 'Profile', component: () => import('@/views/ProfileView.vue') },
+    { path: '/archived', name: 'Archived', component: () => import('@/views/ArchivedView.vue'), meta: { auth: true } },
     { path: '/settings', name: 'Settings', component: () => import('@/views/SettingsView.vue'), meta: { auth: true } },
   ],
 })

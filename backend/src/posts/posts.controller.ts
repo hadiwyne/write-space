@@ -15,6 +15,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { PostsService } from './posts.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { Public } from '../auth/public.decorator';
 import { CreatePostDto } from './dto/create-post.dto';
@@ -69,16 +70,38 @@ export class PostsController {
     return this.postsService.findAll(Number(limit) || 20, Number(offset) || 0);
   }
 
-  @Public()
+  @Get('archived')
+  @UseGuards(JwtAuthGuard)
+  findArchived(
+    @CurrentUser() user: { id: string },
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.postsService.findArchivedByUser(user.id, Number(limit) || 50, Number(offset) || 0);
+  }
+
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.postsService.findOnePublic(id);
+  @UseGuards(OptionalJwtAuthGuard)
+  findOne(@Param('id') id: string, @CurrentUser() user?: { id: string } | null) {
+    return this.postsService.findOnePublic(id, user?.id);
   }
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
   update(@Param('id') id: string, @CurrentUser() user: { id: string }, @Body() dto: UpdatePostDto) {
     return this.postsService.update(id, user.id, dto);
+  }
+
+  @Post(':id/archive')
+  @UseGuards(JwtAuthGuard)
+  archive(@Param('id') id: string, @CurrentUser() user: { id: string }) {
+    return this.postsService.archive(id, user.id);
+  }
+
+  @Post(':id/unarchive')
+  @UseGuards(JwtAuthGuard)
+  unarchive(@Param('id') id: string, @CurrentUser() user: { id: string }) {
+    return this.postsService.unarchive(id, user.id);
   }
 
   @Delete(':id')

@@ -12,8 +12,8 @@ export class FeedService {
     const followingIds = following.map((f) => f.followingId);
 
     const where = followingIds.length
-      ? { isPublished: true, authorId: { in: followingIds } }
-      : { isPublished: true };
+      ? { isPublished: true, archivedAt: null, authorId: { in: followingIds } }
+      : { isPublished: true, archivedAt: null };
 
     return this.prisma.post.findMany({
       where,

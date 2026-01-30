@@ -23,6 +23,17 @@
             <i class="pi pi-comment"></i>
             {{ commentCount }}
           </span>
+          <template v-if="isOwnPost">
+            <router-link :to="`/posts/${post.id}/edit`" class="action action-edit" v-tooltip.bottom="'Edit'">
+              <i class="pi pi-pencil"></i> Edit
+            </router-link>
+            <button type="button" class="action action-archive" v-tooltip.bottom="'Hide from public (can restore later)'" @click="archivePost">
+              <i class="pi pi-folder"></i> Archive
+            </button>
+            <button type="button" class="action action-delete" v-tooltip.bottom="'Permanently delete'" @click="deletePost">
+              <i class="pi pi-trash"></i> Delete
+            </button>
+          </template>
         </footer>
       </article>
       <section class="comments">
@@ -46,14 +57,27 @@
       </section>
     </template>
     <div v-else class="error">Post not found</div>
+
+    <ConfirmModal
+      :open="confirmOpen"
+      :title="confirmTitle"
+      :message="confirmMessage"
+      :confirm-label="confirmType === 'delete' ? 'Delete' : 'Archive'"
+      cancel-label="Cancel"
+      :variant="confirmType === 'delete' ? 'danger' : 'default'"
+      @confirm="onConfirmConfirm"
+      @cancel="confirmOpen = false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useRoute } from 'vue-router'
 import { api, apiBaseUrl } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
+import ConfirmModal from '@/components/ConfirmModal.vue'
 
 function avatarSrc(url: string | null | undefined) {
   if (!url) return ''
@@ -62,6 +86,7 @@ function avatarSrc(url: string | null | undefined) {
 }
 
 const route = useRoute()
+const router = useRouter()
 const auth = useAuthStore()
 const post = ref<{
   id: string
@@ -69,9 +94,15 @@ const post = ref<{
   renderedHTML: string
   tags?: string[]
   publishedAt: string | null
-  author?: { username?: string; displayName?: string | null }
+  author?: { id?: string; username?: string; displayName?: string | null }
   _count?: { likes: number; comments: number }
 } | null>(null)
+
+const isOwnPost = computed(() => {
+  const u = auth.user
+  const a = post.value?.author
+  return !!(u?.id && a?.id && u.id === a.id)
+})
 const comments = ref<{ id: string; content: string; author?: { username?: string; displayName?: string | null; avatarUrl?: string | null } }[]>([])
 const loading = ref(true)
 const liked = ref(false)
@@ -79,6 +110,17 @@ const likeCount = ref(0)
 const newComment = ref('')
 
 const commentCount = computed(() => post.value?._count?.comments ?? comments.value.length)
+
+const confirmOpen = ref(false)
+const confirmType = ref<'archive' | 'delete' | null>(null)
+const confirmTitle = computed(() =>
+  confirmType.value === 'delete' ? 'Delete post?' : 'Archive post?'
+)
+const confirmMessage = computed(() =>
+  confirmType.value === 'delete'
+    ? 'Permanently delete this post? This cannot be undone.'
+    : 'Archive this post? It will be hidden from the feed and your profile. You can restore it later.'
+)
 
 async function load() {
   const id = route.params.id as string
@@ -127,6 +169,33 @@ async function addComment() {
   }
 }
 
+function archivePost() {
+  confirmType.value = 'archive'
+  confirmOpen.value = true
+}
+
+function deletePost() {
+  confirmType.value = 'delete'
+  confirmOpen.value = true
+}
+
+async function onConfirmConfirm() {
+  if (!confirmType.value) return
+  const type = confirmType.value
+  confirmOpen.value = false
+  confirmType.value = null
+  try {
+    if (type === 'archive') {
+      await api.post(`/posts/${route.params.id}/archive`)
+    } else {
+      await api.delete(`/posts/${route.params.id}`)
+    }
+    router.push(auth.user?.username ? `/u/${auth.user.username}` : '/feed')
+  } catch {
+    // ignore
+  }
+}
+
 onMounted(load)
 watch(() => route.params.id, load)
 </script>
@@ -145,6 +214,12 @@ watch(() => route.params.id, load)
 .action { display: inline-flex; align-items: center; gap: 0.35rem; margin-right: 0; font-size: 0.9375rem; color: var(--gray-700); cursor: pointer; background: none; border: none; }
 .action .pi { font-size: 1rem; }
 .action.active { color: var(--primary); }
+.action-edit { color: var(--primary); text-decoration: none; }
+.action-edit:hover { text-decoration: underline; }
+.action-archive { color: var(--gray-600); }
+.action-archive:hover { color: var(--gray-800); }
+.action-delete { color: var(--gray-600); }
+.action-delete:hover { color: #dc2626; }
 .comments h2 { font-size: 1.25rem; margin: 0 0 1rem; }
 .comment-form { margin-bottom: 1rem; }
 .comment-form textarea { width: 100%; padding: 0.5rem; border: 1px solid var(--gray-300); border-radius: var(--radius); margin-bottom: 0.5rem; }

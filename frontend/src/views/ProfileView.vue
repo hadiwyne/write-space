@@ -23,6 +23,7 @@
         </p>
         <template v-if="isOwnProfile">
           <router-link to="/settings" class="edit-link">Edit profile</router-link>
+          <router-link to="/archived" class="edit-link archived-link">Archived</router-link>
         </template>
         <template v-else-if="auth.isLoggedIn">
           <button
@@ -40,7 +41,14 @@
         <h2>Posts</h2>
         <div v-if="posts.length === 0" class="empty">No posts yet.</div>
         <div v-else class="post-list">
-          <PostCard v-for="p in posts" :key="p.id" :post="p" />
+          <PostCard
+            v-for="p in posts"
+            :key="p.id"
+            :post="p"
+            :show-actions="!!isOwnProfile"
+            @archive="archivePostFromList"
+            @delete="deletePostFromList"
+          />
         </div>
       </div>
     </template>
@@ -91,6 +99,17 @@
         </div>
       </div>
     </Teleport>
+
+    <ConfirmModal
+      :open="confirmOpen"
+      :title="confirmTitle"
+      :message="confirmMessage"
+      :confirm-label="confirmType === 'delete' ? 'Delete' : 'Archive'"
+      cancel-label="Cancel"
+      :variant="confirmType === 'delete' ? 'danger' : 'default'"
+      @confirm="onConfirmConfirm"
+      @cancel="confirmOpen = false"
+    />
   </div>
 </template>
 
@@ -100,6 +119,7 @@ import { useRoute } from 'vue-router'
 import { api, apiBaseUrl } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import PostCard from '@/components/PostCard.vue'
+import ConfirmModal from '@/components/ConfirmModal.vue'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -119,6 +139,17 @@ const modalMode = ref<'followers' | 'following'>('followers')
 const modalList = ref<{ id: string; username: string; displayName: string | null; avatarUrl: string | null }[]>([])
 const modalLoading = ref(false)
 const modalActionLoading = ref<string | null>(null)
+const confirmOpen = ref(false)
+const confirmType = ref<'archive' | 'delete' | null>(null)
+const confirmPostId = ref<string | null>(null)
+const confirmTitle = computed(() =>
+  confirmType.value === 'delete' ? 'Delete post?' : 'Archive post?'
+)
+const confirmMessage = computed(() =>
+  confirmType.value === 'delete'
+    ? 'Permanently delete this post? This cannot be undone.'
+    : 'Archive this post? It will be hidden from the feed and your profile. You can restore it later.'
+)
 const isOwnProfile = computed(() => auth.user && profile.value && auth.user.username === profile.value.username)
 function avatarSrc(url: string | null | undefined) {
   if (!url) return ''
@@ -223,6 +254,39 @@ async function unfollowUser(username: string) {
   }
 }
 
+function archivePostFromList(postId: string) {
+  confirmType.value = 'archive'
+  confirmPostId.value = postId
+  confirmOpen.value = true
+}
+
+function deletePostFromList(postId: string) {
+  confirmType.value = 'delete'
+  confirmPostId.value = postId
+  confirmOpen.value = true
+}
+
+async function onConfirmConfirm() {
+  const postId = confirmPostId.value
+  const type = confirmType.value
+  if (!postId || !type) return
+  confirmOpen.value = false
+  confirmType.value = null
+  confirmPostId.value = null
+  try {
+    if (type === 'archive') {
+      await api.post(`/posts/${postId}/archive`)
+    } else {
+      await api.delete(`/posts/${postId}`)
+    }
+    posts.value = (posts.value as { id: string }[]).filter((p) => p.id !== postId)
+    if (profile.value?._count?.posts != null)
+      profile.value._count = { ...profile.value._count, posts: Math.max(0, profile.value._count.posts - 1) }
+  } catch {
+    // ignore
+  }
+}
+
 onMounted(load)
 watch(() => route.params.username, load)
 </script>
@@ -241,7 +305,9 @@ watch(() => route.params.username, load)
 .meta-sep { user-select: none; }
 .meta-link { background: none; border: none; padding: 0; font-size: inherit; color: var(--primary); cursor: pointer; text-decoration: none; }
 .meta-link:hover { text-decoration: underline; }
-.edit-link { display: inline-block; margin-top: 0.75rem; font-size: 0.875rem; }
+.edit-link { display: inline-block; margin-top: 0.75rem; font-size: 0.875rem; margin-right: 1rem; }
+.archived-link { color: var(--gray-600); }
+.archived-link:hover { color: var(--primary); }
 .btn-follow { margin-top: 0.75rem; padding: 0.5rem 1.25rem; font-size: 0.9375rem; font-weight: 500; border-radius: var(--radius); border: 1px solid var(--primary); background: var(--primary); color: #fff; cursor: pointer; }
 .btn-follow:hover:not(:disabled) { filter: brightness(1.05); }
 .btn-follow:disabled { opacity: 0.7; cursor: not-allowed; }
