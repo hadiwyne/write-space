@@ -1,0 +1,143 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ContentType {
+  LATEX
+  MARKDOWN
+  HTML
+  WYSIWYG
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  username      String    @unique
+  passwordHash  String    @map("password_hash")
+
+  displayName   String?   @map("display_name")
+  bio           String?
+  profileHTML   String?   @map("profile_html") @db.Text
+  avatarUrl     String?   @map("avatar_url")
+
+  posts         Post[]
+  drafts        Draft[]
+  comments      Comment[]
+  likes         Like[]
+
+  followers     Follow[]  @relation("UserFollowers")
+  following     Follow[]  @relation("UserFollowing")
+
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model Post {
+  id            String    @id @default(uuid())
+  authorId      String    @map("author_id")
+  author        User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  title         String
+  content       String    @db.Text
+  contentType   ContentType @map("content_type")
+  renderedHTML  String    @map("rendered_html") @db.Text
+
+  tags          String[]
+  imageUrls     String[]  @map("image_urls")
+  isPublished   Boolean   @default(false) @map("is_published")
+
+  likes         Like[]
+  comments      Comment[]
+  viewCount     Int       @default(0) @map("view_count")
+
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  publishedAt   DateTime? @map("published_at")
+
+  @@index([authorId])
+  @@index([createdAt])
+  @@index([publishedAt])
+  @@index([tags])
+  @@map("posts")
+}
+
+model Draft {
+  id                String    @id @default(uuid())
+  userId            String    @map("user_id")
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title             String?
+  content           String    @db.Text
+  contentType       ContentType @map("content_type")
+  editorState       Json?     @map("editor_state")
+
+  version           Int       @default(1)
+  previousVersionId String?   @map("previous_version_id")
+  previousVersion   Draft?    @relation("DraftVersions", fields: [previousVersionId], references: [id])
+  nextVersions      Draft[]   @relation("DraftVersions")
+
+  lastSavedAt       DateTime  @default(now()) @map("last_saved_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([lastSavedAt])
+  @@map("drafts")
+}
+
+model Comment {
+  id            String    @id @default(uuid())
+  postId        String    @map("post_id")
+  post          Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  authorId      String    @map("author_id")
+  author        User      @relation(fields: [authorId], references: [id])
+
+  content       String    @db.Text
+
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([postId])
+  @@index([authorId])
+  @@map("comments")
+}
+
+model Like {
+  id            String    @id @default(uuid())
+  postId        String    @map("post_id")
+  post          Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  userId        String    @map("user_id")
+  user          User      @relation(fields: [userId], references: [id])
+
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+  @@map("likes")
+}
+
+model Follow {
+  id            String    @id @default(uuid())
+  followerId    String    @map("follower_id")
+  follower      User      @relation("UserFollowing", fields: [followerId], references: [id])
+
+  followingId   String    @map("following_id")
+  following     User      @relation("UserFollowers", fields: [followingId], references: [id])
+
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@map("follows")
+}
