@@ -30,6 +30,34 @@
             <i class="pi pi-refresh"></i>
             {{ repostCount }}
           </button>
+          <div v-if="auth.isLoggedIn" class="dropdown-wrap">
+            <button type="button" class="action" v-tooltip.bottom="'Add to collection'" @click="toggleCollectionDropdown">
+              <i class="pi pi-folder-plus"></i> Add to collection
+            </button>
+            <div v-if="collectionDropdownOpen" class="action-dropdown">
+              <div v-if="collectionsLoading" class="dropdown-loading">Loading…</div>
+              <template v-else-if="collections.length === 0">
+                <div class="dropdown-empty">No collections yet.</div>
+                <router-link to="/collections" class="dropdown-option" @click="collectionDropdownOpen = false">Create collection</router-link>
+              </template>
+              <template v-else>
+                <button
+                  v-for="c in collections"
+                  :key="(c as { id: string }).id"
+                  type="button"
+                  class="dropdown-option"
+                  :disabled="addingToCollection === (c as { id: string }).id"
+                  @click="addToCollection((c as { id: string }).id)"
+                >
+                  <i class="pi pi-folder"></i>
+                  {{ (c as { title: string }).title }}
+                </button>
+                <router-link to="/collections" class="dropdown-option dropdown-option-muted" @click="collectionDropdownOpen = false">
+                  <i class="pi pi-plus"></i> New collection
+                </router-link>
+              </template>
+            </div>
+          </div>
           <div class="export-wrap" ref="exportWrapRef">
             <button type="button" class="action" v-tooltip.bottom="'Export'" @click="exportOpen = !exportOpen">
               <i class="pi pi-download"></i> Export
@@ -139,6 +167,10 @@ const bookmarked = ref(false)
 const reposted = ref(false)
 const repostCount = ref(0)
 const exportOpen = ref(false)
+const collectionDropdownOpen = ref(false)
+const collections = ref<{ id: string; title: string }[]>([])
+const collectionsLoading = ref(false)
+const addingToCollection = ref<string | null>(null)
 const newComment = ref('')
 const replyToId = ref<string | null>(null)
 const replyContent = ref('')
@@ -216,6 +248,39 @@ async function toggleRepost() {
     repostCount.value = data.count ?? repostCount.value
   } catch {
     // ignore
+  }
+}
+
+function toggleCollectionDropdown() {
+  collectionDropdownOpen.value = !collectionDropdownOpen.value
+  if (collectionDropdownOpen.value && collections.value.length === 0 && !collectionsLoading.value) {
+    loadCollections()
+  }
+}
+
+async function loadCollections() {
+  collectionsLoading.value = true
+  try {
+    const { data } = await api.get('/collections/me')
+    collections.value = Array.isArray(data) ? data : []
+  } catch {
+    collections.value = []
+  } finally {
+    collectionsLoading.value = false
+  }
+}
+
+async function addToCollection(collectionId: string) {
+  const postId = route.params.id as string
+  if (!postId || addingToCollection.value) return
+  addingToCollection.value = collectionId
+  try {
+    await api.post(`/collections/${collectionId}/posts/${postId}`)
+    collectionDropdownOpen.value = false
+  } catch {
+    // ignore (e.g. already in collection)
+  } finally {
+    addingToCollection.value = null
   }
 }
 
@@ -311,6 +376,13 @@ watch(() => route.params.id, load)
 .post-tags .tag { margin-right: 0.5rem; font-size: 0.875rem; }
 .post-actions { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--gray-200); display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
 .action { display: inline-flex; align-items: center; gap: 0.35rem; margin-right: 0; font-size: 0.9375rem; color: var(--gray-700); cursor: pointer; background: none; border: none; }
+.dropdown-wrap { position: relative; }
+.action-dropdown { position: absolute; top: 100%; left: 0; margin-top: 0.25rem; background: #fff; border: 1px solid var(--gray-200); border-radius: var(--radius); box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 10; min-width: 12rem; max-height: 16rem; overflow-y: auto; }
+.dropdown-loading, .dropdown-empty { padding: 0.75rem 1rem; font-size: 0.875rem; color: var(--gray-600); }
+.dropdown-option { display: flex; align-items: center; gap: 0.5rem; width: 100%; padding: 0.5rem 0.75rem; text-align: left; font-size: 0.875rem; background: none; border: none; cursor: pointer; color: var(--gray-800); text-decoration: none; }
+.dropdown-option:hover:not(:disabled) { background: var(--gray-100); }
+.dropdown-option:disabled { opacity: 0.6; cursor: not-allowed; }
+.dropdown-option-muted { color: var(--gray-600); font-size: 0.8125rem; }
 .export-wrap { position: relative; }
 .export-dropdown { position: absolute; top: 100%; left: 0; margin-top: 0.25rem; background: #fff; border: 1px solid var(--gray-200); border-radius: var(--radius); box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 10; min-width: 10rem; }
 .export-option { display: block; width: 100%; padding: 0.5rem 0.75rem; text-align: left; font-size: 0.875rem; background: none; border: none; cursor: pointer; color: var(--gray-800); }
