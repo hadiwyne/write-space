@@ -1,0 +1,40 @@
+/* WriteSpace Literary Design System */
+:root {
+  /* Color Palette (Literary-Inspired) */
+  --bg-primary: #F5F1E8;
+  --bg-secondary: #FAF7F0;
+  --bg-card: #FFFFFF;
+  --text-primary: #2C1810;
+  --text-secondary: #5C4A3D;
+  --text-tertiary: #8C7A6B;
+  --accent-primary: #8B4513;
+  --accent-secondary: #C19A6B;
+  --accent-tertiary: #D4AF37;
+  --accent-green: #3D5A3C;
+  --accent-burgundy: #6B2C3E;
+  --border-light: #E5DCC8;
+  --border-medium: #D4C4AC;
+  --like-color: #DC143C;
+
+  /* Shadows */
+  --shadow-sm: 0 2px 4px rgba(44, 24, 16, 0.05);
+  --shadow-md: 0 4px 12px rgba(44, 24, 16, 0.08);
+  --shadow-lg: 0 12px 24px rgba(44, 24, 16, 0.12);
+
+  /* Border Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  /* Legacy mappings for existing components */
+  --primary: var(--accent-primary);
+  --primary-dark: var(--accent-burgundy);
+  --gray-50: var(--bg-secondary);
+  --gray-100: var(--bg-primary);
+  --gray-200: var(--border-light);
+  --gray-300: var(--border-medium);
+  --gray-700: var(--text-secondary);
+  --gray-900: var(--text-primary);
+  --radius: var(--radius-md);
+  --shadow: var(--shadow-sm);
+}

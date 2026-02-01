@@ -61,7 +61,7 @@ export class UsersService {
   }
 
   async findByUsername(username: string) {
-    return this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { username },
       select: {
         id: true,
@@ -72,9 +72,24 @@ export class UsersService {
         avatarUrl: true,
         createdAt: true,
         updatedAt: true,
-        _count: { select: { posts: true, followers: true, following: true, reposts: true } },
+        _count: { select: { followers: true, following: true, reposts: true, likes: true } },
       },
     });
+    if (!user) return null;
+    const postsCount = await this.prisma.post.count({
+      where: {
+        authorId: user.id,
+        isPublished: true,
+        archivedAt: null,
+      },
+    });
+    return {
+      ...user,
+      _count: {
+        ...user._count,
+        posts: postsCount,
+      },
+    };
   }
 
   async create(dto: RegisterDto) {

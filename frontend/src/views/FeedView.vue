@@ -1,25 +1,74 @@
 <template>
   <div class="feed">
-    <h1>Feed</h1>
-    <div class="feed-toolbar">
-      <div class="feed-tabs">
-        <button type="button" class="tab" :class="{ active: sort === 'latest' }" @click="sort = 'latest'; load()">Latest</button>
-        <button type="button" class="tab" :class="{ active: sort === 'popular' }" @click="sort = 'popular'; load()">Popular</button>
+    <header class="feed-hero">
+      <h1>Your Feed</h1>
+    </header>
+
+    <section class="feed-filters">
+      <div class="filter-tabs">
+        <button
+          type="button"
+          class="filter-tab"
+          :class="{ active: sort === 'latest' }"
+          @click="sort = 'latest'; load()"
+        >
+          <i class="pi pi-clock"></i>
+          Latest
+        </button>
+        <button
+          type="button"
+          class="filter-tab"
+          :class="{ active: sort === 'popular' }"
+          @click="sort = 'popular'; load()"
+        >
+          <i class="pi pi-bolt"></i>
+          Popular
+        </button>
       </div>
-      <div class="feed-tag-filter">
-        <input v-model="tagFilter" type="text" placeholder="Filter by tag" class="tag-input" @keyup.enter="load()" />
-        <button type="button" class="btn btn-sm" @click="load()">Apply</button>
+      <div class="filter-tag">
+        <input
+          v-model="tagFilter"
+          type="text"
+          placeholder="Filter by tag"
+          class="tag-input"
+          @keyup.enter="load()"
+        />
+        <button type="button" class="tag-btn" @click="load()">Apply</button>
       </div>
+      <div class="view-toggle">
+        <button
+          type="button"
+          class="view-btn"
+          :class="{ active: viewMode === 'list' }"
+          aria-label="List view"
+          @click="viewMode = 'list'"
+        >
+          <i class="pi pi-list"></i>
+        </button>
+        <button
+          type="button"
+          class="view-btn"
+          :class="{ active: viewMode === 'grid' }"
+          aria-label="Grid view"
+          @click="viewMode = 'grid'"
+        >
+          <i class="pi pi-th-large"></i>
+        </button>
+      </div>
+    </section>
+
+    <div v-if="loading" class="feed-loading">Loading…</div>
+    <div v-else-if="posts.length === 0" class="feed-empty">
+      No posts yet. <router-link to="/write">Write</router-link> one.
     </div>
-    <div v-if="loading">Loading…</div>
-    <div v-else-if="posts.length === 0">No posts yet. <router-link to="/write">Write</router-link> one.</div>
-    <div v-else class="post-list">
+    <div v-else class="post-list" :class="{ 'post-list--grid': viewMode === 'grid' }">
       <PostCard
-        v-for="p in posts"
-        :key="p.id"
+        v-for="(p, i) in posts"
+        :key="(p as { id: string }).id"
         :post="p"
         :show-repost="!!auth.token"
         :reposted="repostedIds.has((p as { id: string }).id)"
+        :style="{ animationDelay: `${0.1 * i}s` }"
         @repost="handleRepost"
       />
     </div>
@@ -37,6 +86,7 @@ const posts = ref<Record<string, unknown>[]>([])
 const loading = ref(true)
 const sort = ref<'latest' | 'popular'>('latest')
 const tagFilter = ref('')
+const viewMode = ref<'list' | 'grid'>('list')
 const repostedIds = ref<Set<string>>(new Set())
 
 async function handleRepost(postId: string) {
@@ -69,12 +119,143 @@ onMounted(load)
 
 <style scoped>
 .feed { padding: 0; }
-.feed-toolbar { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
-.feed-tabs { display: flex; gap: 0.25rem; }
-.tab { padding: 0.5rem 0.75rem; border: 1px solid var(--gray-300); background: #fff; border-radius: var(--radius); cursor: pointer; font-size: 0.9375rem; }
-.tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-.feed-tag-filter { display: flex; gap: 0.5rem; }
-.tag-input { padding: 0.5rem 0.75rem; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 0.9375rem; width: 12rem; }
-.btn-sm { padding: 0.375rem 0.75rem; font-size: 0.875rem; border-radius: var(--radius); border: 1px solid var(--primary); background: var(--primary); color: #fff; cursor: pointer; }
-.post-list { display: flex; flex-direction: column; gap: 1rem; }
+.feed-hero { margin-bottom: 3rem; }
+.feed-hero h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.feed-filters {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+  background: var(--bg-card);
+  padding: 1rem;
+  border-radius: var(--radius-lg);
+  border: 2px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 2rem;
+}
+
+.filter-tabs {
+  display: flex;
+  background: var(--bg-primary);
+  padding: 0.25rem;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--border-light);
+}
+.filter-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.5rem;
+  border-radius: calc(var(--radius-md) - 2px);
+  border: none;
+  background: transparent;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.filter-tab:hover:not(.active) {
+  background: rgba(139, 69, 19, 0.08);
+  color: var(--accent-primary);
+}
+.filter-tab.active {
+  background: var(--accent-primary);
+  color: white;
+  box-shadow: 0 2px 8px rgba(139, 69, 19, 0.25);
+}
+.filter-tab .pi { font-size: 1rem; }
+
+.filter-tag { display: flex; gap: 0.5rem; }
+.tag-input {
+  padding: 0.5rem 0.75rem;
+  border: 2px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  font-size: 0.9375rem;
+  font-family: inherit;
+  width: 10rem;
+  background: var(--bg-card);
+}
+.tag-input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+.tag-btn {
+  padding: 0.5rem 1rem;
+  border: 2px solid var(--accent-primary);
+  border-radius: var(--radius-sm);
+  background: var(--accent-primary);
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.tag-btn:hover {
+  background: var(--accent-burgundy);
+  border-color: var(--accent-burgundy);
+}
+
+.view-toggle {
+  margin-left: auto;
+  display: flex;
+  gap: 0.5rem;
+}
+.view-btn {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 1.125rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.view-btn:hover:not(.active) {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+.view-btn.active {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: white;
+}
+
+.feed-loading, .feed-empty {
+  padding: 2rem 0;
+  color: var(--text-secondary);
+}
+.feed-empty a { font-weight: 600; }
+
+.post-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.post-list--grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .feed-hero h1 { font-size: 2rem; }
+  .feed-filters { flex-direction: column; align-items: stretch; padding: 0.75rem; }
+  .filter-tabs { justify-content: center; }
+  .view-toggle { margin-left: 0; justify-content: center; }
+}
 </style>

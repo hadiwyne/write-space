@@ -41,4 +41,24 @@ export class LikesService {
     });
     return !!like;
   }
+
+  async findByUser(username: string, limit = 50, offset = 0) {
+    const user = await this.prisma.user.findUnique({ where: { username } });
+    if (!user) throw new NotFoundException('User not found');
+    const items = await this.prisma.like.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      skip: offset,
+      include: {
+        post: {
+          include: {
+            author: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
+            _count: { select: { likes: true, comments: true, reposts: true } },
+          },
+        },
+      },
+    });
+    return items.map((l) => l.post);
+  }
 }
