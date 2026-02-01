@@ -15,6 +15,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from './users.service';
 import { FollowService } from './follow.service';
+import { RepostsService } from '../reposts/reposts.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -28,6 +29,7 @@ export class UsersController {
   constructor(
     private readonly usersService: UsersService,
     private readonly followService: FollowService,
+    private readonly repostsService: RepostsService,
   ) {}
 
   @Get('me')
@@ -100,6 +102,16 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   async removeFollower(@Param('userId') userId: string, @CurrentUser() user: { id: string }) {
     return this.followService.removeFollower(user.id, userId);
+  }
+
+  @Public()
+  @Get(':username/reposts')
+  getReposts(
+    @Param('username') username: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.repostsService.findByUser(username, Number(limit) || 50, Number(offset) || 0);
   }
 
   @Public()

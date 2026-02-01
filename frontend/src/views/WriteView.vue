@@ -57,6 +57,13 @@
       <div class="form-group">
         <input v-model="tagsStr" type="text" placeholder="Tags (comma-separated)" class="tags-input" />
       </div>
+      <div class="form-group visibility-row">
+        <label class="visibility-label">Visibility</label>
+        <select v-model="visibility" class="visibility-select">
+          <option value="PUBLIC">Public – visible to everyone</option>
+          <option value="FOLLOWERS_ONLY">Followers only – visible to people who follow you</option>
+        </select>
+      </div>
       <p v-if="error" class="error">{{ error }}</p>
       <div v-if="conflictDraft" class="conflict-banner">
         <p>This draft was updated elsewhere. Choose:</p>
@@ -83,6 +90,7 @@ const title = ref('')
 const content = ref('')
 const contentType = ref<ContentType>('MARKDOWN')
 const tagsStr = ref('')
+const visibility = ref<'PUBLIC' | 'FOLLOWERS_ONLY'>('PUBLIC')
 const error = ref('')
 const loading = ref(false)
 const savingDraft = ref(false)
@@ -169,6 +177,7 @@ async function publish() {
       contentType: contentType.value,
       tags: tags(),
       isPublished: true,
+      visibility: visibility.value,
     })
     router.push(`/posts/${data.id}`)
   } catch (e: unknown) {
@@ -283,6 +292,9 @@ async function onRichEditorImageUpload(file: File) {
 .preview-content { padding: 0.75rem; font-size: 0.9375rem; line-height: 1.6; }
 .preview-content :deep(img) { max-width: 100%; }
 .tags-input { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--gray-300); border-radius: var(--radius); }
+.visibility-row { display: flex; align-items: center; gap: 0.75rem; }
+.visibility-label { font-size: 0.9375rem; }
+.visibility-select { padding: 0.5rem 0.75rem; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 0.9375rem; min-width: 18rem; }
 .error { color: #dc2626; font-size: 0.875rem; margin: 0; }
 .conflict-banner { padding: 0.75rem; background: #fef3c7; border: 1px solid #f59e0b; border-radius: var(--radius); }
 .conflict-banner p { margin: 0 0 0.5rem; font-size: 0.875rem; }

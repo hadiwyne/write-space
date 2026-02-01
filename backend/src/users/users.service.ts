@@ -72,7 +72,7 @@ export class UsersService {
         avatarUrl: true,
         createdAt: true,
         updatedAt: true,
-        _count: { select: { posts: true, followers: true, following: true } },
+        _count: { select: { posts: true, followers: true, following: true, reposts: true } },
       },
     });
   }

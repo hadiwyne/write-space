@@ -24,6 +24,20 @@
         <i class="pi pi-comment"></i>
         {{ (post._count && post._count.comments) || 0 }}
       </span>
+      <span class="stat" v-tooltip.bottom="'Reposts'">
+        <i class="pi pi-refresh"></i>
+        {{ (post._count && post._count.reposts) || 0 }}
+      </span>
+      <button
+        v-if="showRepost && post.id"
+        type="button"
+        class="card-action card-repost"
+        :class="{ active: reposted }"
+        v-tooltip.bottom="reposted ? 'Undo repost' : 'Repost'"
+        @click.stop="onRepost"
+      >
+        <i class="pi pi-refresh"></i>
+      </button>
       <div v-if="showActions" class="card-actions">
         <template v-if="archivedMode">
           <button type="button" class="card-action card-unarchive" v-tooltip.bottom="'Restore to profile'" @click.stop="onUnarchive">
@@ -51,8 +65,15 @@ const props = defineProps({
   post: { type: Object, required: true },
   showActions: { type: Boolean, default: false },
   archivedMode: { type: Boolean, default: false },
+  showRepost: { type: Boolean, default: false },
+  reposted: { type: Boolean, default: false },
 })
-const emit = defineEmits<{ (e: 'archive', postId: string): void; (e: 'delete', postId: string): void; (e: 'unarchive', postId: string): void }>()
+const emit = defineEmits<{
+  (e: 'archive', postId: string): void
+  (e: 'delete', postId: string): void
+  (e: 'unarchive', postId: string): void
+  (e: 'repost', postId: string): void
+}>()
 
 function onArchive() {
   emit('archive', props.post.id)
@@ -62,6 +83,9 @@ function onDelete() {
 }
 function onUnarchive() {
   emit('unarchive', props.post.id)
+}
+function onRepost() {
+  emit('repost', props.post.id)
 }
 function avatarSrc(url: string | null | undefined) {
   if (!url) return ''
@@ -103,4 +127,6 @@ function formatDate(s: string | undefined) {
 .card-action:hover { background: var(--gray-100); color: var(--gray-700); }
 .card-delete:hover { color: #dc2626; }
 .card-unarchive:hover { color: var(--primary); }
+.card-repost { margin-left: auto; }
+.card-repost.active { color: var(--primary); }
 </style>

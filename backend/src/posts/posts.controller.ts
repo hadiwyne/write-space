@@ -11,7 +11,9 @@ import {
   UseInterceptors,
   UploadedFile,
   BadRequestException,
+  Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { PostsService } from './posts.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -20,13 +22,19 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { Public } from '../auth/public.decorator';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
+import { BookmarksService } from '../bookmarks/bookmarks.service';
+import { RepostsService } from '../reposts/reposts.service';
 
 const MAX_POST_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
 @Controller('posts')
 export class PostsController {
-  constructor(private readonly postsService: PostsService) {}
+  constructor(
+    private readonly postsService: PostsService,
+    private readonly bookmarksService: BookmarksService,
+    private readonly repostsService: RepostsService,
+  ) {}
 
   @Post()
   @UseGuards(JwtAuthGuard)
@@ -59,15 +67,37 @@ export class PostsController {
 
   @Public()
   @Get()
+  @UseGuards(OptionalJwtAuthGuard)
   findAll(
+    @CurrentUser() user: { id: string } | null,
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
     @Query('author') author?: string,
   ) {
+    const userId = user?.id ?? null;
     if (author) {
-      return this.postsService.findByAuthor(author, Number(limit) || 20, Number(offset) || 0);
+      return this.postsService.findByAuthor(author, Number(limit) || 20, Number(offset) || 0, userId);
     }
-    return this.postsService.findAll(Number(limit) || 20, Number(offset) || 0);
+    return this.postsService.findAll(Number(limit) || 20, Number(offset) || 0, userId);
+  }
+
+  @Public()
+  @Get(':id/export')
+  @UseGuards(OptionalJwtAuthGuard)
+  async export(
+    @Param('id') id: string,
+    @Query('format') format: string,
+    @CurrentUser() user: { id: string } | null,
+    @Res() res: Response,
+  ) {
+    const fmt = (format || 'html').toLowerCase();
+    if (fmt !== 'html' && fmt !== 'docx') throw new BadRequestException('Format must be html or docx');
+    const result = await this.postsService.export(id, fmt, user?.id ?? null);
+    const ext = result.format === 'docx' ? 'docx' : 'html';
+    const mime = result.format === 'docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'text/html';
+    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}.${ext}"`);
+    res.setHeader('Content-Type', mime);
+    res.send(result.buffer);
   }
 
   @Get('archived')
@@ -78,6 +108,32 @@ export class PostsController {
     @Query('offset') offset?: string,
   ) {
     return this.postsService.findArchivedByUser(user.id, Number(limit) || 50, Number(offset) || 0);
+  }
+
+  @Post(':id/bookmarks')
+  @UseGuards(JwtAuthGuard)
+  toggleBookmark(@Param('id') id: string, @CurrentUser() user: { id: string }) {
+    return this.bookmarksService.toggle(id, user.id);
+  }
+
+  @Get(':id/bookmarks/me')
+  @UseGuards(JwtAuthGuard)
+  async bookmarkMe(@Param('id') id: string, @CurrentUser() user: { id: string }) {
+    const bookmarked = await this.bookmarksService.userHasBookmark(id, user.id);
+    return { bookmarked };
+  }
+
+  @Post(':id/reposts')
+  @UseGuards(JwtAuthGuard)
+  toggleRepost(@Param('id') id: string, @CurrentUser() user: { id: string }) {
+    return this.repostsService.toggle(id, user.id);
+  }
+
+  @Get(':id/reposts/me')
+  @UseGuards(JwtAuthGuard)
+  async repostMe(@Param('id') id: string, @CurrentUser() user: { id: string }) {
+    const reposted = await this.repostsService.userReposted(id, user.id);
+    return { reposted };
   }
 
   @Get(':id')

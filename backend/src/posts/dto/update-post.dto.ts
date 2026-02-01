@@ -1,5 +1,5 @@
 import { IsString, IsOptional, IsBoolean, IsArray, IsEnum, MinLength, MaxLength } from 'class-validator';
-import { ContentType } from '@prisma/client';
+import { ContentType, PostVisibility } from '@prisma/client';
 
 export class UpdatePostDto {
   @IsOptional()
@@ -24,4 +24,8 @@ export class UpdatePostDto {
   @IsOptional()
   @IsBoolean()
   isPublished?: boolean;
+
+  @IsOptional()
+  @IsEnum(PostVisibility)
+  visibility?: PostVisibility;
 }

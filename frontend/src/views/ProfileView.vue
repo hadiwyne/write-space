@@ -20,6 +20,10 @@
           <button type="button" class="meta-link" @click="openModal('following')">
             {{ profile._count?.following ?? 0 }} following
           </button>
+          <span class="meta-sep">·</span>
+          <button type="button" class="meta-link" @click="profileTab = 'reposts'">
+            {{ profile._count?.reposts ?? 0 }} reposts
+          </button>
         </p>
         <template v-if="isOwnProfile">
           <router-link to="/settings" class="edit-link">Edit profile</router-link>
@@ -38,17 +42,39 @@
         </template>
       </div>
       <div id="posts-section" class="posts-section">
-        <h2>Posts</h2>
-        <div v-if="posts.length === 0" class="empty">No posts yet.</div>
-        <div v-else class="post-list">
-          <PostCard
-            v-for="p in posts"
-            :key="p.id"
-            :post="p"
-            :show-actions="!!isOwnProfile"
-            @archive="archivePostFromList"
-            @delete="deletePostFromList"
-          />
+        <div class="profile-tabs">
+          <button type="button" class="profile-tab" :class="{ active: profileTab === 'posts' }" @click="profileTab = 'posts'">
+            Posts {{ profile._count?.posts ?? 0 }}
+          </button>
+          <button type="button" class="profile-tab" :class="{ active: profileTab === 'reposts' }" @click="switchToReposts">
+            Reposts {{ profile._count?.reposts ?? 0 }}
+          </button>
+        </div>
+        <div v-if="profileTab === 'posts'">
+          <div v-if="posts.length === 0" class="empty">No posts yet.</div>
+          <div v-else class="post-list">
+            <PostCard
+              v-for="p in posts"
+              :key="p.id"
+              :post="p"
+              :show-actions="!!isOwnProfile"
+              @archive="archivePostFromList"
+              @delete="deletePostFromList"
+            />
+          </div>
+        </div>
+        <div v-else>
+          <div v-if="repostsLoading" class="empty">Loading…</div>
+          <div v-else-if="reposts.length === 0" class="empty">No reposts yet.</div>
+          <div v-else class="post-list">
+            <PostCard
+              v-for="p in reposts"
+              :key="p.id"
+              :post="p"
+              :show-repost="!!auth.token"
+              :reposted="isOwnProfile"
+            />
+          </div>
         </div>
       </div>
     </template>
@@ -128,9 +154,12 @@ const profile = ref<{
   displayName: string | null
   bio: string | null
   avatarUrl: string | null
-  _count?: { posts: number; followers: number; following: number }
+  _count?: { posts: number; followers: number; following: number; reposts?: number }
 } | null>(null)
 const posts = ref<unknown[]>([])
+const reposts = ref<unknown[]>([])
+const repostsLoading = ref(false)
+const profileTab = ref<'posts' | 'reposts'>('posts')
 const loading = ref(true)
 const isFollowing = ref(false)
 const followLoading = ref(false)
@@ -209,7 +238,21 @@ async function toggleFollow() {
 }
 
 function scrollToPosts() {
+  profileTab.value = 'posts'
   document.getElementById('posts-section')?.scrollIntoView({ behavior: 'smooth' })
+}
+
+async function switchToReposts() {
+  profileTab.value = 'reposts'
+  const username = profile.value?.username
+  if (!username || reposts.value.length > 0) return
+  repostsLoading.value = true
+  try {
+    const { data } = await api.get(`/users/${username}/reposts`)
+    reposts.value = Array.isArray(data) ? data : []
+  } finally {
+    repostsLoading.value = false
+  }
 }
 
 async function openModal(mode: 'followers' | 'following') {

@@ -13,6 +13,13 @@
         <div class="form-group">
           <input v-model="tagsStr" type="text" placeholder="Tags (comma-separated)" class="tags-input" />
         </div>
+        <div class="form-group visibility-row">
+          <label class="visibility-label">Visibility</label>
+          <select v-model="visibility" class="visibility-select">
+            <option value="PUBLIC">Public – visible to everyone</option>
+            <option value="FOLLOWERS_ONLY">Followers only – visible to people who follow you</option>
+          </select>
+        </div>
         <p v-if="error" class="error">{{ error }}</p>
         <div class="actions">
           <button type="submit" class="btn btn-primary" :disabled="saving">Save</button>
@@ -30,8 +37,9 @@ import { api } from '@/api/client'
 
 const route = useRoute()
 const router = useRouter()
-const post = ref<{ id: string; title: string; content: string; tags: string[] } | null>(null)
+const post = ref<{ id: string; title: string; content: string; tags: string[]; visibility?: string } | null>(null)
 const title = ref('')
+const visibility = ref<'PUBLIC' | 'FOLLOWERS_ONLY'>('PUBLIC')
 const content = ref('')
 const tagsStr = ref('')
 const loading = ref(true)
@@ -48,6 +56,7 @@ onMounted(async () => {
     title.value = data.title
     content.value = data.content
     tagsStr.value = (data.tags || []).join(', ')
+    visibility.value = (data.visibility as 'PUBLIC' | 'FOLLOWERS_ONLY') || 'PUBLIC'
   } catch {
     post.value = null
   } finally {
@@ -64,6 +73,7 @@ async function save() {
       title: title.value,
       content: content.value,
       tags: tags.value,
+      visibility: visibility.value,
     })
     router.push(`/posts/${post.value.id}`)
   } catch (e: unknown) {
@@ -80,6 +90,9 @@ async function save() {
 .title-input { width: 100%; font-size: 1.25rem; padding: 0.5rem 0; border: none; border-bottom: 1px solid var(--gray-200); }
 .editor { width: 100%; padding: 0.75rem; border: 1px solid var(--gray-300); border-radius: var(--radius); font-family: inherit; resize: vertical; }
 .tags-input { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--gray-300); border-radius: var(--radius); }
+.visibility-row { display: flex; align-items: center; gap: 0.75rem; }
+.visibility-label { font-size: 0.9375rem; }
+.visibility-select { padding: 0.5rem 0.75rem; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 0.9375rem; min-width: 18rem; }
 .error { color: #dc2626; font-size: 0.875rem; margin: 0; }
 .actions { margin-top: 0.5rem; }
 .btn { padding: 0.5rem 1rem; border-radius: var(--radius); border: none; cursor: pointer; font-size: 0.9375rem; }

@@ -11,6 +11,11 @@ import { LikesModule } from './likes/likes.module';
 import { FeedModule } from './feed/feed.module';
 import { DraftsModule } from './drafts/drafts.module';
 import { DocumentsModule } from './documents/documents.module';
+import { SearchModule } from './search/search.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { BookmarksModule } from './bookmarks/bookmarks.module';
+import { CollectionsModule } from './collections/collections.module';
+import { RepostsModule } from './reposts/reposts.module';
 
 @Module({
   imports: [
@@ -24,6 +29,11 @@ import { DocumentsModule } from './documents/documents.module';
     FeedModule,
     DraftsModule,
     DocumentsModule,
+    SearchModule,
+    NotificationsModule,
+    BookmarksModule,
+    CollectionsModule,
+    RepostsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: JwtAuthGuard }],
 })

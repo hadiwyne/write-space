@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
-import { CommentsService } from './comments.service';
+import { CommentsService, CommentWithReplies } from './comments.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { Public } from '../auth/public.decorator';
@@ -18,7 +18,11 @@ export class CommentsController {
 
   @Public()
   @Get()
-  findByPost(@Param('postId') postId: string, @Query('limit') limit?: string, @Query('offset') offset?: string) {
+  findByPost(
+    @Param('postId') postId: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ): Promise<CommentWithReplies[]> {
     return this.commentsService.findByPost(postId, Number(limit) || 50, Number(offset) || 0);
   }
 
