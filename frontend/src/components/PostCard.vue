@@ -1,55 +1,77 @@
 <template>
-  <article class="card">
+  <article class="card" :style="{ animationDelay }">
     <header class="card-header">
-      <router-link :to="'/u/' + (post.author && post.author.username)" class="author">
-        <img v-if="post.author && post.author.avatarUrl" :src="avatarSrc(post.author.avatarUrl)" alt="" class="avatar-img" />
-        <span v-else class="avatar">{{ (post.author && (post.author.displayName || post.author.username)) ? (post.author.displayName || post.author.username)[0] : '?' }}</span>
-        <span class="name">{{ post.author && (post.author.displayName || post.author.username) }}</span>
+      <router-link :to="'/u/' + (post.author && post.author.username)" class="card-author">
+        <div class="author-avatar">
+          <img v-if="post.author && post.author.avatarUrl" :src="avatarSrc(post.author.avatarUrl)" alt="" class="avatar-img" />
+          <span v-else class="avatar-initial">{{ (post.author && (post.author.displayName || post.author.username)) ? (post.author.displayName || post.author.username)[0] : '?' }}</span>
+        </div>
+        <div class="author-info">
+          <span class="author-name">{{ post.author && (post.author.displayName || post.author.username) }}</span>
+          <div class="author-meta">
+            <span class="meta-date">{{ formatDate(post.publishedAt || post.createdAt) }}</span>
+            <span class="meta-dot">·</span>
+            <span class="meta-read">{{ readTime }} min read</span>
+          </div>
+        </div>
       </router-link>
-      <span class="date">{{ formatDate(post.publishedAt || post.createdAt) }}</span>
+      <button type="button" class="card-menu" aria-label="Post menu" @click.stop>
+        <span aria-hidden="true">⋯</span>
+      </button>
     </header>
+
     <router-link :to="'/posts/' + post.id" class="card-body">
-      <h2 class="title">{{ post.title }}</h2>
-      <p class="excerpt">{{ excerpt }}</p>
-      <div v-if="post.tags && post.tags.length" class="tags">
-        <span v-for="t in post.tags" :key="t" class="tag">#{{ t }}</span>
+      <h2 class="card-title">{{ post.title }}</h2>
+      <p class="card-excerpt">{{ excerpt }}</p>
+      <div v-if="post.tags && post.tags.length" class="card-tags">
+        <router-link
+          v-for="t in post.tags"
+          :key="t"
+          :to="`/feed?tag=${t}`"
+          class="tag"
+          @click.stop
+        >
+          #{{ t }}
+        </router-link>
       </div>
     </router-link>
+
     <footer class="card-footer">
-      <span class="stat" v-tooltip.bottom="'Likes'">
+      <span class="action-stat" v-tooltip.bottom="'Likes'">
         <i class="pi pi-heart"></i>
         {{ (post._count && post._count.likes) || 0 }}
       </span>
-      <span class="stat" v-tooltip.bottom="'Comments'">
+      <router-link :to="'/posts/' + post.id + '#comments'" class="action-stat" v-tooltip.bottom="'Comments'">
         <i class="pi pi-comment"></i>
         {{ (post._count && post._count.comments) || 0 }}
-      </span>
-      <span class="stat" v-tooltip.bottom="'Reposts'">
+      </router-link>
+      <span class="action-stat" v-tooltip.bottom="'Reposts'">
         <i class="pi pi-refresh"></i>
         {{ (post._count && post._count.reposts) || 0 }}
       </span>
       <button
         v-if="showRepost && post.id"
         type="button"
-        class="card-action card-repost"
+        class="action-btn"
         :class="{ active: reposted }"
         v-tooltip.bottom="reposted ? 'Undo repost' : 'Repost'"
         @click.stop="onRepost"
       >
         <i class="pi pi-refresh"></i>
+        Repost
       </button>
       <div v-if="showActions" class="card-actions">
         <template v-if="archivedMode">
-          <button type="button" class="card-action card-unarchive" v-tooltip.bottom="'Restore to profile'" @click.stop="onUnarchive">
+          <button type="button" class="action-btn action-archive" v-tooltip.bottom="'Restore to profile'" @click.stop="onUnarchive">
             <i class="pi pi-refresh"></i>
           </button>
         </template>
         <template v-else>
-          <button type="button" class="card-action card-archive" v-tooltip.bottom="'Archive'" @click.stop="onArchive">
+          <button type="button" class="action-btn action-archive" v-tooltip.bottom="'Archive'" @click.stop="onArchive">
             <i class="pi pi-folder"></i>
           </button>
         </template>
-        <button type="button" class="card-action card-delete" v-tooltip.bottom="'Delete'" @click.stop="onDelete">
+        <button type="button" class="action-btn action-delete" v-tooltip.bottom="'Delete'" @click.stop="onDelete">
           <i class="pi pi-trash"></i>
         </button>
       </div>
@@ -67,6 +89,7 @@ const props = defineProps({
   archivedMode: { type: Boolean, default: false },
   showRepost: { type: Boolean, default: false },
   reposted: { type: Boolean, default: false },
+  animationDelay: { type: String, default: '0s' },
 })
 const emit = defineEmits<{
   (e: 'archive', postId: string): void
@@ -97,36 +120,206 @@ const excerpt = computed(() => {
   const text = raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
   return text.slice(0, 160) + (text.length > 160 ? '…' : '')
 })
+const readTime = computed(() => {
+  const raw = (props.post.content || props.post.renderedHTML || '')
+  const text = raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+  const words = text.split(/\s+/).filter(Boolean).length
+  return Math.max(1, Math.ceil(words / 200))
+})
 function formatDate(s: string | undefined) {
   if (!s) return ''
   const d = new Date(s)
-  const now = new Date()
-  const diff = now.getTime() - d.getTime()
-  if (diff < 60000) return 'just now'
-  if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago'
-  if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago'
-  return d.toLocaleDateString()
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 </script>
 
 <style scoped>
-.card { background: #fff; border: 1px solid var(--gray-200); border-radius: 12px; padding: 1.25rem; }
-.card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
-.author { display: flex; align-items: center; gap: 0.5rem; color: var(--gray-700); font-size: 0.875rem; }
-.avatar, .avatar-img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: var(--gray-200); display: inline-flex; align-items: center; justify-content: center; font-size: 0.875rem; }
-.card-body { display: block; color: inherit; }
-.title { font-size: 1.25rem; margin: 0 0 0.25rem; }
-.excerpt { color: var(--gray-700); font-size: 0.9375rem; margin: 0 0 0.5rem; }
-.tag { font-size: 0.8125rem; color: var(--primary); margin-right: 0.5rem; }
-.card-footer { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--gray-100); font-size: 0.8125rem; color: var(--gray-700); display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
-.stat { display: inline-flex; align-items: center; gap: 0.35rem; }
-.stat .pi { font-size: 0.95rem; }
-.card-actions { margin-left: auto; display: flex; align-items: center; gap: 0.25rem; }
-.card-action { padding: 0.25rem 0.5rem; background: none; border: none; color: var(--gray-500); cursor: pointer; border-radius: var(--radius); }
-.card-action .pi { font-size: 0.95rem; }
-.card-action:hover { background: var(--gray-100); color: var(--gray-700); }
-.card-delete:hover { color: #dc2626; }
-.card-unarchive:hover { color: var(--primary); }
-.card-repost { margin-left: auto; }
-.card-repost.active { color: var(--primary); }
+.card {
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  margin-bottom: 0;
+  box-shadow: var(--shadow-md);
+  border: 2px solid var(--border-light);
+  transition: all 0.2s ease;
+  animation: fadeInUp 0.6s ease-out both;
+}
+.card::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--accent-primary);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.card:hover {
+  border-color: var(--accent-secondary);
+}
+.card:hover::after {
+  opacity: 1;
+}
+
+.card-author {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-light);
+  text-decoration: none;
+  color: inherit;
+}
+.card-author:hover { text-decoration: none; color: inherit; }
+.author-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 1.25rem;
+  box-shadow: 0 4px 12px rgba(139, 69, 19, 0.25);
+  border: 3px solid var(--bg-card);
+  outline: 2px solid var(--border-medium);
+}
+.avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.avatar-initial { line-height: 1; }
+.author-info { min-width: 0; }
+.author-name {
+  display: block;
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+  color: var(--text-primary);
+}
+.author-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--text-tertiary);
+}
+.meta-dot { user-select: none; }
+
+.card-menu {
+  position: absolute;
+  top: 2rem;
+  right: 2rem;
+  padding: 0.5rem;
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-tertiary);
+  font-size: 1.25rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: all 0.2s ease;
+}
+.card-menu:hover {
+  background: var(--bg-primary);
+  color: var(--accent-primary);
+}
+
+.card-body {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+.card-body:hover { text-decoration: none; color: inherit; }
+.card-title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  margin: 0 0 1rem;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+  color: var(--text-primary);
+  transition: color 0.2s ease;
+}
+.card:hover .card-title { color: var(--accent-primary); }
+.card-excerpt {
+  color: var(--text-secondary);
+  line-height: 1.75;
+  margin-bottom: 1.25rem;
+  font-size: 1rem;
+}
+.card-tags {
+  display: flex;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+.tag {
+  padding: 0.5rem 1rem;
+  background: var(--bg-primary);
+  color: var(--accent-primary);
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border: 1px solid var(--border-light);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.tag:hover {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: white;
+  text-decoration: none;
+}
+
+.card-footer {
+  display: flex;
+  gap: 0.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border-light);
+  flex-wrap: wrap;
+  align-items: center;
+}
+.action-stat,
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+.action-stat { cursor: default; }
+.action-stat .pi { font-size: 1.125rem; }
+.action-stat:hover { color: var(--text-secondary); text-decoration: none; }
+.action-btn:hover {
+  color: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+.action-btn.active {
+  color: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+.card-actions { margin-left: auto; display: flex; gap: 0.5rem; }
+.action-archive:hover { color: var(--accent-primary); border-color: var(--accent-primary); }
+.action-delete:hover { color: var(--like-color); border-color: var(--like-color); }
+
+@media (max-width: 768px) {
+  .card { padding: 1.5rem; }
+  .card-title { font-size: 1.5rem; }
+  .card-footer .action-stat, .card-footer .action-btn { min-width: calc(50% - 0.25rem); }
+}
 </style>

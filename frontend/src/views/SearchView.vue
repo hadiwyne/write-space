@@ -37,7 +37,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { api, apiBaseUrl } from '@/api/client'
 import PostCard from '@/components/PostCard.vue'
 
@@ -47,7 +48,8 @@ function avatarSrc(url: string | null | undefined) {
   return apiBaseUrl + url
 }
 
-const query = ref('')
+const route = useRoute()
+const query = ref((route.query.q as string) || '')
 const loading = ref(false)
 const hasSearched = ref(false)
 const tab = ref<'posts' | 'users'>('posts')
@@ -70,24 +72,34 @@ async function search() {
     loading.value = false
   }
 }
+
+watch(() => route.query.q, (q) => {
+  query.value = q || ''
+  if (q?.trim()) search()
+})
+onMounted(() => {
+  if (route.query.q?.trim()) search()
+})
 </script>
 
 <style scoped>
 .search-page { padding: 0; }
 .search-form { display: flex; gap: 0.75rem; margin-bottom: 1.5rem; }
-.search-input { flex: 1; max-width: 24rem; padding: 0.5rem 1rem; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 1rem; }
+.search-input { flex: 1; max-width: 24rem; padding: 0.75rem 1rem; border: 2px solid var(--border-light); border-radius: var(--radius-md); font-size: 1rem; font-family: inherit; background: var(--bg-card); transition: border-color 0.2s ease; }
+.search-input:focus { outline: none; border-color: var(--accent-primary); box-shadow: 0 0 0 4px rgba(139, 69, 19, 0.1); }
 .btn { padding: 0.5rem 1rem; border-radius: var(--radius); border: none; cursor: pointer; font-size: 0.9375rem; }
 .btn-primary { background: var(--primary); color: #fff; }
-.search-tabs { display: flex; gap: 0.25rem; margin-bottom: 1rem; }
-.tab { padding: 0.5rem 0.75rem; border: 1px solid var(--gray-300); background: #fff; border-radius: var(--radius); cursor: pointer; font-size: 0.9375rem; }
-.tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+.search-tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; background: var(--bg-primary); padding: 0.25rem; border-radius: var(--radius-md); border: 2px solid var(--border-light); }
+.tab { padding: 0.625rem 1.25rem; border: none; background: transparent; border-radius: calc(var(--radius-md) - 2px); cursor: pointer; font-size: 0.9375rem; font-weight: 600; font-family: inherit; color: var(--text-secondary); transition: all 0.3s ease; }
+.tab:hover:not(.active) { background: rgba(139, 69, 19, 0.08); color: var(--accent-primary); }
+.tab.active { background: var(--accent-primary); color: white; box-shadow: 0 2px 8px rgba(139, 69, 19, 0.25); }
 .loading, .empty { color: var(--gray-700); padding: 1rem 0; }
 .post-list { display: flex; flex-direction: column; gap: 1rem; }
 .user-list { list-style: none; margin: 0; padding: 0; }
 .user-item { border-bottom: 1px solid var(--gray-100); }
 .user-link { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0; color: inherit; text-decoration: none; }
 .user-link:hover { color: var(--primary); }
-.user-avatar, .user-avatar-placeholder { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; background: var(--gray-200); flex-shrink: 0; display: block; line-height: 48px; text-align: center; font-size: 1.25rem; }
+.user-avatar, .user-avatar-placeholder { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); flex-shrink: 0; display: block; line-height: 48px; text-align: center; font-size: 1.25rem; font-weight: 700; color: white; }
 .user-info { display: flex; flex-direction: column; }
 .user-name { font-weight: 500; }
 .user-handle { font-size: 0.875rem; color: var(--gray-600); }
