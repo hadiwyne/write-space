@@ -64,25 +64,30 @@
     <div v-else class="post-list" :class="{ 'post-list--grid': viewMode === 'grid' }">
       <PostCard
         v-for="(p, i) in posts"
-        :key="(p as { id: string }).id"
+        :key="p.id"
         :post="p"
         :show-repost="!!auth.token"
-        :reposted="repostedIds.has((p as { id: string }).id)"
+        :reposted="repostedIds.has(p.id)"
         :style="{ animationDelay: `${0.1 * i}s` }"
         @repost="handleRepost"
+        @like="handleLike"
       />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { api } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import PostCard from '@/components/PostCard.vue'
 
+type FeedPost = { id: string; _count?: { likes?: number; reposts?: number; comments?: number }; likes?: unknown[]; [key: string]: unknown }
+
+const route = useRoute()
 const auth = useAuthStore()
-const posts = ref<Record<string, unknown>[]>([])
+const posts = ref<FeedPost[]>([])
 const loading = ref(true)
 const sort = ref<'latest' | 'popular'>('latest')
 const tagFilter = ref('')
@@ -92,12 +97,27 @@ const repostedIds = ref<Set<string>>(new Set())
 async function handleRepost(postId: string) {
   try {
     const { data } = await api.post(`/posts/${postId}/reposts`)
-    const p = posts.value.find((x) => (x as { id: string }).id === postId) as { _count?: { reposts?: number } }
+    const p = posts.value.find((x) => x.id === postId)
     if (p?._count) p._count = { ...p._count, reposts: (p._count.reposts ?? 0) + (data.reposted ? 1 : -1) }
     if (data.reposted) repostedIds.value = new Set([...repostedIds.value, postId])
     else repostedIds.value = new Set([...repostedIds.value].filter((id) => id !== postId))
   } catch {
     // ignore
+  }
+}
+
+function handleLike(postId: string, isLiked: boolean) {
+  const p = posts.value.find((x) => x.id === postId)
+  if (p?._count) {
+    p._count = { ...p._count, likes: (p._count.likes ?? 0) + (isLiked ? 1 : -1) }
+  }
+  // Update the likes array so the UI reflects the change immediately
+  if (p) {
+    if (isLiked) {
+      p.likes = [{ id: 'local' }]
+    } else {
+      p.likes = []
+    }
   }
 }
 
@@ -114,7 +134,21 @@ async function load() {
   }
 }
 
-onMounted(load)
+function onPageShow(e: PageTransitionEvent) {
+  if (e.persisted) load()
+}
+
+watch(() => route.path, (path) => {
+  if (path === '/feed') load()
+})
+
+onMounted(() => {
+  load()
+  window.addEventListener('pageshow', onPageShow)
+})
+onUnmounted(() => {
+  window.removeEventListener('pageshow', onPageShow)
+})
 </script>
 
 <style scoped>

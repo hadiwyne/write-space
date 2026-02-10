@@ -37,11 +37,26 @@
     </router-link>
 
     <footer class="card-footer">
-      <span class="action-stat" v-tooltip.bottom="'Likes'">
+      <button
+        v-if="canLike"
+        type="button"
+        class="action-stat action-like-btn"
+        :class="{ liked: liked }"
+        v-tooltip.bottom="liked ? 'Unlike' : 'Like'"
+        @click.stop="toggleLike"
+      >
+        <i :class="liked ? 'pi pi-heart-fill' : 'pi pi-heart'"></i>
+        {{ likeCount }}
+      </button>
+      <span v-else class="action-stat">
         <i class="pi pi-heart"></i>
-        {{ (post._count && post._count.likes) || 0 }}
+        {{ likeCount }}
       </span>
-      <router-link :to="'/posts/' + post.id + '#comments'" class="action-stat" v-tooltip.bottom="'Comments'">
+      <router-link
+        :to="'/posts/' + post.id + '#comments'"
+        class="action-stat action-comment-link"
+        v-tooltip.bottom="'View and add comments'"
+      >
         <i class="pi pi-comment"></i>
         {{ (post._count && post._count.comments) || 0 }}
       </router-link>
@@ -80,23 +95,61 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { apiBaseUrl } from '@/api/client'
+import { ref, computed, watch } from 'vue'
+import { api, apiBaseUrl } from '@/api/client'
+import { useAuthStore } from '@/stores/auth'
+import { useLikedPostsStore } from '@/stores/likedPosts'
 
+const auth = useAuthStore()
+const likedStore = useLikedPostsStore()
 const props = defineProps({
   post: { type: Object, required: true },
   showActions: { type: Boolean, default: false },
   archivedMode: { type: Boolean, default: false },
   showRepost: { type: Boolean, default: false },
   reposted: { type: Boolean, default: false },
+  showLike: { type: Boolean, default: true },
   animationDelay: { type: String, default: '0s' },
 })
+const canLike = computed(() => props.showLike && !!auth.token)
+
+const likedFromApi = computed(() =>
+  !!(props.post.likes && Array.isArray(props.post.likes) && props.post.likes.length > 0)
+)
+const liked = computed(() => likedFromApi.value || likedStore.has(props.post.id))
+const likeCount = ref((props.post._count && props.post._count.likes) || 0)
+
+watch(
+  () => props.post,
+  (post) => {
+    likeCount.value = (post._count && post._count.likes) || 0
+    // Sync API liked state to store
+    if (post.likes && Array.isArray(post.likes) && post.likes.length > 0) {
+      likedStore.setLiked(post.id, true)
+    }
+  },
+  { deep: true, immediate: true }
+)
+
 const emit = defineEmits<{
   (e: 'archive', postId: string): void
   (e: 'delete', postId: string): void
   (e: 'unarchive', postId: string): void
   (e: 'repost', postId: string): void
+  (e: 'like', postId: string, liked: boolean): void
 }>()
+
+async function toggleLike() {
+  if (!auth.token || !props.post.id) return
+  try {
+    const { data } = await api.post(`/posts/${props.post.id}/likes`)
+    likedStore.setLiked(props.post.id, data.liked)
+    likeCount.value = data.count ?? likeCount.value
+    emit('like', props.post.id, data.liked)
+  } catch {
+    // ignore
+  }
+}
 
 function onArchive() {
   emit('archive', props.post.id)
@@ -305,6 +358,17 @@ function formatDate(s: string | undefined) {
 .action-stat { cursor: default; }
 .action-stat .pi { font-size: 1.125rem; }
 .action-stat:hover { color: var(--text-secondary); text-decoration: none; }
+.action-like-btn {
+  cursor: pointer;
+  border: none;
+  background: var(--bg-primary);
+  font-family: inherit;
+}
+.action-like-btn:hover { color: var(--like-color); text-decoration: none; }
+.action-like-btn.liked { color: var(--like-color); }
+.action-like-btn.liked .pi { color: var(--like-color); }
+.action-comment-link { cursor: pointer; }
+.action-comment-link:hover { color: var(--accent-primary); text-decoration: none; }
 .action-btn:hover {
   color: var(--accent-primary);
   border-color: var(--accent-primary);

@@ -67,6 +67,7 @@ export class PostsService {
       include: {
         author: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
         _count: { select: { likes: true, comments: true, reposts: true } },
+        ...(userId ? { likes: { where: { userId }, take: 1, select: { id: true } } } : {}),
       },
     });
   }
@@ -174,6 +175,7 @@ export class PostsService {
       include: {
         author: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
         _count: { select: { likes: true, comments: true, reposts: true } },
+        ...(viewerUserId ? { likes: { where: { userId: viewerUserId }, take: 1, select: { id: true } } } : {}),
       },
     });
   }

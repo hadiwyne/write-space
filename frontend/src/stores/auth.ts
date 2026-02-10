@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { api } from '@/api/client'
+import { useLikedPostsStore } from './likedPosts'
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(localStorage.getItem('writespace_token'))
@@ -32,6 +33,9 @@ export const useAuthStore = defineStore('auth', () => {
     setToken(data.accessToken)
     await fetchUser()
   }
-  function logout() { clear() }
+  function logout() {
+    useLikedPostsStore().clear()
+    clear()
+  }
   return { token, user, isLoggedIn, login, register, logout, fetchUser, setToken, clear }
 }, { persist: { paths: ['token'] } })

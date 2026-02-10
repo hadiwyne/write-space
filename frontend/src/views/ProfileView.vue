@@ -72,6 +72,7 @@
                 :reposter-name="profile?.displayName || profile?.username || 'User'"
                 :show-repost="!!auth.token"
                 :reposted="!!isOwnProfile"
+                @like="handleLike"
               />
               <PostCard
                 v-else
@@ -80,6 +81,7 @@
                 :style="{ animationDelay: `${0.05 * i}s` }"
                 @archive="archivePostFromList"
                 @delete="deletePostFromList"
+                @like="handleLike"
               />
             </div>
           </div>
@@ -94,6 +96,7 @@
               :post="p"
               :show-repost="!!auth.token"
               :style="{ animationDelay: `${0.05 * i}s` }"
+              @like="handleLike"
             />
           </div>
         </div>
@@ -176,11 +179,12 @@ const profile = ref<{
   displayName: string | null
   bio: string | null
   avatarUrl: string | null
+  profileHTML?: string | null
   _count?: { posts: number; followers: number; following: number; reposts?: number; likes?: number }
 } | null>(null)
-const posts = ref<unknown[]>([])
-const reposts = ref<unknown[]>([])
-const likedPosts = ref<unknown[]>([])
+const posts = ref<Record<string, unknown>[]>([])
+const reposts = ref<Record<string, unknown>[]>([])
+const likedPosts = ref<{ id: string; [key: string]: unknown }[]>([])
 const likedLoading = ref(false)
 const profileTab = ref<'posts' | 'liked'>('posts')
 
@@ -380,6 +384,16 @@ async function onConfirmConfirm() {
       profile.value._count = { ...profile.value._count, posts: Math.max(0, profile.value._count.posts - 1) }
   } catch {
     // ignore
+  }
+}
+
+function handleLike(_postId: string, isLiked: boolean) {
+  if (isOwnProfile.value && profile.value?._count != null) {
+    const currentLikes = profile.value._count.likes ?? 0
+    profile.value._count = {
+      ...profile.value._count,
+      likes: Math.max(0, currentLikes + (isLiked ? 1 : -1)),
+    }
   }
 }
 

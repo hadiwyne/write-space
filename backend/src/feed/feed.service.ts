@@ -1,10 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
-const postInclude = {
-  author: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
-  _count: { select: { likes: true, comments: true, reposts: true } },
-};
+function postInclude(userId: string | null) {
+  return {
+    author: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
+    _count: { select: { likes: true, comments: true, reposts: true } },
+    ...(userId ? { likes: { where: { userId }, take: 1, select: { id: true } } } : {}),
+  };
+}
 
 const baseWhere = { isPublished: true, archivedAt: null };
 
@@ -17,10 +20,11 @@ export class FeedService {
       ? await this.prisma.follow.findMany({ where: { followerId: userId }, select: { followingId: true } })
       : [];
     const followingIds = following.map((f) => f.followingId);
+    const authorIds = userId ? [userId, ...followingIds] : null;
     const where = {
       ...baseWhere,
-      ...(followingIds.length
-        ? { authorId: { in: followingIds } }
+      ...(authorIds?.length
+        ? { authorId: { in: authorIds } }
         : { visibility: 'PUBLIC' as const }),
       ...(tag ? { tags: { has: tag } } : {}),
     };
@@ -30,7 +34,7 @@ export class FeedService {
       orderBy: { publishedAt: 'desc' },
       take: limit,
       skip: offset,
-      include: postInclude,
+      include: postInclude(userId),
     });
   }
 
@@ -53,10 +57,7 @@ export class FeedService {
       where,
       take: limit * 2,
       skip: offset,
-      include: {
-        ...postInclude,
-        _count: { select: { likes: true, comments: true, reposts: true } },
-      },
+      include: postInclude(userId ?? null),
     });
     const sorted = posts
       .sort((a, b) => {
@@ -100,7 +101,7 @@ export class FeedService {
     const posts = await this.prisma.post.findMany({
       where: { ...baseWhere, ...visibilityFilter },
       take: 50,
-      include: postInclude,
+      include: postInclude(userId ?? null),
     });
     return posts
       .sort((a, b) => {

@@ -15,6 +15,7 @@
       @delete="$emit('delete', post.id)"
       @unarchive="$emit('unarchive', post.id)"
       @repost="$emit('repost', post.id)"
+      @like="(postId, liked) => $emit('like', postId, liked)"
     />
   </article>
 </template>
@@ -37,6 +38,7 @@ defineEmits<{
   (e: 'delete', postId: string): void
   (e: 'unarchive', postId: string): void
   (e: 'repost', postId: string): void
+  (e: 'like', postId: string, liked: boolean): void
 }>()
 
 function formatAgo(date: string | Date): string {

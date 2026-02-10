@@ -125,6 +125,7 @@ import { useRouter } from 'vue-router'
 import { useRoute } from 'vue-router'
 import { api, apiBaseUrl } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
+import { useLikedPostsStore } from '@/stores/likedPosts'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import CommentThread from '@/components/CommentThread.vue'
 
@@ -137,6 +138,7 @@ function avatarSrc(url: string | null | undefined) {
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const likedStore = useLikedPostsStore()
 const post = ref<{
   id: string
   title: string
@@ -204,7 +206,9 @@ async function load() {
         api.get(`/posts/${id}/bookmarks/me`).catch(() => ({ data: { bookmarked: false } })),
         api.get(`/posts/${id}/reposts/me`).catch(() => ({ data: { reposted: false } })),
       ])
-      liked.value = likeRes.data?.liked ?? false
+      const isLiked = likeRes.data?.liked ?? false
+      liked.value = isLiked
+      if (isLiked) likedStore.setLiked(id, true)
       bookmarked.value = bookmarkRes.data?.bookmarked ?? false
       reposted.value = repostRes.data?.reposted ?? false
     }
@@ -221,10 +225,12 @@ function formatDate(s: string | null | undefined) {
 
 async function toggleLike() {
   if (!auth.isLoggedIn) return
+  const postId = route.params.id as string
   try {
-    const { data } = await api.post(`/posts/${route.params.id}/likes`)
+    const { data } = await api.post(`/posts/${postId}/likes`)
     liked.value = data.liked
     likeCount.value = data.count ?? likeCount.value
+    likedStore.setLiked(postId, data.liked)
   } catch {
     // ignore
   }
