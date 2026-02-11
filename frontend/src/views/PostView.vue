@@ -84,7 +84,7 @@
         <h2>Comments</h2>
         <div v-if="auth.isLoggedIn" class="comment-form">
           <textarea v-model="newComment" placeholder="Add a comment…" rows="3"></textarea>
-          <button type="button" class="btn btn-primary btn-sm" @click="addComment">Post</button>
+          <button type="button" class="btn btn-primary btn-sm" @click="() => addComment()">Post</button>
         </div>
         <div class="comment-list">
           <CommentThread
@@ -219,7 +219,7 @@ async function load() {
       bookmarked.value = bookmarkRes.data?.bookmarked ?? false
       reposted.value = repostRes.data?.reposted ?? false
     }
-    repostCount.value = post.value?._count?.reposts ?? 0
+    repostCount.value = (post.value?._count as { reposts?: number } | undefined)?.reposts ?? 0
   } finally {
     loading.value = false
   }

@@ -4,8 +4,8 @@
     <div v-if="loading" class="loading">Loading…</div>
     <div v-else-if="notifications.length === 0" class="empty">No notifications yet.</div>
     <ul v-else class="notification-list">
-      <li v-for="n in notifications" :key="n.id" class="notification-item" :class="{ unread: !n.readAt }">
-        <router-link :to="notificationLink(n)" class="notification-link" @click="markRead(n.id)">
+      <li v-for="n in notifications" :key="notifId(n)" class="notification-item" :class="{ unread: !n.readAt }">
+        <router-link :to="notificationLink(n)" class="notification-link" @click="markRead(notifId(n))">
           <img v-if="n.actor?.avatarUrl" :src="avatarSrc(n.actor.avatarUrl)" alt="" class="notif-avatar" />
           <span v-else class="notif-avatar-placeholder">{{ (n.actor?.displayName || n.actor?.username || '?')[0] }}</span>
           <div class="notif-body">
@@ -22,6 +22,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { api, apiBaseUrl } from '@/api/client'
+import { useNotificationsStore } from '@/stores/notifications'
 
 function avatarSrc(url: string | null | undefined) {
   if (!url) return ''
@@ -29,8 +30,18 @@ function avatarSrc(url: string | null | undefined) {
   return apiBaseUrl + url
 }
 
-const notifications = ref<Record<string, unknown>[]>([])
+type NotifRecord = Record<string, unknown> & {
+  id?: string
+  type?: string
+  readAt?: string | null
+  createdAt?: string
+  actor?: { displayName?: string; username?: string; avatarUrl?: string | null }
+  postId?: string
+}
+
+const notifications = ref<NotifRecord[]>([])
 const loading = ref(true)
+const notificationsStore = useNotificationsStore()
 
 onMounted(async () => {
   try {
@@ -41,7 +52,11 @@ onMounted(async () => {
   }
 })
 
-function notificationText(n: Record<string, unknown>) {
+function notifId(n: NotifRecord) {
+  return String(n.id ?? '')
+}
+
+function notificationText(n: NotifRecord) {
   const actor = (n.actor as { displayName?: string; username?: string })?.displayName || (n.actor as { username?: string })?.username || 'Someone'
   switch (n.type) {
     case 'LIKE':
@@ -57,10 +72,10 @@ function notificationText(n: Record<string, unknown>) {
   }
 }
 
-function notificationLink(n: Record<string, unknown>) {
+function notificationLink(n: NotifRecord) {
   const postId = n.postId as string | undefined
   if (postId) return `/posts/${postId}`
-  const username = (n.actor as { username?: string })?.username
+  const username = n.actor?.username
   if (username) return `/u/${username}`
   return '/feed'
 }
@@ -79,8 +94,8 @@ function formatDate(s: string | undefined) {
 async function markRead(id: string) {
   try {
     await api.post(`/notifications/${id}/read`)
-    const idx = notifications.value.findIndex((n) => (n as { id: string }).id === id)
-    if (idx >= 0) (notifications.value[idx] as Record<string, unknown>).readAt = new Date().toISOString()
+    const idx = notifications.value.findIndex((n) => notifId(n) === id)
+    if (idx >= 0) (notifications.value[idx] as NotifRecord).readAt = new Date().toISOString()
     await notificationsStore.fetchUnreadCount()
   } catch {
     // ignore

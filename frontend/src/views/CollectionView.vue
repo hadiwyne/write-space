@@ -12,9 +12,9 @@
       <div v-if="collection.items?.length === 0" class="empty">No posts in this collection yet.</div>
       <div v-else class="post-list">
         <PostCard
-          v-for="p in collection.items"
+          v-for="p in (collection.items ?? [])"
           :key="postKey(p)"
-          :post="p"
+          :post="postAsRecord(p)"
         />
       </div>
     </template>
@@ -28,12 +28,20 @@ import { useRoute } from 'vue-router'
 import { api } from '@/api/client'
 import PostCard from '@/components/PostCard.vue'
 
-function postKey(p: Record<string, unknown>) {
+function postKey(p: Record<string, unknown> | unknown) {
   return String((p as { id?: string }).id ?? '')
 }
 
+function postAsRecord(p: unknown): Record<string, unknown> {
+  return p as Record<string, unknown>
+}
+
 const route = useRoute()
-const collection = ref<Record<string, unknown> | null>(null)
+type CollectionWithUser = Record<string, unknown> & {
+  user?: { username?: string; displayName?: string }
+  items?: unknown[]
+}
+const collection = ref<CollectionWithUser | null>(null)
 const loading = ref(true)
 
 async function load() {

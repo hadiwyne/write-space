@@ -7,7 +7,7 @@
     <div v-else class="post-list">
       <PostCard
         v-for="p in posts"
-        :key="p.id"
+        :key="postKey(p)"
         :post="p"
         :show-actions="true"
         :archived-mode="true"
@@ -37,6 +37,10 @@ import ConfirmModal from '@/components/ConfirmModal.vue'
 
 const posts = ref<Record<string, unknown>[]>([])
 const loading = ref(true)
+
+function postKey(p: Record<string, unknown>) {
+  return String((p as { id?: string }).id ?? '')
+}
 const deleteConfirmOpen = ref(false)
 const deleteConfirmPostId = ref<string | null>(null)
 

@@ -67,7 +67,7 @@ const CROP_SIZE = 280
 const RADIUS = CROP_SIZE / 2
 const OUTPUT_SIZE = 256
 
-const props = withDefaults(
+withDefaults(
   defineProps<{
     /** Current avatar URL (for showing "current" state when no crop in progress) */
     currentPreviewUrl?: string | null

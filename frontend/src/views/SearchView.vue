@@ -14,19 +14,19 @@
       <div v-if="tab === 'posts'" class="results">
         <div v-if="posts.length === 0" class="empty">No posts found.</div>
         <div v-else class="post-list">
-          <PostCard v-for="p in posts" :key="p.id" :post="p" />
+          <PostCard v-for="p in posts" :key="postKey(p)" :post="p" />
         </div>
       </div>
       <div v-if="tab === 'users'" class="results">
         <div v-if="users.length === 0" class="empty">No people found.</div>
         <ul v-else class="user-list">
-          <li v-for="u in users" :key="u.id" class="user-item">
-            <router-link :to="`/u/${u.username}`" class="user-link">
-              <img v-if="u.avatarUrl" :src="avatarSrc(u.avatarUrl)" alt="" class="user-avatar" />
-              <span v-else class="user-avatar-placeholder">{{ (u.displayName || u.username || '?')[0] }}</span>
+          <li v-for="u in users" :key="userKey(u)" class="user-item">
+            <router-link :to="`/u/${userUsername(u)}`" class="user-link">
+              <img v-if="userAvatarUrl(u)" :src="avatarSrc(userAvatarUrl(u))" alt="" class="user-avatar" />
+              <span v-else class="user-avatar-placeholder">{{ (userDisplayName(u) || userUsername(u) || '?')[0] }}</span>
               <div class="user-info">
-                <span class="user-name">{{ u.displayName || u.username }}</span>
-                <span class="user-handle">@{{ u.username }}</span>
+                <span class="user-name">{{ userDisplayName(u) || userUsername(u) }}</span>
+                <span class="user-handle">@{{ userUsername(u) }}</span>
               </div>
             </router-link>
           </li>
@@ -49,15 +49,36 @@ function avatarSrc(url: string | null | undefined) {
 }
 
 const route = useRoute()
-const query = ref((route.query.q as string) || '')
+const rawQ = route.query.q
+const query = ref(Array.isArray(rawQ) ? (rawQ[0] ?? '') : (typeof rawQ === 'string' ? rawQ : ''))
 const loading = ref(false)
 const hasSearched = ref(false)
 const tab = ref<'posts' | 'users'>('posts')
 const posts = ref<Record<string, unknown>[]>([])
 const users = ref<Record<string, unknown>[]>([])
 
+function postKey(p: Record<string, unknown>) {
+  return String((p as { id?: string }).id ?? '')
+}
+
+function userKey(u: Record<string, unknown>) {
+  return String((u as { id?: string }).id ?? '')
+}
+
+function userUsername(u: Record<string, unknown>) {
+  return String((u as { username?: string }).username ?? '')
+}
+
+function userDisplayName(u: Record<string, unknown>) {
+  return (u as { displayName?: string }).displayName
+}
+
+function userAvatarUrl(u: Record<string, unknown>) {
+  return (u as { avatarUrl?: string | null }).avatarUrl
+}
+
 async function search() {
-  const q = query.value.trim()
+  const q = typeof query.value === 'string' ? query.value.trim() : ''
   if (!q) return
   loading.value = true
   hasSearched.value = true
@@ -74,11 +95,14 @@ async function search() {
 }
 
 watch(() => route.query.q, (q) => {
-  query.value = q || ''
-  if (q?.trim()) search()
+  const val = Array.isArray(q) ? (q[0] ?? '') : (typeof q === 'string' ? q : '')
+  query.value = val
+  if (typeof val === 'string' && val.trim()) search()
 })
 onMounted(() => {
-  if (route.query.q?.trim()) search()
+  const q = route.query.q
+  const val = Array.isArray(q) ? (q[0] ?? '') : (typeof q === 'string' ? q : '')
+  if (typeof val === 'string' && val.trim()) search()
 })
 </script>
 

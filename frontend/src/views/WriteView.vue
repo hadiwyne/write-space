@@ -71,7 +71,7 @@
         <button type="button" class="btn btn-sm btn-outline" @click="useServer">Use server version</button>
       </div>
       <div class="actions">
-        <button type="button" class="btn btn-outline" @click="saveDraft" :disabled="savingDraft">Save draft</button>
+        <button type="button" class="btn btn-outline" @click="() => saveDraft()" :disabled="savingDraft">Save draft</button>
         <button type="submit" class="btn btn-primary" :disabled="loading">Publish</button>
       </div>
     </form>
@@ -79,7 +79,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/api/client'
 import { renderPreview, type ContentType } from '@/utils/preview'
@@ -144,7 +144,7 @@ async function saveDraft(silent = false) {
   } catch (e: unknown) {
     const err = e as { response?: { status: number; data?: { serverDraft?: unknown } } }
     if (err.response?.status === 409 && err.response?.data?.serverDraft) {
-      conflictDraft.value = err.response.data.serverDraft as typeof conflictDraft.value
+      conflictDraft.value = err.response.data.serverDraft as unknown as typeof conflictDraft.value
     } else {
       error.value = (e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to save draft'
     }

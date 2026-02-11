@@ -62,7 +62,7 @@
           <div v-else class="post-list">
             <div
               v-for="(item, i) in combinedFeed"
-              :key="item.type === 'repost' ? 'r-' + item.post.id : item.post.id"
+              :key="feedItemKey(item)"
               class="feed-item-wrap"
             >
               <RepostCard
@@ -189,6 +189,12 @@ const likedLoading = ref(false)
 const profileTab = ref<'posts' | 'liked'>('posts')
 
 type FeedItem = { type: 'post'; post: Record<string, unknown> } | { type: 'repost'; post: Record<string, unknown>; repostedAt: string }
+
+function feedItemKey(item: FeedItem) {
+  const id = (item.post as { id?: string }).id
+  return item.type === 'repost' ? `r-${id ?? ''}` : String(id ?? '')
+}
+
 const combinedFeed = computed<FeedItem[]>(() => {
   const repostItems: FeedItem[] = (reposts.value as { repostedAt?: string }[]).map((r) => ({
     type: 'repost' as const,

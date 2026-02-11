@@ -8,7 +8,7 @@
     </div>
     <div v-if="collections.length === 0 && !loading" class="empty">No collections yet. Create one to get started.</div>
     <ul v-else class="collection-list">
-      <li v-for="c in collections" :key="c.id" class="collection-item">
+      <li v-for="c in collections" :key="collectionKey(c)" class="collection-item">
         <router-link :to="collectionLink(c)" class="collection-link">
           <span class="collection-title">{{ c.title }}</span>
           <span class="collection-count">{{ itemCount(c) }} posts</span>
@@ -45,6 +45,10 @@ import { api } from '@/api/client'
 const router = useRouter()
 const collections = ref<Record<string, unknown>[]>([])
 const loading = ref(true)
+
+function collectionKey(c: Record<string, unknown>) {
+  return String((c as { id?: string }).id ?? '')
+}
 
 function itemCount(c: Record<string, unknown>) {
   return (c as { _count?: { items: number } })._count?.items ?? 0

@@ -133,7 +133,7 @@ const FontSizeExtension = Extension.create({
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ({ chain }: { chain: () => any }) =>
           chain().setMark('textStyle', { fontSize: null }).run(),
-    }
+    } as Record<string, unknown>
   },
 })
 
@@ -192,8 +192,9 @@ watch(
 )
 
 function setFontSize(value: string) {
-  if (!value) editor.value?.chain().focus().unsetFontSize().run()
-  else editor.value?.chain().focus().setFontSize(value).run()
+  const c = editor.value?.chain().focus() as unknown as { unsetFontSize: () => { run: () => void }; setFontSize: (v: string) => { run: () => void }; run: () => void }
+  if (!value) c?.unsetFontSize().run()
+  else c?.setFontSize(value).run()
 }
 
 function setHeading(value: string) {
