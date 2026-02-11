@@ -96,7 +96,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { api, apiBaseUrl } from '@/api/client'
+import { api, apiBaseUrl, avatarSrc } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import { useLikedPostsStore } from '@/stores/likedPosts'
 
@@ -162,11 +162,6 @@ function onUnarchive() {
 }
 function onRepost() {
   emit('repost', props.post.id)
-}
-function avatarSrc(url: string | null | undefined) {
-  if (!url) return ''
-  if (url.startsWith('http')) return url
-  return apiBaseUrl + url
 }
 const excerpt = computed(() => {
   const raw = (props.post.content || props.post.renderedHTML || '')

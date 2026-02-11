@@ -21,14 +21,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { api, apiBaseUrl } from '@/api/client'
+import { api, apiBaseUrl, avatarSrc } from '@/api/client'
 import { useNotificationsStore } from '@/stores/notifications'
-
-function avatarSrc(url: string | null | undefined) {
-  if (!url) return ''
-  if (url.startsWith('http')) return url
-  return apiBaseUrl + url
-}
 
 type NotifRecord = Record<string, unknown> & {
   id?: string

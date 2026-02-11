@@ -109,7 +109,7 @@ import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationsStore } from '@/stores/notifications'
-import { apiBaseUrl } from '@/api/client'
+import { apiBaseUrl, avatarSrc } from '@/api/client'
 import type { NotificationItem } from '@/stores/notifications'
 
 const auth = useAuthStore()
@@ -126,11 +126,6 @@ const headerVisible = ref(true)
 const lastScrollY = ref(0)
 const scrollThreshold = 10
 
-function avatarSrc(url: string | null | undefined) {
-  if (!url) return ''
-  if (url.startsWith('http')) return url
-  return apiBaseUrl + url
-}
 
 function closeDropdown() {
   dropdownOpen.value = false

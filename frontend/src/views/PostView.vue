@@ -123,17 +123,11 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRoute } from 'vue-router'
-import { api, apiBaseUrl } from '@/api/client'
+import { api, apiBaseUrl, avatarSrc } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import { useLikedPostsStore } from '@/stores/likedPosts'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import CommentThread from '@/components/CommentThread.vue'
-
-function avatarSrc(url: string | null | undefined) {
-  if (!url) return ''
-  if (url.startsWith('http')) return url
-  return apiBaseUrl + url
-}
 
 function collectionId(c: { id: string; title: string }) {
   return c.id

@@ -135,8 +135,8 @@ export class UsersService {
     const uploadsDir = join(process.cwd(), 'uploads', 'avatars');
     await mkdir(uploadsDir, { recursive: true });
     await writeFile(join(uploadsDir, filename), buffer);
-    const baseUrl = (this.config.get<string>('API_PUBLIC_URL') || `http://localhost:${this.config.get('PORT', 3000)}`).replace(/\/$/, '');
-    const avatarUrl = `${baseUrl}/uploads/avatars/${filename}`;
+    // Store relative path so the frontend can prefix its own API base (works across origins and avoids API_PUBLIC_URL misuse).
+    const avatarUrl = `/uploads/avatars/${filename}`;
     return this.prisma.user.update({
       where: { id: userId },
       data: { avatarUrl },

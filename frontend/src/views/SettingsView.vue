@@ -44,7 +44,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { api, apiBaseUrl } from '@/api/client'
+import { api, apiBaseUrl, avatarSrc } from '@/api/client'
 import AvatarUploadCrop from '@/components/AvatarUploadCrop.vue'
 
 const auth = useAuthStore()
@@ -57,11 +57,6 @@ const error = ref('')
 const success = ref('')
 const saving = ref(false)
 
-function avatarSrc(url: string | null | undefined) {
-  if (!url) return ''
-  if (url.startsWith('http')) return url
-  return apiBaseUrl + url
-}
 
 onMounted(() => {
   if (auth.user) {

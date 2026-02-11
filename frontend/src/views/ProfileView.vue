@@ -166,7 +166,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { api, apiBaseUrl } from '@/api/client'
+import { api, apiBaseUrl, avatarSrc } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import PostCard from '@/components/PostCard.vue'
 import RepostCard from '@/components/RepostCard.vue'
@@ -236,11 +236,6 @@ const totalPosts = computed(() => {
   const repostsCount = p?.reposts ?? 0
   return postsCount + repostsCount
 })
-function avatarSrc(url: string | null | undefined) {
-  if (!url) return ''
-  if (url.startsWith('http')) return url
-  return apiBaseUrl + url
-}
 
 async function load() {
   const username = route.params.username as string
