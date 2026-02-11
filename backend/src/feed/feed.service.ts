@@ -15,6 +15,27 @@ const baseWhere = { isPublished: true, archivedAt: null };
 export class FeedService {
   constructor(private prisma: PrismaService) {}
 
+  /** Posts only from people the user follows (not the user's own posts). Requires userId. */
+  async getFriends(userId: string, limit = 20, offset = 0, tag?: string) {
+    const following = await this.prisma.follow.findMany({
+      where: { followerId: userId },
+      select: { followingId: true },
+    });
+    const authorIds = following.map((f) => f.followingId);
+    const where = {
+      ...baseWhere,
+      authorId: { in: authorIds },
+      ...(tag ? { tags: { has: tag } } : {}),
+    };
+    return this.prisma.post.findMany({
+      where,
+      orderBy: { publishedAt: 'desc' },
+      take: limit,
+      skip: offset,
+      include: postInclude(userId),
+    });
+  }
+
   async getChronological(userId: string | null, limit = 20, offset = 0, tag?: string) {
     const visibilityFilter = userId
       ? {

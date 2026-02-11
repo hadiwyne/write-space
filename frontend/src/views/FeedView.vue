@@ -24,6 +24,15 @@
           <i class="pi pi-bolt"></i>
           Popular
         </button>
+        <button
+          type="button"
+          class="filter-tab"
+          :class="{ active: sort === 'friends' }"
+          @click="sort = 'friends'; load()"
+        >
+          <i class="pi pi-users"></i>
+          Friends
+        </button>
       </div>
       <div class="filter-tag">
         <input
@@ -59,7 +68,15 @@
 
     <div v-if="loading" class="feed-loading">Loading…</div>
     <div v-else-if="posts.length === 0" class="feed-empty">
-      No posts yet. <router-link to="/write">Write</router-link> one.
+      <template v-if="sort === 'friends' && !auth.token">
+        <router-link to="/login">Log in</router-link> to see posts from people you follow.
+      </template>
+      <template v-else-if="sort === 'friends'">
+        No posts from people you follow yet. Follow some <router-link to="/search">people</router-link> to fill this feed.
+      </template>
+      <template v-else>
+        No posts yet. <router-link to="/write">Write</router-link> one.
+      </template>
     </div>
     <div v-else class="post-list" :class="{ 'post-list--grid': viewMode === 'grid' }">
       <PostCard
@@ -89,7 +106,7 @@ const route = useRoute()
 const auth = useAuthStore()
 const posts = ref<FeedPost[]>([])
 const loading = ref(true)
-const sort = ref<'latest' | 'popular'>('latest')
+const sort = ref<'latest' | 'popular' | 'friends'>('latest')
 const tagFilter = ref('')
 const viewMode = ref<'list' | 'grid'>('list')
 const repostedIds = ref<Set<string>>(new Set())
@@ -126,6 +143,7 @@ async function load() {
   try {
     const params = new URLSearchParams()
     if (sort.value === 'popular') params.set('sort', 'popular')
+    if (sort.value === 'friends') params.set('sort', 'friends')
     if (tagFilter.value.trim()) params.set('tag', tagFilter.value.trim())
     const { data } = await api.get(`/feed?${params.toString()}`)
     posts.value = Array.isArray(data) ? data : []
