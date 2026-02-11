@@ -10,8 +10,9 @@ export class FollowService {
   ) {}
 
   async isFollowing(followerId: string, username: string): Promise<boolean> {
-    const target = await this.prisma.user.findUnique({ where: { username } });
+    const target = await this.prisma.user.findUnique({ where: { username }, select: { id: true, isSuperadmin: true } });
     if (!target) throw new NotFoundException('User not found');
+    if ((target as { isSuperadmin?: boolean }).isSuperadmin && target.id !== followerId) throw new NotFoundException('User not found');
     if (target.id === followerId) return false; // can't "follow" yourself
     const follow = await this.prisma.follow.findUnique({
       where: { followerId_followingId: { followerId, followingId: target.id } },
@@ -20,8 +21,9 @@ export class FollowService {
   }
 
   async follow(followerId: string, username: string) {
-    const target = await this.prisma.user.findUnique({ where: { username } });
+    const target = await this.prisma.user.findUnique({ where: { username }, select: { id: true, isSuperadmin: true } });
     if (!target) throw new NotFoundException('User not found');
+    if ((target as { isSuperadmin?: boolean }).isSuperadmin) throw new NotFoundException('User not found');
     if (target.id === followerId) throw new BadRequestException('You cannot follow yourself');
     await this.prisma.follow.upsert({
       where: { followerId_followingId: { followerId, followingId: target.id } },
@@ -37,8 +39,9 @@ export class FollowService {
   }
 
   async unfollow(followerId: string, username: string) {
-    const target = await this.prisma.user.findUnique({ where: { username } });
+    const target = await this.prisma.user.findUnique({ where: { username }, select: { id: true, isSuperadmin: true } });
     if (!target) throw new NotFoundException('User not found');
+    if ((target as { isSuperadmin?: boolean }).isSuperadmin) throw new NotFoundException('User not found');
     await this.prisma.follow.deleteMany({
       where: { followerId, followingId: target.id },
     });
@@ -49,7 +52,7 @@ export class FollowService {
     const user = await this.prisma.user.findUnique({ where: { username } });
     if (!user) throw new NotFoundException('User not found');
     const follows = await this.prisma.follow.findMany({
-      where: { followingId: user.id },
+      where: { followingId: user.id, follower: { isSuperadmin: false } },
       take: limit,
       skip: offset,
       orderBy: { createdAt: 'desc' },
@@ -66,7 +69,7 @@ export class FollowService {
     const user = await this.prisma.user.findUnique({ where: { username } });
     if (!user) throw new NotFoundException('User not found');
     const follows = await this.prisma.follow.findMany({
-      where: { followerId: user.id },
+      where: { followerId: user.id, following: { isSuperadmin: false } },
       take: limit,
       skip: offset,
       orderBy: { createdAt: 'desc' },

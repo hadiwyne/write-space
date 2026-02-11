@@ -21,6 +21,7 @@ import { FollowService } from './follow.service';
 import { RepostsService } from '../reposts/reposts.service';
 import { LikesService } from '../likes/likes.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { Public } from '../auth/public.decorator';
@@ -141,7 +142,10 @@ export class UsersController {
 
   @Public()
   @Get(':username')
-  getByUsername(@Param('username') username: string) {
-    return this.usersService.findByUsername(username);
+  @UseGuards(OptionalJwtAuthGuard)
+  async getByUsername(@Param('username') username: string, @CurrentUser() user: { id: string } | null) {
+    const profile = await this.usersService.findByUsername(username, user?.id);
+    if (!profile) throw new NotFoundException('User not found');
+    return profile;
   }
 }

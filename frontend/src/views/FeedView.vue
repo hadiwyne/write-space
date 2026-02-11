@@ -83,11 +83,14 @@
         v-for="(p, i) in posts"
         :key="p.id"
         :post="p"
+        :show-actions="canShowActions(p)"
         :show-repost="!!auth.token"
         :reposted="repostedIds.has(p.id)"
         :style="{ animationDelay: `${0.1 * i}s` }"
         @repost="handleRepost"
         @like="handleLike"
+        @archive="handleArchive"
+        @delete="handleDelete"
       />
     </div>
   </div>
@@ -135,6 +138,31 @@ function handleLike(postId: string, isLiked: boolean) {
     } else {
       p.likes = []
     }
+  }
+}
+
+function canShowActions(p: FeedPost): boolean {
+  const u = auth.user
+  if (!u?.id) return false
+  const authorId = (p as { author?: { id?: string } }).author?.id
+  return authorId === u.id || !!u.isSuperadmin
+}
+
+async function handleArchive(postId: string) {
+  try {
+    await api.patch(`/posts/${postId}/archive`)
+    posts.value = posts.value.filter((x) => x.id !== postId)
+  } catch {
+    // ignore
+  }
+}
+
+async function handleDelete(postId: string) {
+  try {
+    await api.delete(`/posts/${postId}`)
+    posts.value = posts.value.filter((x) => x.id !== postId)
+  } catch {
+    // ignore
   }
 }
 

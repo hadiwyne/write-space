@@ -87,16 +87,17 @@ export class PostsController {
   @Get()
   @UseGuards(OptionalJwtAuthGuard)
   findAll(
-    @CurrentUser() user: { id: string } | null,
+    @CurrentUser() user: { id: string; isSuperadmin?: boolean } | null,
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
     @Query('author') author?: string,
   ) {
     const userId = user?.id ?? null;
+    const isSuperadmin = !!user?.isSuperadmin;
     if (author) {
       return this.postsService.findByAuthor(author, Number(limit) || 20, Number(offset) || 0, userId);
     }
-    return this.postsService.findAll(Number(limit) || 20, Number(offset) || 0, userId);
+    return this.postsService.findAll(Number(limit) || 20, Number(offset) || 0, userId, isSuperadmin);
   }
 
   @Public()
@@ -105,12 +106,12 @@ export class PostsController {
   async export(
     @Param('id') id: string,
     @Query('format') format: string,
-    @CurrentUser() user: { id: string } | null,
+    @CurrentUser() user: { id: string; isSuperadmin?: boolean } | null,
     @Res() res: Response,
   ) {
     const fmt = (format || 'html').toLowerCase();
     if (fmt !== 'html' && fmt !== 'docx') throw new BadRequestException('Format must be html or docx');
-    const result = await this.postsService.export(id, fmt, user?.id ?? null);
+    const result = await this.postsService.export(id, fmt, user?.id ?? null, !!user?.isSuperadmin);
     const ext = result.format === 'docx' ? 'docx' : 'html';
     const mime = result.format === 'docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'text/html';
     res.setHeader('Content-Disposition', `attachment; filename="${result.filename}.${ext}"`);
@@ -156,8 +157,8 @@ export class PostsController {
 
   @Get(':id')
   @UseGuards(OptionalJwtAuthGuard)
-  findOne(@Param('id') id: string, @CurrentUser() user?: { id: string } | null) {
-    return this.postsService.findOnePublic(id, user?.id);
+  findOne(@Param('id') id: string, @CurrentUser() user?: { id: string; isSuperadmin?: boolean } | null) {
+    return this.postsService.findOnePublic(id, user?.id, !!user?.isSuperadmin);
   }
 
   @Patch(':id')
@@ -180,7 +181,7 @@ export class PostsController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
-  remove(@Param('id') id: string, @CurrentUser() user: { id: string }) {
-    return this.postsService.remove(id, user.id);
+  remove(@Param('id') id: string, @CurrentUser() user: { id: string; isSuperadmin?: boolean }) {
+    return this.postsService.remove(id, user.id, !!user.isSuperadmin);
   }
 }

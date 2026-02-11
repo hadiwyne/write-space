@@ -77,7 +77,7 @@
               <PostCard
                 v-else
                 :post="item.post"
-                :show-actions="!!isOwnProfile"
+                :show-actions="!!isOwnProfile || !!auth.user?.isSuperadmin"
                 :style="{ animationDelay: `${0.05 * i}s` }"
                 @archive="archivePostFromList"
                 @delete="deletePostFromList"

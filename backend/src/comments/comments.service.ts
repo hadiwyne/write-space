@@ -102,10 +102,10 @@ export class CommentsService {
     });
   }
 
-  async remove(id: string, userId: string) {
+  async remove(id: string, userId: string, isSuperadmin = false) {
     const comment = await this.prisma.comment.findUnique({ where: { id } });
     if (!comment) throw new NotFoundException('Comment not found');
-    if (comment.authorId !== userId) throw new ForbiddenException('Not your comment');
+    if (!isSuperadmin && comment.authorId !== userId) throw new ForbiddenException('Not your comment');
     await this.prisma.comment.delete({ where: { id } });
     return { deleted: true };
   }

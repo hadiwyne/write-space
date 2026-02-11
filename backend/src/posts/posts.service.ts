@@ -67,16 +67,18 @@ export class PostsService {
     return post;
   }
 
-  async findAll(limit = 20, offset = 0, userId?: string | null) {
-    const visibilityFilter = userId
-      ? {
-          OR: [
-            { visibility: 'PUBLIC' as const },
-            { visibility: 'FOLLOWERS_ONLY' as const, author: { followers: { some: { followerId: userId } } } },
-            { visibility: 'FOLLOWERS_ONLY' as const, authorId: userId },
-          ],
-        }
-      : { visibility: 'PUBLIC' as const };
+  async findAll(limit = 20, offset = 0, userId?: string | null, isSuperadmin = false) {
+    const visibilityFilter = isSuperadmin
+      ? {}
+      : userId
+        ? {
+            OR: [
+              { visibility: 'PUBLIC' as const },
+              { visibility: 'FOLLOWERS_ONLY' as const, author: { followers: { some: { followerId: userId } } } },
+              { visibility: 'FOLLOWERS_ONLY' as const, authorId: userId },
+            ],
+          }
+        : { visibility: 'PUBLIC' as const };
     return this.prisma.post.findMany({
       where: { isPublished: true, archivedAt: null, ...visibilityFilter },
       orderBy: { publishedAt: 'desc' },
@@ -102,8 +104,12 @@ export class PostsService {
     return post;
   }
 
-  async findOnePublic(id: string, userId?: string) {
+  async findOnePublic(id: string, userId?: string, isSuperadmin = false) {
     const post = await this.findOne(id);
+    if (isSuperadmin) {
+      await this.prisma.post.update({ where: { id }, data: { viewCount: { increment: 1 } } });
+      return this.findOne(id);
+    }
     const isAuthor = userId && post.authorId === userId;
     if (!post.isPublished) throw new NotFoundException('Post not found');
     if (post.archivedAt && !isAuthor) throw new NotFoundException('Post not found');
@@ -165,10 +171,10 @@ export class PostsService {
     });
   }
 
-  async remove(id: string, userId: string) {
+  async remove(id: string, userId: string, isSuperadmin = false) {
     const post = await this.prisma.post.findUnique({ where: { id } });
     if (!post) throw new NotFoundException('Post not found');
-    if (post.authorId !== userId) throw new ForbiddenException('Not your post');
+    if (!isSuperadmin && post.authorId !== userId) throw new ForbiddenException('Not your post');
     await this.prisma.post.delete({ where: { id } });
     return { deleted: true };
   }
@@ -238,8 +244,9 @@ export class PostsService {
     id: string,
     format: string,
     userId: string | null,
+    isSuperadmin = false,
   ): Promise<{ format: string; filename: string; buffer: Buffer }> {
-    const post = await this.findOnePublic(id, userId ?? undefined);
+    const post = await this.findOnePublic(id, userId ?? undefined, isSuperadmin);
     const safeTitle = (post.title || 'post').replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').slice(0, 80);
     const filename = safeTitle || 'export';
     if (format === 'docx') {

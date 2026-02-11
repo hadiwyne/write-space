@@ -35,6 +35,7 @@ export class SearchService {
 
     return this.prisma.user.findMany({
       where: {
+        isSuperadmin: false,
         OR: [
           { username: { contains: term, mode: 'insensitive' } },
           { displayName: { contains: term, mode: 'insensitive' } },
