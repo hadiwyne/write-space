@@ -15,26 +15,40 @@ export interface LinkPreviewData {
 /** Internal post image path – skip these when looking for a link to preview. */
 const POST_IMAGE_PATH = '/posts/images/';
 
+/** Decode common HTML entities in a URL (e.g. &amp; from rich text). */
+function decodeUrl(url: string): string {
+  return url
+    .replace(/&amp;/gi, '&')
+    .replace(/&#38;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"');
+}
+
 /** Extract first HTTP(S) URL from post content that is suitable for link preview. Skips internal post image URLs. */
 export function extractFirstUrl(content: string): string | null {
   if (!content || typeof content !== 'string') return null;
 
-  const skip = (url: string) => url.includes(POST_IMAGE_PATH);
+  const skip = (url: string) => decodeUrl(url).includes(POST_IMAGE_PATH);
+  const take = (url: string) => (skip(url) ? null : decodeUrl(url));
 
   // Markdown [text](url) – check all and take first non-image
   const mdLinks = content.matchAll(/\[[^\]]*\]\((https?:\/\/[^)\s]+)\)/g);
   for (const m of mdLinks) {
-    if (!skip(m[1])) return m[1];
+    const u = take(m[1]);
+    if (u) return u;
   }
-  // HTML <a href="url">
-  const aTags = content.matchAll(/<a[^>]+href=["'](https?:\/\/[^"'\s]+)["']/gi);
+  // HTML <a href="url"> – permissive for rich text (optional spaces, any attribute order, URL until closing quote)
+  const aTags = content.matchAll(/<a\s[^>]*href\s*=\s*["'](https?:\/\/[^"']+)["']/gi);
   for (const m of aTags) {
-    if (!skip(m[1])) return m[1];
+    const u = take(m[1]);
+    if (u) return u;
   }
   // Plain URL
   const plainUrls = content.matchAll(/https?:\/\/[^\s<>"']+/g);
   for (const m of plainUrls) {
-    if (!skip(m[0])) return m[0];
+    const u = take(m[0]);
+    if (u) return u;
   }
   return null;
 }
