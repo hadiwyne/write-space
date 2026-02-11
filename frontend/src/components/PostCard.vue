@@ -22,7 +22,7 @@
 
     <router-link :to="'/posts/' + post.id" class="card-body">
       <h2 class="card-title">{{ post.title }}</h2>
-      <p class="card-excerpt">{{ excerpt }}</p>
+      <p v-if="excerpt" class="card-excerpt">{{ excerpt }}</p>
       <div v-if="postImageUrls.length" class="card-thumbnails">
         <img
           v-for="(url, i) in postImageUrls"
@@ -173,12 +173,6 @@ function onUnarchive() {
 function onRepost() {
   emit('repost', props.post.id)
 }
-const excerpt = computed(() => {
-  const raw = (props.post.content || props.post.renderedHTML || '')
-  const text = raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-  return text.slice(0, 160) + (text.length > 160 ? '…' : '')
-})
-
 /** Extract image URLs from post (rendered HTML or markdown) for thumbnail preview. Max 4. */
 const postImageUrls = computed(() => {
   const html = props.post.renderedHTML || ''
@@ -197,6 +191,18 @@ const postImageUrls = computed(() => {
     }
   }
   return urls.slice(0, 4)
+})
+
+/** Excerpt from rendered HTML first (so markdown shows as plain text, not raw syntax). Strip image URLs so we never show them. */
+const excerpt = computed(() => {
+  const raw = props.post.renderedHTML || props.post.content || ''
+  let text = raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+  postImageUrls.value.forEach((url) => {
+    text = text.split(url).join(' ')
+  })
+  text = text.replace(/\s+/g, ' ').trim()
+  if (!text) return ''
+  return text.slice(0, 160) + (text.length > 160 ? '…' : '')
 })
 const readTime = computed(() => {
   const raw = (props.post.content || props.post.renderedHTML || '')
