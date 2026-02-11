@@ -23,7 +23,7 @@
     <router-link :to="'/posts/' + post.id" class="card-body">
       <h2 class="card-title">{{ post.title }}</h2>
       <p v-if="excerpt" class="card-excerpt">{{ excerpt }}</p>
-      <div v-if="postImageUrls.length" class="card-thumbnails">
+      <div v-if="postImageUrls.length" class="card-thumbnails" :class="'card-thumbnails--' + postImageUrls.length">
         <img
           v-for="(url, i) in postImageUrls"
           :key="i"
@@ -343,12 +343,28 @@ function formatDate(s: string | undefined) {
   flex-wrap: wrap;
 }
 .card-thumb {
-  width: 72px;
-  height: 72px;
   object-fit: cover;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-light);
   background: var(--bg-primary);
+}
+/* One image: large preview */
+.card-thumbnails--1 .card-thumb {
+  width: 100%;
+  max-width: 420px;
+  height: 240px;
+}
+/* Two images: medium, side by side */
+.card-thumbnails--2 .card-thumb {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 160px;
+}
+/* Three or four: small grid */
+.card-thumbnails--3 .card-thumb,
+.card-thumbnails--4 .card-thumb {
+  width: 72px;
+  height: 72px;
 }
 .card-tags {
   display: flex;
