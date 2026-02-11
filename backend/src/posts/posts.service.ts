@@ -1,11 +1,24 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ContentType } from '@prisma/client';
+import sharp from 'sharp';
 import { PrismaService } from '../prisma/prisma.service';
 import { MarkdownRenderer } from './renderers/markdown.renderer';
 import { HtmlRenderer } from './renderers/html.renderer';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
+
+export const MAX_IMAGES_PER_POST = 5;
+
+/** Count image references in post content (markdown ![alt](url) or HTML <img). */
+function countImagesInContent(content: string, contentType: ContentType): number {
+  if (!content) return 0;
+  if (contentType === 'MARKDOWN') {
+    const matches = content.matchAll(/!\[[^\]]*\]\([^)]+\)/g);
+    return [...matches].length;
+  }
+  return (content.match(/<img\s/gi) || []).length;
+}
 
 @Injectable()
 export class PostsService {
@@ -29,6 +42,10 @@ export class PostsService {
   }
 
   async create(authorId: string, dto: CreatePostDto) {
+    const count = countImagesInContent(dto.content, dto.contentType);
+    if (count > MAX_IMAGES_PER_POST) {
+      throw new BadRequestException(`A post can have at most ${MAX_IMAGES_PER_POST} images. This post has ${count}.`);
+    }
     const renderedHTML = this.renderContent(dto.content, dto.contentType);
     return this.prisma.post.create({
       data: {
@@ -103,6 +120,13 @@ export class PostsService {
     const post = await this.prisma.post.findUnique({ where: { id } });
     if (!post) throw new NotFoundException('Post not found');
     if (post.authorId !== userId) throw new ForbiddenException('Not your post');
+    if (dto.content != null) {
+      const contentType = dto.contentType ?? post.contentType;
+      const count = countImagesInContent(dto.content, contentType);
+      if (count > MAX_IMAGES_PER_POST) {
+        throw new BadRequestException(`A post can have at most ${MAX_IMAGES_PER_POST} images. This post has ${count}.`);
+      }
+    }
     const renderedHTML = dto.content != null ? this.renderContent(dto.content, dto.contentType ?? post.contentType) : undefined;
     return this.prisma.post.update({
       where: { id },
@@ -229,10 +253,29 @@ export class PostsService {
     return Packer.toBuffer(doc);
   }
 
-  /** Save post image to database (persists on ephemeral hosts; no external storage). Returns URL for embedding in content. */
+  /** Compress image for web (max width 1600, quality 82). Returns buffer and mime type. */
+  private async compressPostImage(buffer: Buffer, mimeType: string): Promise<{ buffer: Buffer; mimeType: string }> {
+    try {
+      const pipeline = sharp(buffer)
+        .resize(1600, 1600, { fit: 'inside', withoutEnlargement: true })
+        .rotate(); // auto-orient from EXIF
+      const isPng = mimeType === 'image/png';
+      const output = isPng
+        ? pipeline.png({ quality: 85, compressionLevel: 6 })
+        : pipeline.jpeg({ quality: 82, mozjpeg: true }); // jpeg for jpeg/gif/webp
+      const outBuffer = await output.toBuffer();
+      const outMime = isPng ? 'image/png' : 'image/jpeg';
+      return { buffer: outBuffer, mimeType: outMime };
+    } catch {
+      return { buffer, mimeType };
+    }
+  }
+
+  /** Save post image to database (persists on ephemeral hosts; no external storage). Compresses image. Returns URL for embedding in content. */
   async uploadPostImage(userId: string, buffer: Buffer, mimeType: string): Promise<{ url: string }> {
+    const { buffer: compressed, mimeType: outMime } = await this.compressPostImage(buffer, mimeType);
     const image = await this.prisma.postImage.create({
-      data: { userId, data: buffer, mimeType },
+      data: { userId, data: compressed, mimeType: outMime },
     });
     const baseUrl = (this.config.get<string>('API_PUBLIC_URL') || `http://localhost:${this.config.get('PORT', 3000)}`).replace(/\/$/, '');
     const url = `${baseUrl}/posts/images/${image.id}`;

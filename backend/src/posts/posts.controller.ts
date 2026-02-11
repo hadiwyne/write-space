@@ -12,6 +12,7 @@ import {
   UploadedFile,
   BadRequestException,
   NotFoundException,
+  PayloadTooLargeException,
   Res,
   StreamableFile,
   Header,
@@ -28,7 +29,8 @@ import { UpdatePostDto } from './dto/update-post.dto';
 import { BookmarksService } from '../bookmarks/bookmarks.service';
 import { RepostsService } from '../reposts/reposts.service';
 
-const MAX_POST_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+/** Max 2 MB per image (reasonable for web; we compress on upload). */
+export const MAX_POST_IMAGE_SIZE_BYTES = 2 * 1024 * 1024;
 const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
 @Controller('posts')
@@ -49,7 +51,7 @@ export class PostsController {
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(
     FileInterceptor('image', {
-      limits: { fileSize: MAX_POST_IMAGE_SIZE },
+      limits: { fileSize: MAX_POST_IMAGE_SIZE_BYTES },
       fileFilter: (_req, file, cb) => {
         if (!file.mimetype || !ALLOWED_IMAGE_MIMES.includes(file.mimetype)) {
           return cb(null, false);
@@ -60,10 +62,13 @@ export class PostsController {
   )
   uploadImage(
     @CurrentUser() user: { id: string },
-    @UploadedFile() file: { buffer: Buffer; mimetype: string } | undefined,
+    @UploadedFile() file: { buffer: Buffer; mimetype: string; size?: number } | undefined,
   ) {
     if (!file || !file.buffer) {
       throw new BadRequestException('No image file provided');
+    }
+    if (file.size != null && file.size > MAX_POST_IMAGE_SIZE_BYTES) {
+      throw new PayloadTooLargeException('Image must be 2 MB or smaller.');
     }
     return this.postsService.uploadPostImage(user.id, file.buffer, file.mimetype);
   }

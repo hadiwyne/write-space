@@ -29,10 +29,20 @@
         <input ref="wordInputRef" type="file" accept=".docx" class="hidden" @change="onWordUpload" />
         <input ref="imageInputRef" type="file" accept="image/*" class="hidden" @change="onImageUpload" />
         <button type="button" class="btn btn-sm btn-outline" @click="wordInputRef?.click()">Import Word</button>
-        <button v-if="contentType !== 'WYSIWYG'" type="button" class="btn btn-sm btn-outline" @click="imageInputRef?.click()">Insert image</button>
+        <button
+          v-if="contentType !== 'WYSIWYG'"
+          type="button"
+          class="btn btn-sm btn-outline"
+          :disabled="imageCountInContent >= MAX_IMAGES_PER_POST"
+          :title="imageCountInContent >= MAX_IMAGES_PER_POST ? 'Maximum 5 images per post' : undefined"
+          @click="imageInputRef?.click()"
+        >
+          Insert image
+        </button>
         <button v-if="draftId" type="button" class="btn btn-sm btn-outline" @click="loadVersions">Version history</button>
         <span v-if="lastSavedAt" class="saved-hint">Saved {{ lastSavedAt }}</span>
       </div>
+      <p class="upload-hint">Max 2 MB per image. Up to 5 images per post.</p>
       <div v-if="versionsOpen" class="versions-panel">
         <p v-if="versionsLoading">Loading…</p>
         <template v-else-if="versions.length">
@@ -53,6 +63,7 @@
             v-if="contentType === 'WYSIWYG'"
             ref="richEditorRef"
             v-model="content"
+            :can-add-image="imageCountInContent < MAX_IMAGES_PER_POST"
             @image-upload="onRichEditorImageUpload"
           />
           <textarea
@@ -112,6 +123,9 @@ import { api } from '@/api/client'
 import { renderPreview, type ContentType } from '@/utils/preview'
 import RichTextEditor from '@/components/RichTextEditor.vue'
 
+const MAX_IMAGES_PER_POST = 5
+const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024 // 2 MB
+
 const router = useRouter()
 const title = ref('')
 const content = ref('')
@@ -156,6 +170,13 @@ const imageInputRef = ref<HTMLInputElement | null>(null)
 const editorRef = ref<HTMLTextAreaElement | null>(null)
 const richEditorRef = ref<InstanceType<typeof RichTextEditor> | null>(null)
 const previewHtml = computed(() => renderPreview(content.value, contentType.value))
+
+function countImagesInContent(text: string, type: ContentType): number {
+  if (!text) return 0
+  if (type === 'MARKDOWN') return (text.match(/!\[[^\]]*\]\([^)]+\)/g) || []).length
+  return (text.match(/<img\s/gi) || []).length
+}
+const imageCountInContent = computed(() => countImagesInContent(content.value, contentType.value))
 
 function tags(): string[] {
   return tagsStr.value.split(',').map((t) => t.trim()).filter(Boolean)
@@ -289,11 +310,29 @@ async function restoreVersion(versionId: string) {
   }
 }
 
+function getUploadErrorMessage(err: unknown): string {
+  const msg = err && typeof err === 'object' && 'response' in err
+    ? (err.response as { data?: { message?: string | string[] } })?.data?.message
+    : undefined
+  if (Array.isArray(msg)) return msg[0] ?? 'Failed to upload image'
+  if (typeof msg === 'string') return msg
+  return 'Failed to upload image'
+}
+
 async function onImageUpload(e: Event) {
   const input = e.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return
   input.value = ''
+  if (imageCountInContent.value >= MAX_IMAGES_PER_POST) {
+    error.value = 'Maximum 5 images per post.'
+    return
+  }
+  if (file.size > MAX_IMAGE_SIZE_BYTES) {
+    error.value = 'Image must be 2 MB or smaller.'
+    return
+  }
+  error.value = ''
   try {
     const formData = new FormData()
     formData.append('image', file)
@@ -310,19 +349,28 @@ async function onImageUpload(e: Event) {
     } else {
       content.value += insert
     }
-  } catch {
-    error.value = 'Failed to upload image'
+  } catch (err) {
+    error.value = getUploadErrorMessage(err)
   }
 }
 
 async function onRichEditorImageUpload(file: File) {
+  if (imageCountInContent.value >= MAX_IMAGES_PER_POST) {
+    error.value = 'Maximum 5 images per post.'
+    return
+  }
+  if (file.size > MAX_IMAGE_SIZE_BYTES) {
+    error.value = 'Image must be 2 MB or smaller.'
+    return
+  }
+  error.value = ''
   try {
     const formData = new FormData()
     formData.append('image', file)
     const { data } = await api.post<{ url: string }>('/posts/upload-image', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
     richEditorRef.value?.addImage(data.url)
-  } catch {
-    error.value = 'Failed to upload image'
+  } catch (err) {
+    error.value = getUploadErrorMessage(err)
   }
 }
 </script>
@@ -418,6 +466,7 @@ async function onRichEditorImageUpload(file: File) {
 .versions-list { list-style: none; margin: 0; padding: 0; }
 .versions-item { display: flex; align-items: center; justify-content: space-between; padding: 0.35rem 0; font-size: 0.875rem; }
 .btn-ghost { background: transparent; border: none; color: var(--gray-700); cursor: pointer; }
+.upload-hint { font-size: 0.8125rem; color: var(--gray-600); margin: -0.5rem 0 0; }
 .actions { display: flex; gap: 0.75rem; margin-top: 0.5rem; }
 .btn { padding: 0.5rem 1rem; border-radius: var(--radius); border: none; cursor: pointer; font-size: 0.9375rem; }
 .btn-primary { background: var(--primary); color: #fff; }
