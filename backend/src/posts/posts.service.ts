@@ -1,12 +1,13 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ContentType } from '@prisma/client';
+import { ContentType, Prisma } from '@prisma/client';
 import sharp from 'sharp';
 import { PrismaService } from '../prisma/prisma.service';
 import { MarkdownRenderer } from './renderers/markdown.renderer';
 import { HtmlRenderer } from './renderers/html.renderer';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
+import { extractFirstUrl, fetchLinkPreview } from './link-preview.service';
 
 export const MAX_IMAGES_PER_POST = 5;
 
@@ -47,7 +48,7 @@ export class PostsService {
       throw new BadRequestException(`A post can have at most ${MAX_IMAGES_PER_POST} images. This post has ${count}.`);
     }
     const renderedHTML = this.renderContent(dto.content, dto.contentType);
-    return this.prisma.post.create({
+    const post = await this.prisma.post.create({
       data: {
         authorId,
         title: dto.title,
@@ -62,6 +63,8 @@ export class PostsService {
       },
       include: { author: { select: { id: true, username: true, displayName: true, avatarUrl: true } } },
     });
+    this.refreshLinkPreview(post.id, dto.content).catch(() => {});
+    return post;
   }
 
   async findAll(limit = 20, offset = 0, userId?: string | null) {
@@ -128,7 +131,7 @@ export class PostsService {
       }
     }
     const renderedHTML = dto.content != null ? this.renderContent(dto.content, dto.contentType ?? post.contentType) : undefined;
-    return this.prisma.post.update({
+    const updated = await this.prisma.post.update({
       where: { id },
       data: {
         ...(dto.title != null && { title: dto.title }),
@@ -143,6 +146,22 @@ export class PostsService {
         ...(dto.visibility != null && { visibility: dto.visibility }),
       },
       include: { author: { select: { id: true, username: true, displayName: true, avatarUrl: true } } },
+    });
+    if (dto.content != null) this.refreshLinkPreview(updated.id, dto.content).catch(() => {});
+    return updated;
+  }
+
+  /** Fetch OG metadata for first URL in content and save to post.linkPreview (runs in background). */
+  private async refreshLinkPreview(postId: string, content: string): Promise<void> {
+    const url = extractFirstUrl(content);
+    if (!url) {
+      await this.prisma.post.update({ where: { id: postId }, data: { linkPreview: Prisma.DbNull } });
+      return;
+    }
+    const preview = await fetchLinkPreview(url);
+    await this.prisma.post.update({
+      where: { id: postId },
+      data: { linkPreview: preview ? (preview as unknown as Prisma.InputJsonValue) : Prisma.DbNull },
     });
   }
 

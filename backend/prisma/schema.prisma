@@ -66,6 +66,7 @@ model Post {
 
   tags          String[]
   imageUrls     String[]  @map("image_urls")
+  linkPreview   Json?     @map("link_preview")
   isPublished   Boolean   @default(false) @map("is_published")
   visibility    PostVisibility @default(PUBLIC) @map("visibility")
 
