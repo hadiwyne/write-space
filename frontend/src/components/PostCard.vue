@@ -22,7 +22,17 @@
 
     <router-link :to="'/posts/' + post.id" class="card-body">
       <h2 class="card-title">{{ post.title }}</h2>
-      <p class="card-excerpt">{{ excerpt }}</p>
+      <p v-if="excerpt" class="card-excerpt">{{ excerpt }}</p>
+      <div v-if="postImageUrls.length" class="card-thumbnails" :class="'card-thumbnails--' + postImageUrls.length">
+        <img
+          v-for="(url, i) in postImageUrls"
+          :key="i"
+          :src="avatarSrc(url)"
+          alt=""
+          class="card-thumb"
+          loading="lazy"
+        />
+      </div>
       <div v-if="post.tags && post.tags.length" class="card-tags">
         <router-link
           v-for="t in post.tags"
@@ -163,9 +173,35 @@ function onUnarchive() {
 function onRepost() {
   emit('repost', props.post.id)
 }
+/** Extract image URLs from post (rendered HTML or markdown) for thumbnail preview. Max 4. */
+const postImageUrls = computed(() => {
+  const html = props.post.renderedHTML || ''
+  const content = props.post.content || ''
+  const urls: string[] = []
+  if (html) {
+    const imgRegex = /<img[^>]+src=["']([^"']+)["']/gi
+    let m: RegExpExecArray | null
+    while ((m = imgRegex.exec(html)) !== null && urls.length < 4) urls.push(m[1])
+  }
+  if (urls.length < 4 && content) {
+    const mdRegex = /!\[[^\]]*\]\(([^)]+)\)/g
+    let m: RegExpExecArray | null
+    while ((m = mdRegex.exec(content)) !== null && urls.length < 4) {
+      if (!urls.includes(m[1])) urls.push(m[1])
+    }
+  }
+  return urls.slice(0, 4)
+})
+
+/** Excerpt from rendered HTML first (so markdown shows as plain text, not raw syntax). Strip image URLs so we never show them. */
 const excerpt = computed(() => {
-  const raw = (props.post.content || props.post.renderedHTML || '')
-  const text = raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+  const raw = props.post.renderedHTML || props.post.content || ''
+  let text = raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+  postImageUrls.value.forEach((url) => {
+    text = text.split(url).join(' ')
+  })
+  text = text.replace(/\s+/g, ' ').trim()
+  if (!text) return ''
   return text.slice(0, 160) + (text.length > 160 ? '…' : '')
 })
 const readTime = computed(() => {
@@ -297,8 +333,38 @@ function formatDate(s: string | undefined) {
 .card-excerpt {
   color: var(--text-secondary);
   line-height: 1.75;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1rem;
   font-size: 1rem;
+}
+.card-thumbnails {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+.card-thumb {
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+  background: var(--bg-primary);
+}
+/* One image: large preview */
+.card-thumbnails--1 .card-thumb {
+  width: 100%;
+  max-width: 420px;
+  height: 240px;
+}
+/* Two images: medium, side by side */
+.card-thumbnails--2 .card-thumb {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 160px;
+}
+/* Three or four: small grid */
+.card-thumbnails--3 .card-thumb,
+.card-thumbnails--4 .card-thumb {
+  width: 72px;
+  height: 72px;
 }
 .card-tags {
   display: flex;

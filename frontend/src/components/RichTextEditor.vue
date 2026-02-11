@@ -20,12 +20,12 @@
       </button>
       <span class="toolbar-divider"></span>
       <!-- Font size -->
-      <select class="toolbar-select" title="Font size" :value="currentFontSize" @change="setFontSize(($event.target as HTMLSelectElement).value)">
+      <select class="toolbar-select" title="Font size" :value="currentFontSize" @change="onFontSizeChange">
         <option value="">Size</option>
         <option v-for="s in fontSizes" :key="s" :value="s">{{ s }}</option>
       </select>
       <!-- Headings -->
-      <select class="toolbar-select" title="Paragraph style" :value="currentHeading" @change="setHeading(($event.target as HTMLSelectElement).value)">
+      <select class="toolbar-select" title="Paragraph style" :value="currentHeading" @change="onHeadingChange">
         <option value="">Style</option>
         <option value="paragraph">Paragraph</option>
         <option value="1">Heading 1</option>
@@ -63,7 +63,13 @@
         🔗
       </button>
       <!-- Image -->
-      <button type="button" class="toolbar-btn" @click="triggerImageUpload" title="Insert image">
+      <button
+        type="button"
+        class="toolbar-btn"
+        :disabled="!canAddImage"
+        :title="canAddImage ? 'Insert image' : 'Maximum 5 images per post'"
+        @click="triggerImageUpload"
+      >
         🖼
       </button>
       <input ref="imageInputRef" type="file" accept="image/*" class="hidden" @change="onImageSelect" />
@@ -86,9 +92,13 @@ import Image from '@tiptap/extension-image'
 import Link from '@tiptap/extension-link'
 import TextStyle from '@tiptap/extension-text-style'
 
-const props = defineProps<{
-  modelValue: string
-}>()
+const props = withDefaults(
+  defineProps<{
+    modelValue: string
+    canAddImage?: boolean
+  }>(),
+  { canAddImage: true }
+)
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]
@@ -191,6 +201,16 @@ watch(
   { immediate: true }
 )
 
+function onFontSizeChange(e: Event) {
+  const value = (e.target as HTMLSelectElement)?.value ?? ''
+  setFontSize(value)
+}
+
+function onHeadingChange(e: Event) {
+  const value = (e.target as HTMLSelectElement)?.value ?? ''
+  setHeading(value)
+}
+
 function setFontSize(value: string) {
   const c = editor.value?.chain().focus() as unknown as { unsetFontSize: () => { run: () => void }; setFontSize: (v: string) => { run: () => void }; run: () => void }
   if (!value) c?.unsetFontSize().run()
@@ -212,6 +232,7 @@ function toggleLink() {
 }
 
 function triggerImageUpload() {
+  if (!props.canAddImage) return
   imageInputRef.value?.click()
 }
 
@@ -289,6 +310,10 @@ onBeforeUnmount(() => {
 .toolbar-btn.active {
   background: var(--gray-300);
   color: var(--primary);
+}
+.toolbar-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 .toolbar-highlight-icon {
   background: linear-gradient(transparent 60%, #fef08a 60%);

@@ -29,6 +29,8 @@ model User {
   bio           String?
   profileHTML   String?   @map("profile_html") @db.Text
   avatarUrl     String?   @map("avatar_url")
+  avatarData    Bytes?    @map("avatar_data")
+  avatarMimeType String?  @map("avatar_mime_type")
 
   posts         Post[]
   drafts        Draft[]
@@ -44,6 +46,7 @@ model User {
   bookmarks     Bookmark[]
   collections   Collection[]
   reposts       Repost[]
+  postImages    PostImage[]
 
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -244,4 +247,16 @@ model Repost {
   @@index([userId])
   @@index([postId])
   @@map("reposts")
+}
+
+model PostImage {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  data      Bytes
+  mimeType  String   @map("mime_type")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("post_images")
 }

@@ -1,8 +1,6 @@
 import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
-import { mkdir, writeFile } from 'fs/promises';
-import { join } from 'path';
 // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
 const DOMPurify = require('isomorphic-dompurify') as { sanitize: (html: string, options?: object) => string };
 import { PrismaService } from '../prisma/prisma.service';
@@ -129,18 +127,26 @@ export class UsersService {
     });
   }
 
+  /** Save avatar to database (persists on ephemeral hosts like Koyeb; no R2/credit card needed). */
   async saveAvatar(userId: string, buffer: Buffer, mimeType: string) {
-    const ext = mimeType === 'image/jpeg' ? '.jpg' : mimeType === 'image/png' ? '.png' : mimeType === 'image/gif' ? '.gif' : '.webp';
-    const filename = `${userId}-${Date.now()}${ext}`;
-    const uploadsDir = join(process.cwd(), 'uploads', 'avatars');
-    await mkdir(uploadsDir, { recursive: true });
-    await writeFile(join(uploadsDir, filename), buffer);
-    // Store relative path so the frontend can prefix its own API base (works across origins and avoids API_PUBLIC_URL misuse).
-    const avatarUrl = `/uploads/avatars/${filename}`;
-    return this.prisma.user.update({
+    const avatarUrl = `/users/avatar/${userId}`;
+    await this.prisma.user.update({
       where: { id: userId },
-      data: { avatarUrl },
+      data: { avatarUrl, avatarData: buffer, avatarMimeType: mimeType },
+    });
+    return this.prisma.user.findUnique({
+      where: { id: userId },
       select: userSelectWithoutPassword,
     });
+  }
+
+  /** Get avatar image buffer and mime type for a user (for DB-stored avatars). */
+  async getAvatar(userId: string): Promise<{ buffer: Buffer; mimeType: string } | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { avatarData: true, avatarMimeType: true },
+    });
+    if (!user?.avatarData || !user.avatarMimeType) return null;
+    return { buffer: Buffer.from(user.avatarData), mimeType: user.avatarMimeType };
   }
 }
