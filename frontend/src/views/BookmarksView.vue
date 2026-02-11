@@ -5,7 +5,7 @@
     <div v-else-if="loading" class="loading">Loading…</div>
     <div v-else-if="posts.length === 0" class="empty">No bookmarks yet.</div>
     <div v-else class="post-list">
-      <PostCard v-for="p in posts" :key="(p as { id: string }).id" :post="p" />
+      <PostCard v-for="p in posts" :key="postKey(p)" :post="p" />
     </div>
   </div>
 </template>
@@ -18,6 +18,9 @@ import PostCard from '@/components/PostCard.vue'
 
 const auth = useAuthStore()
 const posts = ref<Record<string, unknown>[]>([])
+function postKey(p: Record<string, unknown>) {
+  return String((p as { id?: string }).id ?? '')
+}
 const loading = ref(true)
 
 onMounted(async () => {

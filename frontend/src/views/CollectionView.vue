@@ -13,7 +13,7 @@
       <div v-else class="post-list">
         <PostCard
           v-for="p in collection.items"
-          :key="(p as { id: string }).id"
+          :key="postKey(p)"
           :post="p"
         />
       </div>
@@ -27,6 +27,10 @@ import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '@/api/client'
 import PostCard from '@/components/PostCard.vue'
+
+function postKey(p: Record<string, unknown>) {
+  return String((p as { id?: string }).id ?? '')
+}
 
 const route = useRoute()
 const collection = ref<Record<string, unknown> | null>(null)

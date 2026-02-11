@@ -43,14 +43,14 @@
               <template v-else>
                 <button
                   v-for="c in collections"
-                  :key="(c as { id: string }).id"
+                  :key="collectionId(c)"
                   type="button"
                   class="dropdown-option"
-                  :disabled="addingToCollection === (c as { id: string }).id"
-                  @click="addToCollection((c as { id: string }).id)"
+                  :disabled="addingToCollection === collectionId(c)"
+                  @click="addToCollection(collectionId(c))"
                 >
                   <i class="pi pi-folder"></i>
-                  {{ (c as { title: string }).title }}
+                  {{ collectionTitle(c) }}
                 </button>
                 <router-link to="/collections" class="dropdown-option dropdown-option-muted" @click="collectionDropdownOpen = false">
                   <i class="pi pi-plus"></i> New collection
@@ -133,6 +133,13 @@ function avatarSrc(url: string | null | undefined) {
   if (!url) return ''
   if (url.startsWith('http')) return url
   return apiBaseUrl + url
+}
+
+function collectionId(c: { id: string; title: string }) {
+  return c.id
+}
+function collectionTitle(c: { id: string; title: string }) {
+  return c.title
 }
 
 const route = useRoute()

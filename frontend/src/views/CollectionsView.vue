@@ -11,7 +11,7 @@
       <li v-for="c in collections" :key="c.id" class="collection-item">
         <router-link :to="collectionLink(c)" class="collection-link">
           <span class="collection-title">{{ c.title }}</span>
-          <span class="collection-count">{{ (c as { _count?: { items: number } })._count?.items ?? 0 }} posts</span>
+          <span class="collection-count">{{ itemCount(c) }} posts</span>
         </router-link>
       </li>
     </ul>
@@ -45,6 +45,10 @@ import { api } from '@/api/client'
 const router = useRouter()
 const collections = ref<Record<string, unknown>[]>([])
 const loading = ref(true)
+
+function itemCount(c: Record<string, unknown>) {
+  return (c as { _count?: { items: number } })._count?.items ?? 0
+}
 const showCreate = ref(false)
 const newTitle = ref('')
 const newDesc = ref('')
