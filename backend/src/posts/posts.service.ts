@@ -1,8 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ContentType } from '@prisma/client';
-import { mkdir, writeFile } from 'fs/promises';
-import { join } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { MarkdownRenderer } from './renderers/markdown.renderer';
 import { HtmlRenderer } from './renderers/html.renderer';
@@ -231,14 +229,23 @@ export class PostsService {
     return Packer.toBuffer(doc);
   }
 
+  /** Save post image to database (persists on ephemeral hosts; no external storage). Returns URL for embedding in content. */
   async uploadPostImage(userId: string, buffer: Buffer, mimeType: string): Promise<{ url: string }> {
-    const ext = mimeType === 'image/jpeg' ? '.jpg' : mimeType === 'image/png' ? '.png' : mimeType === 'image/gif' ? '.gif' : '.webp';
-    const filename = `${userId}-${Date.now()}${ext}`;
-    const uploadsDir = join(process.cwd(), 'uploads', 'post-images');
-    await mkdir(uploadsDir, { recursive: true });
-    await writeFile(join(uploadsDir, filename), buffer);
+    const image = await this.prisma.postImage.create({
+      data: { userId, data: buffer, mimeType },
+    });
     const baseUrl = (this.config.get<string>('API_PUBLIC_URL') || `http://localhost:${this.config.get('PORT', 3000)}`).replace(/\/$/, '');
-    const url = `${baseUrl}/uploads/post-images/${filename}`;
+    const url = `${baseUrl}/posts/images/${image.id}`;
     return { url };
+  }
+
+  /** Get post image by id for serving (DB-stored images). */
+  async getPostImage(id: string): Promise<{ buffer: Buffer; mimeType: string } | null> {
+    const row = await this.prisma.postImage.findUnique({
+      where: { id },
+      select: { data: true, mimeType: true },
+    });
+    if (!row) return null;
+    return { buffer: Buffer.from(row.data), mimeType: row.mimeType };
   }
 }

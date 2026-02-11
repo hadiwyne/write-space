@@ -11,6 +11,9 @@ import {
   UseInterceptors,
   UploadedFile,
   BadRequestException,
+  NotFoundException,
+  StreamableFile,
+  Header,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from './users.service';
@@ -67,6 +70,16 @@ export class UsersController {
       throw new BadRequestException('No image file provided');
     }
     return this.usersService.saveAvatar(user.id, file.buffer, file.mimetype);
+  }
+
+  /** Serve avatar from DB (for URLs like /users/avatar/:userId). Declared before :username so "avatar" is not matched as username. */
+  @Public()
+  @Header('Cache-Control', 'public, max-age=86400')
+  @Get('avatar/:userId')
+  async getAvatar(@Param('userId') userId: string): Promise<StreamableFile> {
+    const avatar = await this.usersService.getAvatar(userId);
+    if (!avatar) throw new NotFoundException('Avatar not found');
+    return new StreamableFile(avatar.buffer, { type: avatar.mimeType });
   }
 
   @Get(':username/follow/status')

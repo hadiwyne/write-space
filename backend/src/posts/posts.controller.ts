@@ -11,7 +11,10 @@ import {
   UseInterceptors,
   UploadedFile,
   BadRequestException,
+  NotFoundException,
   Res,
+  StreamableFile,
+  Header,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -63,6 +66,16 @@ export class PostsController {
       throw new BadRequestException('No image file provided');
     }
     return this.postsService.uploadPostImage(user.id, file.buffer, file.mimetype);
+  }
+
+  /** Serve post image from DB. Declared before :id so /posts/images/:imageId is matched. */
+  @Public()
+  @Header('Cache-Control', 'public, max-age=86400')
+  @Get('images/:imageId')
+  async getPostImage(@Param('imageId') imageId: string): Promise<StreamableFile> {
+    const image = await this.postsService.getPostImage(imageId);
+    if (!image) throw new NotFoundException('Image not found');
+    return new StreamableFile(image.buffer, { type: image.mimeType });
   }
 
   @Public()
