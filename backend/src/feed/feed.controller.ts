@@ -24,6 +24,12 @@ export class FeedController {
     if (sort === 'popular') {
       return this.feedService.getPopular(lim, off, tag || undefined, userId);
     }
+    if (sort === 'friends' && userId) {
+      return this.feedService.getFriends(userId, lim, off, tag || undefined);
+    }
+    if (sort === 'friends') {
+      return [];
+    }
     return this.feedService.getChronological(userId, lim, off, tag || undefined);
   }
 
