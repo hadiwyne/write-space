@@ -16,16 +16,18 @@ export class FeedService {
   constructor(private prisma: PrismaService) {}
 
   async getChronological(userId: string | null, limit = 20, offset = 0, tag?: string) {
-    const following = userId
-      ? await this.prisma.follow.findMany({ where: { followerId: userId }, select: { followingId: true } })
-      : [];
-    const followingIds = following.map((f) => f.followingId);
-    const authorIds = userId ? [userId, ...followingIds] : null;
+    const visibilityFilter = userId
+      ? {
+          OR: [
+            { visibility: 'PUBLIC' as const },
+            { visibility: 'FOLLOWERS_ONLY' as const, author: { followers: { some: { followerId: userId } } } },
+            { visibility: 'FOLLOWERS_ONLY' as const, authorId: userId },
+          ],
+        }
+      : { visibility: 'PUBLIC' as const };
     const where = {
       ...baseWhere,
-      ...(authorIds?.length
-        ? { authorId: { in: authorIds } }
-        : { visibility: 'PUBLIC' as const }),
+      ...visibilityFilter,
       ...(tag ? { tags: { has: tag } } : {}),
     };
 
