@@ -1,0 +1,10 @@
+# Netlify build settings (when base directory is set to "frontend" in the UI)
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# SPA: serve index.html for client-side routes
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
