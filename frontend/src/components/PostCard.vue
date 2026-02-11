@@ -33,6 +33,26 @@
           loading="lazy"
         />
       </div>
+      <a
+        v-if="linkPreview"
+        :href="linkPreview.url"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="card-link-preview"
+        @click.stop
+      >
+        <div v-if="linkPreview.image" class="card-link-preview-media">
+          <img :src="linkPreview.image" alt="" class="card-link-preview-img" loading="lazy" />
+        </div>
+        <div class="card-link-preview-body">
+          <span v-if="linkPreview.siteName" class="card-link-preview-site">{{ linkPreview.siteName }}</span>
+          <span class="card-link-preview-title">{{ linkPreview.title || 'Link' }}</span>
+          <p v-if="linkPreview.description" class="card-link-preview-desc">{{ linkPreviewDescription }}</p>
+          <span class="card-link-preview-hint">
+            <i class="pi pi-external-link" aria-hidden="true"></i> Open link
+          </span>
+        </div>
+      </a>
       <div v-if="post.tags && post.tags.length" class="card-tags">
         <router-link
           v-for="t in post.tags"
@@ -204,6 +224,25 @@ const excerpt = computed(() => {
   if (!text) return ''
   return text.slice(0, 160) + (text.length > 160 ? '…' : '')
 })
+
+interface LinkPreview {
+  url: string
+  image?: string | null
+  title?: string | null
+  description?: string | null
+  siteName?: string | null
+}
+const linkPreview = computed(() => {
+  const lp = props.post.linkPreview
+  if (!lp || typeof lp !== 'object' || !('url' in lp) || typeof (lp as LinkPreview).url !== 'string') return null
+  return lp as LinkPreview
+})
+const linkPreviewDescription = computed(() => {
+  const desc = linkPreview.value?.description
+  if (!desc) return ''
+  return desc.length > 120 ? desc.slice(0, 120) + '…' : desc
+})
+
 const readTime = computed(() => {
   const raw = (props.post.content || props.post.renderedHTML || '')
   const text = raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
@@ -366,6 +405,90 @@ function formatDate(s: string | undefined) {
   width: 72px;
   height: 72px;
 }
+
+.card-link-preview {
+  display: block;
+  max-width: 420px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: 1rem;
+  text-decoration: none;
+  color: inherit;
+  background: var(--bg-primary);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.card-link-preview:hover {
+  border-color: var(--accent-primary);
+  box-shadow: 0 2px 12px rgba(139, 69, 19, 0.1);
+  text-decoration: none;
+  color: inherit;
+}
+.card-link-preview:hover .card-link-preview-img {
+  transform: scale(1.02);
+}
+.card-link-preview-media {
+  position: relative;
+  width: 100%;
+  height: 140px;
+  overflow: hidden;
+  background: var(--gray-100);
+}
+.card-link-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.25s ease;
+}
+.card-link-preview-body {
+  padding: 0.625rem 0.875rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.card-link-preview-site {
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: var(--accent-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.card-link-preview-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.card-link-preview-desc {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.card-link-preview-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-top: 0.125rem;
+}
+.card-link-preview-hint .pi {
+  font-size: 0.6875rem;
+}
+.card-link-preview:hover .card-link-preview-hint {
+  color: var(--accent-primary);
+}
+
 .card-tags {
   display: flex;
   gap: 0.625rem;
