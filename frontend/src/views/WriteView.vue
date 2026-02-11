@@ -6,11 +6,26 @@
         <input v-model="title" type="text" placeholder="Title" required class="title-input" />
       </div>
       <div class="form-group editor-toolbar">
-        <select v-model="contentType" class="format-select">
-          <option value="MARKDOWN">Markdown</option>
-          <option value="HTML">HTML</option>
-          <option value="WYSIWYG">Rich text (HTML)</option>
-        </select>
+        <div class="dropdown-wrap" ref="formatDropdownRef">
+          <button type="button" class="dropdown-trigger" :aria-expanded="formatDropdownOpen" @click="formatDropdownOpen = !formatDropdownOpen">
+            <i :class="contentTypeIcon" aria-hidden="true"></i>
+            <span>{{ contentTypeLabel }}</span>
+            <i class="pi pi-chevron-down dropdown-chevron" aria-hidden="true"></i>
+          </button>
+          <Transition name="dropdown">
+            <div v-if="formatDropdownOpen" class="dropdown-panel" role="menu">
+              <button type="button" class="dropdown-option" role="menuitem" :class="{ active: contentType === 'MARKDOWN' }" @click="contentType = 'MARKDOWN'; formatDropdownOpen = false">
+                <i class="pi pi-file-edit" aria-hidden="true"></i> Markdown
+              </button>
+              <button type="button" class="dropdown-option" role="menuitem" :class="{ active: contentType === 'HTML' }" @click="contentType = 'HTML'; formatDropdownOpen = false">
+                <i class="pi pi-code" aria-hidden="true"></i> HTML
+              </button>
+              <button type="button" class="dropdown-option" role="menuitem" :class="{ active: contentType === 'WYSIWYG' }" @click="contentType = 'WYSIWYG'; formatDropdownOpen = false">
+                <i class="pi pi-align-left" aria-hidden="true"></i> Rich text
+              </button>
+            </div>
+          </Transition>
+        </div>
         <input ref="wordInputRef" type="file" accept=".docx" class="hidden" @change="onWordUpload" />
         <input ref="imageInputRef" type="file" accept="image/*" class="hidden" @change="onImageUpload" />
         <button type="button" class="btn btn-sm btn-outline" @click="wordInputRef?.click()">Import Word</button>
@@ -58,11 +73,23 @@
         <input v-model="tagsStr" type="text" placeholder="Tags (comma-separated)" class="tags-input" />
       </div>
       <div class="form-group visibility-row">
-        <label class="visibility-label">Visibility</label>
-        <select v-model="visibility" class="visibility-select">
-          <option value="PUBLIC">Public – visible to everyone</option>
-          <option value="FOLLOWERS_ONLY">Followers only – visible to people who follow you</option>
-        </select>
+        <div class="dropdown-wrap" ref="visibilityDropdownRef">
+          <button type="button" class="dropdown-trigger" :aria-expanded="visibilityDropdownOpen" @click="visibilityDropdownOpen = !visibilityDropdownOpen">
+            <i :class="visibilityIcon" aria-hidden="true"></i>
+            <span>{{ visibilityLabel }}</span>
+            <i class="pi pi-chevron-down dropdown-chevron" aria-hidden="true"></i>
+          </button>
+          <Transition name="dropdown">
+            <div v-if="visibilityDropdownOpen" class="dropdown-panel" role="menu">
+              <button type="button" class="dropdown-option" role="menuitem" :class="{ active: visibility === 'PUBLIC' }" @click="visibility = 'PUBLIC'; visibilityDropdownOpen = false">
+                <i class="pi pi-globe" aria-hidden="true"></i> Public
+              </button>
+              <button type="button" class="dropdown-option" role="menuitem" :class="{ active: visibility === 'FOLLOWERS_ONLY' }" @click="visibility = 'FOLLOWERS_ONLY'; visibilityDropdownOpen = false">
+                <i class="pi pi-users" aria-hidden="true"></i> Followers
+              </button>
+            </div>
+          </Transition>
+        </div>
       </div>
       <p v-if="error" class="error">{{ error }}</p>
       <div v-if="conflictDraft" class="conflict-banner">
@@ -79,7 +106,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/api/client'
 import { renderPreview, type ContentType } from '@/utils/preview'
@@ -91,6 +118,29 @@ const content = ref('')
 const contentType = ref<ContentType>('MARKDOWN')
 const tagsStr = ref('')
 const visibility = ref<'PUBLIC' | 'FOLLOWERS_ONLY'>('PUBLIC')
+const formatDropdownOpen = ref(false)
+const visibilityDropdownOpen = ref(false)
+const formatDropdownRef = ref<HTMLElement | null>(null)
+const visibilityDropdownRef = ref<HTMLElement | null>(null)
+
+const contentTypeLabel = computed(() => {
+  if (contentType.value === 'MARKDOWN') return 'Markdown'
+  if (contentType.value === 'HTML') return 'HTML'
+  return 'Rich text'
+})
+const contentTypeIcon = computed(() => {
+  if (contentType.value === 'MARKDOWN') return 'pi pi-file-edit'
+  if (contentType.value === 'HTML') return 'pi pi-code'
+  return 'pi pi-align-left'
+})
+const visibilityLabel = computed(() => (visibility.value === 'PUBLIC' ? 'Public' : 'Followers'))
+const visibilityIcon = computed(() => (visibility.value === 'PUBLIC' ? 'pi pi-globe' : 'pi pi-users'))
+
+function onWritePageDocumentClick(e: MouseEvent) {
+  const target = e.target as Node
+  if (formatDropdownRef.value && !formatDropdownRef.value.contains(target)) formatDropdownOpen.value = false
+  if (visibilityDropdownRef.value && !visibilityDropdownRef.value.contains(target)) visibilityDropdownOpen.value = false
+}
 const error = ref('')
 const loading = ref(false)
 const savingDraft = ref(false)
@@ -120,7 +170,11 @@ function scheduleAutoSave() {
 }
 
 watch([content, title], () => scheduleAutoSave())
-onUnmounted(() => { if (autoSaveTimer) clearTimeout(autoSaveTimer) })
+onMounted(() => document.addEventListener('click', onWritePageDocumentClick))
+onUnmounted(() => {
+  document.removeEventListener('click', onWritePageDocumentClick)
+  if (autoSaveTimer) clearTimeout(autoSaveTimer)
+})
 
 async function saveDraft(silent = false) {
   if (!silent) savingDraft.value = true
@@ -278,8 +332,71 @@ async function onRichEditorImageUpload(file: File) {
 .write-page h1 { font-size: 1.5rem; margin: 0 0 1rem; }
 .form { display: flex; flex-direction: column; gap: 1rem; }
 .title-input { width: 100%; font-size: 1.5rem; padding: 0.5rem 0; border: none; border-bottom: 1px solid var(--gray-200); background: transparent; }
-.format-select { padding: 0.5rem; border: 1px solid var(--gray-300); border-radius: var(--radius); width: auto; }
 .editor-toolbar { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.dropdown-wrap { position: relative; }
+.dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 2px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.dropdown-trigger:hover {
+  border-color: var(--border-medium);
+}
+.dropdown-trigger:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 4px rgba(139, 69, 19, 0.1);
+}
+.dropdown-chevron { font-size: 0.75rem; color: var(--text-tertiary); margin-left: 0.25rem; }
+.dropdown-panel {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  min-width: 12rem;
+  padding: 0.25rem 0;
+  background: var(--bg-card);
+  border: 2px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+}
+.dropdown-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 1rem;
+  border: none;
+  background: none;
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s ease;
+}
+.dropdown-option:hover {
+  background: var(--bg-primary);
+}
+.dropdown-option.active {
+  background: rgba(139, 69, 19, 0.08);
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+.dropdown-option .pi { color: inherit; }
+.dropdown-enter-active,
+.dropdown-leave-active { transition: opacity 0.15s ease, transform 0.15s ease; }
+.dropdown-enter-from,
+.dropdown-leave-to { opacity: 0; transform: translateY(-4px); }
 .hidden { display: none; }
 .btn-sm { padding: 0.375rem 0.75rem; font-size: 0.875rem; }
 .saved-hint { font-size: 0.75rem; color: var(--gray-700); }
@@ -293,8 +410,6 @@ async function onRichEditorImageUpload(file: File) {
 .preview-content :deep(img) { max-width: 100%; }
 .tags-input { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--gray-300); border-radius: var(--radius); }
 .visibility-row { display: flex; align-items: center; gap: 0.75rem; }
-.visibility-label { font-size: 0.9375rem; }
-.visibility-select { padding: 0.5rem 0.75rem; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 0.9375rem; min-width: 18rem; }
 .error { color: #dc2626; font-size: 0.875rem; margin: 0; }
 .conflict-banner { padding: 0.75rem; background: #fef3c7; border: 1px solid #f59e0b; border-radius: var(--radius); }
 .conflict-banner p { margin: 0 0 0.5rem; font-size: 0.875rem; }
