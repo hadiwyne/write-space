@@ -39,7 +39,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { api, apiBaseUrl, avatarSrc } from '@/api/client'
+import { api, avatarSrc } from '@/api/client'
 import PostCard from '@/components/PostCard.vue'
 
 const route = useRoute()

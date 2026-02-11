@@ -21,7 +21,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { api, apiBaseUrl, avatarSrc } from '@/api/client'
+import { api, avatarSrc } from '@/api/client'
 import { useNotificationsStore } from '@/stores/notifications'
 
 type NotifRecord = Record<string, unknown> & {

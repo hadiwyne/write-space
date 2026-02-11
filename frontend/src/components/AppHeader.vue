@@ -109,7 +109,7 @@ import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationsStore } from '@/stores/notifications'
-import { apiBaseUrl, avatarSrc } from '@/api/client'
+import { avatarSrc } from '@/api/client'
 import type { NotificationItem } from '@/stores/notifications'
 
 const auth = useAuthStore()

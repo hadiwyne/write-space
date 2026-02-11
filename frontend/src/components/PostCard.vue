@@ -96,7 +96,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { api, apiBaseUrl, avatarSrc } from '@/api/client'
+import { api, avatarSrc } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import { useLikedPostsStore } from '@/stores/likedPosts'
 

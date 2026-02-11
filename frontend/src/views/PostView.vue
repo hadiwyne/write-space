@@ -123,7 +123,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRoute } from 'vue-router'
-import { api, apiBaseUrl, avatarSrc } from '@/api/client'
+import { api, avatarSrc } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import { useLikedPostsStore } from '@/stores/likedPosts'
 import ConfirmModal from '@/components/ConfirmModal.vue'

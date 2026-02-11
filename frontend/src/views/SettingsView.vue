@@ -44,7 +44,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { api, apiBaseUrl, avatarSrc } from '@/api/client'
+import { api, avatarSrc } from '@/api/client'
 import AvatarUploadCrop from '@/components/AvatarUploadCrop.vue'
 
 const auth = useAuthStore()
