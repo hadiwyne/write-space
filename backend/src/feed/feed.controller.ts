@@ -12,7 +12,7 @@ export class FeedController {
   @Get()
   @UseGuards(OptionalJwtAuthGuard)
   getFeed(
-    @CurrentUser() user: { id: string } | null,
+    @CurrentUser() user: { id: string; isSuperadmin?: boolean } | null,
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
     @Query('sort') sort?: string,
@@ -21,8 +21,9 @@ export class FeedController {
     const lim = Number(limit) || 20;
     const off = Number(offset) || 0;
     const userId = user?.id ?? null;
+    const isSuperadmin = !!user?.isSuperadmin;
     if (sort === 'popular') {
-      return this.feedService.getPopular(lim, off, tag || undefined, userId);
+      return this.feedService.getPopular(lim, off, tag || undefined, userId, isSuperadmin);
     }
     if (sort === 'friends' && userId) {
       return this.feedService.getFriends(userId, lim, off, tag || undefined);
@@ -30,7 +31,7 @@ export class FeedController {
     if (sort === 'friends') {
       return [];
     }
-    return this.feedService.getChronological(userId, lim, off, tag || undefined);
+    return this.feedService.getChronological(userId, lim, off, tag || undefined, isSuperadmin);
   }
 
   @Public()

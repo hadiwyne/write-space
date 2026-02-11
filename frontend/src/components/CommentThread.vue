@@ -11,7 +11,10 @@
           <time v-if="comment.createdAt" :datetime="comment.createdAt" class="comment-time">{{ formatCommentDate(comment.createdAt) }}</time>
         </span>
         <p class="comment-body">{{ comment.content }}</p>
-        <button v-if="isLoggedIn" type="button" class="comment-reply-btn" @click="$emit('reply', comment.id)">Reply</button>
+        <span class="comment-actions">
+          <button v-if="isLoggedIn" type="button" class="comment-reply-btn" @click="$emit('reply', comment.id)">Reply</button>
+          <button v-if="canDelete" type="button" class="comment-delete-btn" @click="$emit('delete', comment.id)">Delete</button>
+        </span>
       </div>
     </div>
     <div v-if="replyToId === comment.id && isLoggedIn" class="reply-form-wrap" :class="{ 'reply-form-in-thread': depth > 0 }">
@@ -21,7 +24,7 @@
           placeholder="Write a reply…"
           rows="3"
           class="reply-textarea"
-          @input="$emit('update:replyContent', ($event.target as HTMLTextAreaElement).value)"
+          @input="onReplyContentInput($event)"
         ></textarea>
         <div class="reply-form-actions">
           <button type="button" class="btn-reply btn-reply-primary" @click="$emit('submitReply', comment.id)">Reply</button>
@@ -38,24 +41,27 @@
         :reply-to-id="replyToId"
         :reply-content="replyContent"
         :is-logged-in="isLoggedIn"
+        :can-delete-fn="canDeleteFn"
         :avatar-src="avatarSrc"
         @reply="$emit('reply', $event)"
         @update:reply-content="$emit('update:replyContent', $event)"
         @submit-reply="$emit('submitReply', $event)"
         @cancel-reply="$emit('cancelReply')"
+        @delete="$emit('delete', $event)"
       />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 defineOptions({ name: 'CommentThread' })
 
 export type CommentNode = {
   id: string
   content: string
   createdAt?: string
-  author?: { username?: string; displayName?: string | null; avatarUrl?: string | null }
+  author?: { id?: string; username?: string; displayName?: string | null; avatarUrl?: string | null }
   replies?: CommentNode[]
 }
 
@@ -79,21 +85,31 @@ function formatCommentDate(iso: string): string {
   }).replace(/\s+/g, ' ')
 }
 
-defineProps<{
+const props = defineProps<{
   comment: CommentNode
   depth: number
   replyToId: string | null
   replyContent: string
   isLoggedIn: boolean
+  /** When provided, each thread uses this to decide delete visibility for its own comment (avoids inheriting parent's). */
+  canDeleteFn?: (c: CommentNode) => boolean
   avatarSrc: (url: string | null | undefined) => string
 }>()
 
-defineEmits<{
+const canDelete = computed(() => (props.canDeleteFn ? props.canDeleteFn(props.comment) : false))
+
+const emit = defineEmits<{
   reply: [id: string]
   'update:replyContent': [value: string]
   submitReply: [parentId: string]
   cancelReply: []
+  delete: [commentId: string]
 }>()
+
+function onReplyContentInput(e: Event) {
+  const target = e.target as HTMLTextAreaElement
+  emit('update:replyContent', target?.value ?? '')
+}
 </script>
 
 <style scoped>
@@ -159,18 +175,21 @@ defineEmits<{
 .comment-reply .comment-time { font-size: 0.75rem; }
 .comment-body { margin: 0.25rem 0 0; font-size: 0.9375rem; color: var(--text-secondary); }
 .comment-reply .comment-body { font-size: 0.8125rem; }
-.comment-reply-btn {
-  margin-top: 0.25rem;
+.comment-actions { margin-top: 0.25rem; display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+.comment-reply-btn,
+.comment-delete-btn {
   padding: 0;
   background: none;
   border: none;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--accent-primary);
-  cursor: pointer;
   font-family: inherit;
+  cursor: pointer;
 }
+.comment-reply-btn { color: var(--accent-primary); }
 .comment-reply-btn:hover { text-decoration: underline; }
+.comment-delete-btn { color: var(--text-tertiary); }
+.comment-delete-btn:hover { color: var(--like-color); text-decoration: underline; }
 
 .reply-form-wrap {
   margin-top: 0.5rem;

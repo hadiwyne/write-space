@@ -34,7 +34,7 @@ export class CommentsController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
-  remove(@Param('id') id: string, @CurrentUser() user: { id: string }) {
-    return this.commentsService.remove(id, user.id);
+  remove(@Param('id') id: string, @CurrentUser() user: { id: string; isSuperadmin?: boolean }) {
+    return this.commentsService.remove(id, user.id, !!user.isSuperadmin);
   }
 }

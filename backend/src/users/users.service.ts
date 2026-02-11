@@ -15,6 +15,7 @@ const userSelectWithoutPassword = {
   bio: true,
   profileHTML: true,
   avatarUrl: true,
+  isSuperadmin: true,
   createdAt: true,
   updatedAt: true,
 } as const;
@@ -52,13 +53,15 @@ export class UsersService {
         bio: true,
         profileHTML: true,
         avatarUrl: true,
+        isSuperadmin: true,
         createdAt: true,
         updatedAt: true,
       },
     });
   }
 
-  async findByUsername(username: string) {
+  /** Returns profile by username. If profile is superadmin and viewer is not that user, returns null (invisible). */
+  async findByUsername(username: string, viewerId?: string | null) {
     const user = await this.prisma.user.findUnique({
       where: { username },
       select: {
@@ -68,12 +71,14 @@ export class UsersService {
         bio: true,
         profileHTML: true,
         avatarUrl: true,
+        isSuperadmin: true,
         createdAt: true,
         updatedAt: true,
         _count: { select: { followers: true, following: true, reposts: true, likes: true } },
       },
     });
     if (!user) return null;
+    if ((user as { isSuperadmin?: boolean }).isSuperadmin && viewerId !== user.id) return null;
     const postsCount = await this.prisma.post.count({
       where: {
         authorId: user.id,

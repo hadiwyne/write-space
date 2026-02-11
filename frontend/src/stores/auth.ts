@@ -5,7 +5,7 @@ import { useLikedPostsStore } from './likedPosts'
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(localStorage.getItem('writespace_token'))
-  const user = ref<{ id: string; username: string; displayName?: string; avatarUrl?: string } | null>(null)
+  const user = ref<{ id: string; username: string; displayName?: string; avatarUrl?: string; isSuperadmin?: boolean } | null>(null)
   const isLoggedIn = computed(() => !!token.value)
 
   function setToken(t: string) {

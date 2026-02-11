@@ -36,16 +36,18 @@ export class FeedService {
     });
   }
 
-  async getChronological(userId: string | null, limit = 20, offset = 0, tag?: string) {
-    const visibilityFilter = userId
-      ? {
-          OR: [
-            { visibility: 'PUBLIC' as const },
-            { visibility: 'FOLLOWERS_ONLY' as const, author: { followers: { some: { followerId: userId } } } },
-            { visibility: 'FOLLOWERS_ONLY' as const, authorId: userId },
-          ],
-        }
-      : { visibility: 'PUBLIC' as const };
+  async getChronological(userId: string | null, limit = 20, offset = 0, tag?: string, isSuperadmin = false) {
+    const visibilityFilter = isSuperadmin
+      ? {}
+      : userId
+        ? {
+            OR: [
+              { visibility: 'PUBLIC' as const },
+              { visibility: 'FOLLOWERS_ONLY' as const, author: { followers: { some: { followerId: userId } } } },
+              { visibility: 'FOLLOWERS_ONLY' as const, authorId: userId },
+            ],
+          }
+        : { visibility: 'PUBLIC' as const };
     const where = {
       ...baseWhere,
       ...visibilityFilter,
@@ -61,16 +63,17 @@ export class FeedService {
     });
   }
 
-  async getPopular(limit = 20, offset = 0, tag?: string, userId?: string | null) {
-    const visibilityFilter = userId
-      ? {
-          OR: [
-            { visibility: 'PUBLIC' as const },
-            { visibility: 'FOLLOWERS_ONLY' as const, author: { followers: { some: { followerId: userId } } } },
-            { visibility: 'FOLLOWERS_ONLY' as const, authorId: userId },
-          ],
-        }
-      : { visibility: 'PUBLIC' as const };
+  async getPopular(limit = 20, offset = 0, tag?: string, userId?: string | null, isSuperadmin = false) {
+    const visibilityFilter =
+      isSuperadmin || !userId
+        ? (isSuperadmin ? {} : { visibility: 'PUBLIC' as const })
+        : {
+            OR: [
+              { visibility: 'PUBLIC' as const },
+              { visibility: 'FOLLOWERS_ONLY' as const, author: { followers: { some: { followerId: userId } } } },
+              { visibility: 'FOLLOWERS_ONLY' as const, authorId: userId },
+            ],
+          };
     const where = {
       ...baseWhere,
       ...visibilityFilter,

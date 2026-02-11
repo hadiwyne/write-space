@@ -78,6 +78,11 @@
               <i class="pi pi-trash"></i> Delete
             </button>
           </template>
+          <template v-else-if="showPostActions">
+            <button type="button" class="action action-delete" v-tooltip.bottom="'Permanently delete (admin)'" @click="deletePost">
+              <i class="pi pi-trash"></i> Delete
+            </button>
+          </template>
         </footer>
       </article>
       <section class="comments">
@@ -95,11 +100,13 @@
             :reply-to-id="replyToId"
             :reply-content="replyContent"
             :is-logged-in="!!auth.isLoggedIn"
+            :can-delete-fn="canDeleteComment"
             :avatar-src="avatarSrc"
             @reply="replyToId = replyToId === $event ? null : $event"
             @update:reply-content="replyContent = $event"
             @submit-reply="addComment($event)"
             @cancel-reply="replyToId = null; replyContent = ''"
+            @delete="deleteComment"
           />
         </div>
       </section>
@@ -155,13 +162,19 @@ const isOwnPost = computed(() => {
   const a = post.value?.author
   return !!(u?.id && a?.id && u.id === a.id)
 })
+const showPostActions = computed(() => isOwnPost.value || !!auth.user?.isSuperadmin)
 const comments = ref<CommentNode[]>([])
 
 type CommentNode = {
   id: string
   content: string
-  author?: { username?: string; displayName?: string | null; avatarUrl?: string | null }
+  author?: { id?: string; username?: string; displayName?: string | null; avatarUrl?: string | null }
   replies?: CommentNode[]
+}
+function canDeleteComment(c: CommentNode): boolean {
+  const u = auth.user
+  if (!u?.id) return false
+  return (c.author?.id && c.author.id === u.id) || !!u.isSuperadmin
 }
 const loading = ref(true)
 const liked = ref(false)
@@ -335,6 +348,18 @@ async function addComment(parentId?: string) {
       comments.value.push(data)
       newComment.value = ''
     }
+  } catch {
+    // ignore
+  }
+}
+
+async function deleteComment(commentId: string) {
+  const postId = route.params.id as string
+  if (!postId) return
+  try {
+    await api.delete(`/posts/${postId}/comments/${commentId}`)
+    const { data } = await api.get(`/posts/${postId}/comments`)
+    comments.value = data ?? []
   } catch {
     // ignore
   }

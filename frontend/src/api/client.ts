@@ -24,12 +24,18 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+let handling401 = false
 api.interceptors.response.use(
   (r) => r,
   (err) => {
-    if (err.response?.status === 401) {
+    if (err.response?.status === 401 && !handling401) {
+      handling401 = true
       localStorage.removeItem('writespace_token')
-      window.location.href = '/login'
+      const path = typeof window !== 'undefined' ? window.location.pathname : ''
+      if (!path.startsWith('/login') && !path.startsWith('/register')) {
+        window.location.assign('/login')
+      }
+      setTimeout(() => { handling401 = false }, 500)
     }
     return Promise.reject(err)
   }
