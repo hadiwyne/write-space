@@ -29,8 +29,8 @@ import { UpdatePostDto } from './dto/update-post.dto';
 import { BookmarksService } from '../bookmarks/bookmarks.service';
 import { RepostsService } from '../reposts/reposts.service';
 
-/** Max 2 MB per image (reasonable for web; we compress on upload). */
-export const MAX_POST_IMAGE_SIZE_BYTES = 2 * 1024 * 1024;
+/** Max 5 MB per image (reasonable for web; we compress on upload). */
+export const MAX_POST_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
 @Controller('posts')
@@ -68,7 +68,7 @@ export class PostsController {
       throw new BadRequestException('No image file provided');
     }
     if (file.size != null && file.size > MAX_POST_IMAGE_SIZE_BYTES) {
-      throw new PayloadTooLargeException('Image must be 2 MB or smaller.');
+      throw new PayloadTooLargeException('Image must be 5 MB or smaller.');
     }
     return this.postsService.uploadPostImage(user.id, file.buffer, file.mimetype);
   }

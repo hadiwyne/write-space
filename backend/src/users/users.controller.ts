@@ -26,7 +26,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { Public } from '../auth/public.decorator';
 
-const MAX_AVATAR_SIZE = 2 * 1024 * 1024; // 2MB
+const MAX_AVATAR_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
 @Controller('users')

@@ -17,7 +17,7 @@
               :current-preview-url="avatarPreview || avatarSrc(auth.user?.avatarUrl) || null"
               @crop="onAvatarCrop"
             />
-            <p class="hint">JPEG, PNG, GIF or WebP. Max 2MB. Crop to a circle before saving.</p>
+            <p class="hint">JPEG, PNG, GIF or WebP. Max 5MB. Crop to a circle before saving.</p>
           </div>
         </div>
       </div>

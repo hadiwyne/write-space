@@ -37,12 +37,12 @@
           :title="imageCountInContent >= MAX_IMAGES_PER_POST ? 'Maximum 5 images per post' : undefined"
           @click="imageInputRef?.click()"
         >
-          Insert image
+          Insert media
         </button>
         <button v-if="draftId" type="button" class="btn btn-sm btn-outline" @click="loadVersions">Version history</button>
         <span v-if="lastSavedAt" class="saved-hint">Saved {{ lastSavedAt }}</span>
       </div>
-      <p class="upload-hint">Max 2 MB per image. Up to 5 images per post.</p>
+      <p class="upload-hint">Max 5 MB per image. Up to 5 images per post.</p>
       <div v-if="versionsOpen" class="versions-panel">
         <p v-if="versionsLoading">Loading…</p>
         <template v-else-if="versions.length">
@@ -124,7 +124,7 @@ import { renderPreview, type ContentType } from '@/utils/preview'
 import RichTextEditor from '@/components/RichTextEditor.vue'
 
 const MAX_IMAGES_PER_POST = 5
-const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024 // 2 MB
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
 
 const router = useRouter()
 const title = ref('')
@@ -329,7 +329,7 @@ async function onImageUpload(e: Event) {
     return
   }
   if (file.size > MAX_IMAGE_SIZE_BYTES) {
-    error.value = 'Image must be 2 MB or smaller.'
+    error.value = 'Image must be 5 MB or smaller.'
     return
   }
   error.value = ''
@@ -360,7 +360,7 @@ async function onRichEditorImageUpload(file: File) {
     return
   }
   if (file.size > MAX_IMAGE_SIZE_BYTES) {
-    error.value = 'Image must be 2 MB or smaller.'
+    error.value = 'Image must be 5 MB or smaller.'
     return
   }
   error.value = ''

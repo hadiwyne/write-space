@@ -67,7 +67,7 @@
         type="button"
         class="toolbar-btn"
         :disabled="!canAddImage"
-        :title="canAddImage ? 'Insert image' : 'Maximum 5 images per post'"
+        :title="canAddImage ? 'Insert Media' : 'Maximum 5 images per post'"
         @click="triggerImageUpload"
       >
         🖼
