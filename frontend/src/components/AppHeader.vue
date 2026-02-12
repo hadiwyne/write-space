@@ -1,6 +1,6 @@
 <template>
   <header class="header" :class="{ 'header--hidden': !headerVisible }">
-    <router-link to="/" class="logo" aria-label="WriteSpace home">WriteSpace</router-link>
+    <router-link :to="auth.isLoggedIn ? '/feed' : '/'" class="logo" :aria-label="auth.isLoggedIn ? 'WriteSpace feed' : 'WriteSpace home'">WriteSpace</router-link>
 
     <div class="search-wrap">
       <form class="search-form" @submit.prevent="onSearch">
