@@ -24,6 +24,15 @@
               spellcheck="false"
               @input="onHexInput(key, $event)"
             />
+            <button
+              type="button"
+              class="btn-reset-one"
+              :aria-label="`Reset ${colorLabels[key]} to default`"
+              title="Reset to default"
+              @click="resetOne(key)"
+            >
+              <i class="pi pi-undo" aria-hidden="true"></i>
+            </button>
           </div>
         </div>
       </div>
@@ -75,6 +84,10 @@ function onHexInput(key: ThemeKey, e: Event) {
   const value = (e.target as HTMLInputElement).value?.trim().replace(/^#/, '') ?? ''
   if (/^[0-9A-Fa-f]{6}$/.test(value)) theme.set(key, `#${value}`)
 }
+
+function resetOne(key: ThemeKey) {
+  theme.set(key, theme.defaults[key])
+}
 </script>
 
 <style scoped>
@@ -121,6 +134,22 @@ function onHexInput(key: ThemeKey, e: Event) {
   color: var(--text-primary);
 }
 .color-hex:focus { outline: none; border-color: var(--accent-primary); }
+.btn-reset-one {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+.btn-reset-one:hover { color: var(--accent-primary); background: rgba(139, 69, 19, 0.08); }
+.btn-reset-one .pi { font-size: 0.875rem; }
 .actions { margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid var(--border-light); }
 .btn { padding: 0.5rem 1rem; border-radius: var(--radius-md); font-size: 0.9375rem; font-weight: 600; cursor: pointer; font-family: inherit; }
 .btn-outline { background: transparent; border: 2px solid var(--border-medium); color: var(--text-secondary); }
