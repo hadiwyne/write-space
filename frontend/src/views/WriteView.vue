@@ -37,7 +37,7 @@
           :title="imageCountInContent >= MAX_IMAGES_PER_POST ? 'Maximum 5 images per post' : undefined"
           @click="imageInputRef?.click()"
         >
-          Insert image
+          Insert media
         </button>
         <button v-if="draftId" type="button" class="btn btn-sm btn-outline" @click="loadVersions">Version history</button>
         <span v-if="lastSavedAt" class="saved-hint">Saved {{ lastSavedAt }}</span>
