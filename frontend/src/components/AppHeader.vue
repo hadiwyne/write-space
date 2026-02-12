@@ -86,6 +86,9 @@
               <router-link to="/collections" class="dropdown-item" role="menuitem" @click="closeDropdown">
                 <i class="pi pi-folder-open"></i> Collections
               </router-link>
+              <router-link to="/customization" class="dropdown-item" role="menuitem" @click="closeDropdown">
+                <i class="pi pi-palette"></i> Customization
+              </router-link>
               <div class="dropdown-divider"></div>
               <button type="button" class="dropdown-item dropdown-item-danger" role="menuitem" @click="logout">
                 <i class="pi pi-sign-out"></i> Log out

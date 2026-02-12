@@ -19,6 +19,7 @@ const router = createRouter({
     { path: '/collections', name: 'Collections', component: () => import('@/views/CollectionsView.vue'), meta: { auth: true } },
     { path: '/collections/:idOrSlug', name: 'Collection', component: () => import('@/views/CollectionView.vue') },
     { path: '/settings', name: 'Settings', component: () => import('@/views/SettingsView.vue'), meta: { auth: true } },
+    { path: '/customization', name: 'Customization', component: () => import('@/views/CustomizationView.vue'), meta: { auth: true } },
   ],
 })
 
