@@ -86,6 +86,9 @@
               <router-link to="/collections" class="dropdown-item" role="menuitem" @click="closeDropdown">
                 <i class="pi pi-folder-open"></i> Collections
               </router-link>
+              <router-link to="/customization" class="dropdown-item" role="menuitem" @click="closeDropdown">
+                <i class="pi pi-palette"></i> Customization
+              </router-link>
               <div class="dropdown-divider"></div>
               <button type="button" class="dropdown-item dropdown-item-danger" role="menuitem" @click="logout">
                 <i class="pi pi-sign-out"></i> Log out
@@ -113,11 +116,13 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useThemeStore } from '@/stores/theme'
 import { useNotificationsStore } from '@/stores/notifications'
 import { avatarSrc } from '@/api/client'
 import type { NotificationItem } from '@/stores/notifications'
 
 const auth = useAuthStore()
+const theme = useThemeStore()
 const router = useRouter()
 const route = useRoute()
 const notifications = useNotificationsStore()
@@ -172,6 +177,7 @@ function logout() {
   dropdownOpen.value = false
   notifOpen.value = false
   notifications.disconnectSocket()
+  theme.clearUserThemes()
   auth.logout()
   router.push('/')
 }
@@ -262,7 +268,7 @@ onUnmounted(() => {
   gap: clamp(0.75rem, 2vw, 1.5rem);
   width: 100%;
   padding: 0.75rem clamp(1rem, 4vw, 2rem);
-  background: rgba(250, 247, 240, 0.95);
+  background: var(--nav-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 2px solid var(--border-medium);

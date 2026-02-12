@@ -17,6 +17,11 @@ const pinia = createPinia()
 pinia.use(piniaPluginPersistedstate)
 
 const app = createApp(App)
-app.use(pinia).use(router)
+app.use(pinia)
+// Apply saved theme before mounting so first paint uses it
+import { useThemeStore } from './stores/theme'
+const theme = useThemeStore()
+theme.init()
+app.use(router)
 app.directive('tooltip', Tooltip)
 app.mount('#app')

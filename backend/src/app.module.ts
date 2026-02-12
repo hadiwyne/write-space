@@ -16,6 +16,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { BookmarksModule } from './bookmarks/bookmarks.module';
 import { CollectionsModule } from './collections/collections.module';
 import { RepostsModule } from './reposts/reposts.module';
+import { ThemesModule } from './themes/themes.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { RepostsModule } from './reposts/reposts.module';
     BookmarksModule,
     CollectionsModule,
     RepostsModule,
+    ThemesModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: JwtAuthGuard }],
 })
