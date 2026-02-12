@@ -59,6 +59,16 @@ body::before {
 .main--with-header {
   padding-top: calc(4.5rem + clamp(1.25rem, 4vw, 2.5rem));
 }
+@media (max-width: 768px) {
+  .main--with-header {
+    padding-top: calc(7rem + clamp(1rem, 3vw, 1.5rem));
+  }
+}
+@media (max-width: 480px) {
+  .main--with-header {
+    padding-top: calc(8rem + 1rem);
+  }
+}
 .main--full { max-width: none; }
 a { color: var(--accent-primary); text-decoration: none; transition: color 0.2s ease; }
 a:hover { text-decoration: underline; color: var(--accent-burgundy); }
