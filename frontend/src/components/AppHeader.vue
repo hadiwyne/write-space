@@ -1,5 +1,5 @@
 <template>
-  <header class="header">
+  <header class="header" :class="{ 'header--hidden': !headerVisible }">
     <router-link to="/" class="logo" aria-label="WriteSpace home">WriteSpace</router-link>
 
     <div class="search-wrap">
@@ -121,6 +121,31 @@ const notifOpen = ref(false)
 const searchQuery = ref('')
 const avatarWrapRef = ref<HTMLElement | null>(null)
 const notifWrapRef = ref<HTMLElement | null>(null)
+const headerVisible = ref(true)
+const lastScrollY = ref(0)
+const scrollDownThreshold = 12
+const scrollUpThreshold = 5
+
+function getScrollY(): number {
+  return window.scrollY ?? document.documentElement.scrollTop ?? 0
+}
+
+function onScroll() {
+  const y = getScrollY()
+  const prev = lastScrollY.value
+  lastScrollY.value = y
+
+  if (y <= scrollDownThreshold) {
+    headerVisible.value = true
+    return
+  }
+  const delta = y - prev
+  if (delta > scrollDownThreshold) {
+    headerVisible.value = false
+  } else if (delta < -scrollUpThreshold) {
+    headerVisible.value = true
+  }
+}
 
 function closeDropdown() {
   dropdownOpen.value = false
@@ -182,16 +207,24 @@ watch(() => auth.token, (token) => {
   if (token) notifications.init()
   else notifications.disconnectSocket()
 })
+watch(() => route.path, () => {
+  headerVisible.value = true
+})
 
 onMounted(() => {
+  lastScrollY.value = getScrollY()
   if (auth.token) {
     auth.fetchUser()
     notifications.init()
   }
   document.addEventListener('click', onDocumentClick)
+  window.addEventListener('scroll', onScroll, { passive: true })
+  document.addEventListener('scroll', onScroll, { passive: true })
 })
 onUnmounted(() => {
   document.removeEventListener('click', onDocumentClick)
+  window.removeEventListener('scroll', onScroll)
+  document.removeEventListener('scroll', onScroll)
   notifications.disconnectSocket()
 })
 </script>
@@ -216,6 +249,10 @@ onUnmounted(() => {
   box-shadow: 0 2px 12px rgba(44, 24, 16, 0.06);
   animation: slideDown 0.5s ease-out;
   flex-wrap: wrap;
+  transition: transform 0.25s ease;
+}
+.header.header--hidden {
+  transform: translateY(-100%);
 }
 .logo {
   flex-shrink: 0;
