@@ -24,7 +24,7 @@
         <div class="notif-wrap" ref="notifWrapRef">
           <button type="button" class="nav-btn notif-btn" aria-label="Notifications" :aria-expanded="notifOpen" @click="notifOpen = !notifOpen">
             <i class="pi pi-bell"></i>
-            <span v-if="notifications.unreadCount > 0" class="notif-bubble">{{ notifications.unreadCount > 99 ? '99+' : notifications.unreadCount }}</span>
+            <span v-if="!notifOpen && notifications.unreadCount > unreadCountWhenOpened" class="notif-bubble">{{ notifications.unreadCount > 99 ? '99+' : notifications.unreadCount }}</span>
           </button>
           <Transition name="dropdown">
             <div v-if="notifOpen" class="dropdown notif-dropdown" role="menu">
@@ -32,18 +32,23 @@
                 <span class="notif-dropdown-title">Notifications</span>
                 <button v-if="notifications.unreadCount > 0" type="button" class="notif-mark-all" @click="notifications.markAllRead()">Mark all read</button>
               </div>
+              <div class="notif-tabs">
+                <button type="button" class="notif-tab" :class="{ active: notifTab === 'all' }" @click="notifTab = 'all'">All</button>
+                <button type="button" class="notif-tab" :class="{ active: notifTab === 'unread' }" @click="notifTab = 'unread'">Unread</button>
+              </div>
               <div class="notif-list">
-                <template v-if="notifications.list.length === 0">
-                  <div class="notif-empty">No notifications yet.</div>
+                <template v-if="displayedNotifications.length === 0">
+                  <div class="notif-empty">{{ notifTab === 'unread' ? 'No unread notifications.' : 'No notifications yet.' }}</div>
                 </template>
                 <router-link
-                  v-for="n in notifications.list"
+                  v-for="n in displayedNotifications"
                   :key="n.id"
                   :to="notifLink(n)"
                   class="notif-item"
                   :class="{ unread: !n.readAt }"
-                  @click="notifOpen = false"
+                  @click="onNotifClick(n)"
                 >
+                  <span class="notif-dot" :class="{ unread: !n.readAt }" aria-hidden="true"></span>
                   <img v-if="n.actor?.avatarUrl" :src="avatarSrc(n.actor.avatarUrl)" alt="" class="notif-avatar" />
                   <span v-else class="notif-avatar-placeholder">{{ (n.actor?.displayName || n.actor?.username || '?')[0] }}</span>
                   <div class="notif-body">
@@ -105,7 +110,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationsStore } from '@/stores/notifications'
@@ -118,7 +123,13 @@ const route = useRoute()
 const notifications = useNotificationsStore()
 const dropdownOpen = ref(false)
 const notifOpen = ref(false)
+const notifTab = ref<'all' | 'unread'>('all')
+const unreadCountWhenOpened = ref(0)
 const searchQuery = ref('')
+const displayedNotifications = computed(() => {
+  if (notifTab.value === 'unread') return notifications.list.filter((n) => !n.readAt)
+  return notifications.list
+})
 const avatarWrapRef = ref<HTMLElement | null>(null)
 const notifWrapRef = ref<HTMLElement | null>(null)
 const headerVisible = ref(true)
@@ -202,6 +213,15 @@ function notifLink(n: NotificationItem) {
   if (n.actor?.username) return `/u/${n.actor.username}`
   return '/feed'
 }
+
+function onNotifClick(n: NotificationItem) {
+  notifOpen.value = false
+  if (!n.readAt) notifications.markOneRead(n.id)
+}
+
+watch(notifOpen, (open) => {
+  if (open) unreadCountWhenOpened.value = notifications.unreadCount
+})
 
 watch(() => auth.token, (token) => {
   if (token) notifications.init()
@@ -438,7 +458,13 @@ onUnmounted(() => {
 .notif-dropdown-title { font-weight: 600; font-size: 0.9375rem; }
 .notif-mark-all { padding: 0.25rem 0.5rem; font-size: 0.75rem; color: var(--accent-primary); background: none; border: none; cursor: pointer; font-family: inherit; }
 .notif-mark-all:hover { text-decoration: underline; }
+.notif-tabs { display: flex; padding: 0 0.5rem; gap: 0.25rem; border-bottom: 1px solid var(--border-light); }
+.notif-tab { padding: 0.375rem 0.625rem; font-size: 0.8125rem; color: var(--text-tertiary); background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer; font-family: inherit; }
+.notif-tab:hover { color: var(--text-secondary); }
+.notif-tab.active { color: var(--accent-primary); font-weight: 600; border-bottom-color: var(--accent-primary); }
 .notif-list { overflow-y: auto; flex: 1; padding: 0.25rem 0; }
+.notif-dot { flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%; background: transparent; }
+.notif-dot.unread { background: var(--like-color); }
 .notif-empty { padding: 1rem 0.75rem; font-size: 0.875rem; color: var(--text-tertiary); text-align: center; }
 .notif-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; color: inherit; text-decoration: none; }
 .notif-item:hover { background: var(--bg-primary); }

@@ -60,6 +60,18 @@ export const useNotificationsStore = defineStore('notifications', () => {
     }
   }
 
+  async function markOneRead(id: string) {
+    try {
+      const wasUnread = list.value.some((n) => n.id === id && !n.readAt)
+      await api.post(`/notifications/${id}/read`)
+      const now = new Date().toISOString()
+      list.value = list.value.map((n) => (n.id === id ? { ...n, readAt: now } : n))
+      if (wasUnread) unreadCount.value = Math.max(0, unreadCount.value - 1)
+    } catch {
+      // ignore
+    }
+  }
+
   async function markAllRead() {
     try {
       await api.post('/notifications/read-all')
@@ -87,6 +99,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
     unreadCount,
     fetchNotifications,
     fetchUnreadCount,
+    markOneRead,
     markAllRead,
     init,
     disconnectSocket,
