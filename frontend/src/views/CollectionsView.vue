@@ -104,11 +104,57 @@ async function createCollection() {
 .modal h2 { margin: 0 0 1rem; font-size: 1.25rem; }
 .form-group { margin-bottom: 1rem; }
 .form-group label { display: block; font-size: 0.875rem; margin-bottom: 0.25rem; }
-.form-group input, .form-group textarea { width: 100%; min-width: 0; padding: 0.5rem 0.75rem; border: 1px solid var(--gray-300); border-radius: var(--radius); }
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 0.5rem 0.75rem;
+  border: 2px solid var(--border-light);
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+  background: var(--bg-card);
+}
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  color: var(--text-tertiary);
+}
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 4px rgba(139, 69, 19, 0.1);
+}
 .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1rem; flex-wrap: wrap; }
 @media (max-width: 480px) {
   .modal { padding: 1rem; min-width: 0; }
   .collection-link { padding: 0.625rem 0.75rem; }
 }
-.btn-ghost { background: transparent; border: 1px solid var(--gray-300); color: var(--gray-700); }
+.btn {
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+.btn-primary {
+  background: var(--accent-primary);
+  color: white;
+  border-color: var(--accent-primary);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-burgundy);
+  border-color: var(--accent-burgundy);
+}
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-ghost {
+  background: transparent;
+  border: 2px solid var(--border-medium);
+  color: var(--text-secondary);
+}
+.btn-ghost:hover { background: var(--bg-primary); border-color: var(--border-medium); }
 </style>
