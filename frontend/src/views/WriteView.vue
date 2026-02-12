@@ -3,7 +3,15 @@
     <h1>New post</h1>
     <form @submit.prevent="publish" class="form">
       <div class="form-group">
-        <input v-model="title" type="text" placeholder="Title" required class="title-input" />
+        <input
+          :value="title"
+          type="text"
+          placeholder="Title"
+          required
+          class="title-input"
+          @input="onTitleInput"
+        />
+        <p v-if="titleWarningReason" class="title-warning">{{ titleWarningMessage }}</p>
       </div>
       <div class="form-group editor-toolbar">
         <div class="dropdown-wrap" ref="formatDropdownRef">
@@ -110,7 +118,10 @@
       </div>
       <div class="actions">
         <button type="button" class="btn btn-outline" @click="() => saveDraft()" :disabled="savingDraft">Save draft</button>
-        <button type="submit" class="btn btn-primary" :disabled="loading">Publish</button>
+        <button type="submit" class="btn btn-primary btn-publish" :disabled="loading">
+          <i v-if="loading" class="pi pi-spin pi-spinner publish-spinner" aria-hidden="true"></i>
+          <span>{{ loading ? 'Publishing' : 'Publish' }}</span>
+        </button>
       </div>
     </form>
   </div>
@@ -125,9 +136,47 @@ import RichTextEditor from '@/components/RichTextEditor.vue'
 
 const MAX_IMAGES_PER_POST = 5
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
+const MAX_TITLE_WORDS = 20
+const MAX_TITLE_CHARS = 120
+
+function countWords(s: string): number {
+  return s.trim() ? s.trim().split(/\s+/).filter(Boolean).length : 0
+}
+
+function truncateToWords(s: string, maxWords: number): string {
+  const words = s.trim().split(/\s+/).filter(Boolean)
+  return words.slice(0, maxWords).join(' ')
+}
+
+function truncateToChars(s: string, maxChars: number): string {
+  if (s.length <= maxChars) return s
+  return s.slice(0, maxChars)
+}
 
 const router = useRouter()
 const title = ref('')
+const titleWarningReason = ref<'words' | 'chars' | null>(null)
+const titleWarningMessage = computed(() => {
+  if (titleWarningReason.value === 'words') return 'Maximum 20 words for title.'
+  if (titleWarningReason.value === 'chars') return 'Maximum 120 characters for title.'
+  return ''
+})
+
+function onTitleInput(e: Event) {
+  const target = e.target as HTMLInputElement
+  const raw = target.value
+  // Only truncate when a limit is exceeded so we don't strip spaces between words
+  let truncated = raw
+  if (countWords(raw) > MAX_TITLE_WORDS) truncated = truncateToWords(raw, MAX_TITLE_WORDS)
+  if (truncated.length > MAX_TITLE_CHARS) truncated = truncateToChars(truncated, MAX_TITLE_CHARS)
+  const overWords = countWords(raw) > MAX_TITLE_WORDS
+  const overChars = raw.length > MAX_TITLE_CHARS
+  title.value = truncated
+  if (raw !== truncated) target.value = truncated
+  if (overChars) titleWarningReason.value = 'chars'
+  else if (overWords) titleWarningReason.value = 'words'
+  else titleWarningReason.value = null
+}
 const content = ref('')
 const contentType = ref<ContentType>('MARKDOWN')
 const tagsStr = ref('')
@@ -380,6 +429,7 @@ async function onRichEditorImageUpload(file: File) {
 .write-page h1 { font-size: clamp(1.25rem, 4vw, 1.5rem); margin: 0 0 1rem; }
 .form { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
 .title-input { width: 100%; min-width: 0; font-size: clamp(1.125rem, 4vw, 1.5rem); padding: 0.5rem 0; border: none; border-bottom: 1px solid var(--gray-200); background: transparent; }
+.title-warning { font-size: 0.8125rem; color: var(--accent-burgundy, #6b2c3e); margin: 0.25rem 0 0; }
 .editor-toolbar { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
 .dropdown-wrap { position: relative; }
 .dropdown-trigger {
@@ -474,5 +524,8 @@ async function onRichEditorImageUpload(file: File) {
 .actions { display: flex; gap: 0.75rem; margin-top: 0.5rem; }
 .btn { padding: 0.5rem 1rem; border-radius: var(--radius); border: none; cursor: pointer; font-size: 0.9375rem; }
 .btn-primary { background: var(--primary); color: #fff; }
+.btn-publish { display: inline-flex; align-items: center; gap: 0.5rem; }
+.btn-publish:disabled { opacity: 0.8; cursor: not-allowed; }
+.publish-spinner { font-size: 1.125rem; }
 .btn-outline { background: transparent; border: 1px solid var(--gray-300); color: var(--gray-700); }
 </style>

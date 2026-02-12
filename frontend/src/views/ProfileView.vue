@@ -196,7 +196,7 @@ const profileTabsRef = ref<HTMLElement | null>(null)
 const tabIndicatorStyle = ref<{ left: string; width: string }>({ left: '0px', width: '0px' })
 
 function updateProfileTabIndicator() {
-  nextTick(() => {
+  const measure = () => {
     const container = profileTabsRef.value
     if (!container) return
     const tabs = container.querySelectorAll<HTMLButtonElement>('.profile-tab')
@@ -207,7 +207,8 @@ function updateProfileTabIndicator() {
       left: `${active.offsetLeft}px`,
       width: `${active.offsetWidth}px`,
     }
-  })
+  }
+  nextTick(() => requestAnimationFrame(measure))
 }
 
 type FeedItem = { type: 'post'; post: Record<string, unknown> } | { type: 'repost'; post: Record<string, unknown>; repostedAt: string }
@@ -261,6 +262,7 @@ const totalPosts = computed(() => {
 
 async function load() {
   const username = route.params.username as string
+  profileTab.value = 'posts'
   loading.value = true
   isFollowing.value = false
   reposts.value = []
@@ -422,11 +424,13 @@ function handleLike(_postId: string, isLiked: boolean) {
 
 watch(profileTab, updateProfileTabIndicator)
 watch(isOwnProfile, updateProfileTabIndicator)
+watch([profile, loading], () => {
+  if (profile.value && !loading.value) updateProfileTabIndicator()
+}, { immediate: true })
 watch(() => route.params.username, load)
 
 onMounted(() => {
   load()
-  updateProfileTabIndicator()
   window.addEventListener('resize', updateProfileTabIndicator)
 })
 onUnmounted(() => {
@@ -608,7 +612,12 @@ onUnmounted(() => {
   transition: color 0.2s ease;
 }
 .profile-tab:hover:not(.active) { color: var(--accent-primary); }
-.profile-tab.active { color: white; }
+.profile-tab.active {
+  color: white;
+  /* Always show active state (sliding indicator may measure late; this ensures tab is highlighted) */
+  background: var(--accent-primary);
+  box-shadow: 0 2px 8px rgba(139, 69, 19, 0.25);
+}
 .empty { color: var(--text-secondary); padding: 1rem 0; }
 .post-list { display: flex; flex-direction: column; gap: clamp(1rem, 3vw, 1.5rem); }
 .feed-item-wrap { display: contents; }
