@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 const STORAGE_KEY = 'writespace-theme'
+const USER_TEMPLATES_KEY = 'writespace-user-themes'
 
 export const THEME_KEYS = {
   backgrounds: ['bg-primary', 'bg-secondary', 'bg-card'] as const,
@@ -39,6 +40,34 @@ export const THEME_DEFAULTS: Record<ThemeKey, string> = {
 }
 
 export type ThemeTemplate = Record<ThemeKey, string>
+export type UserSavedTheme = { id: string; name: string; palette: ThemeTemplate }
+
+function loadUserTemplates(): UserSavedTheme[] {
+  try {
+    const raw = localStorage.getItem(USER_TEMPLATES_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as unknown[]
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter(
+      (t): t is UserSavedTheme =>
+        t != null &&
+        typeof t === 'object' &&
+        typeof (t as UserSavedTheme).id === 'string' &&
+        typeof (t as UserSavedTheme).name === 'string' &&
+        typeof (t as UserSavedTheme).palette === 'object'
+    )
+  } catch {
+    return []
+  }
+}
+
+function saveUserTemplates(templates: UserSavedTheme[]) {
+  try {
+    localStorage.setItem(USER_TEMPLATES_KEY, JSON.stringify(templates))
+  } catch {
+    // ignore
+  }
+}
 
 export const THEME_TEMPLATES: Record<string, { name: string; palette: ThemeTemplate }> = {
   default: {
@@ -221,8 +250,27 @@ function applyToDocument(overrides: Partial<Record<ThemeKey, string>>) {
   }
 }
 
+const allKeys = Object.keys(THEME_DEFAULTS) as ThemeKey[]
+
 export const useThemeStore = defineStore('theme', () => {
   const overrides = ref<Partial<Record<ThemeKey, string>>>(loadFromStorage())
+  const userTemplates = ref<UserSavedTheme[]>(loadUserTemplates())
+
+  const templatesList = computed(() => {
+    const builtIn = Object.entries(THEME_TEMPLATES).map(([id, t]) => ({
+      id,
+      name: t.name,
+      palette: t.palette,
+      isUser: false,
+    }))
+    const user = userTemplates.value.map((t) => ({
+      id: t.id,
+      name: t.name,
+      palette: t.palette,
+      isUser: true,
+    }))
+    return [...builtIn, ...user]
+  })
 
   function init() {
     applyToDocument(overrides.value)
@@ -240,12 +288,35 @@ export const useThemeStore = defineStore('theme', () => {
     saveToStorage({})
   }
 
+  function getCurrentPalette(): ThemeTemplate {
+    const out = { ...THEME_DEFAULTS }
+    for (const key of allKeys) {
+      if (overrides.value[key] != null) out[key] = overrides.value[key]!
+    }
+    return out
+  }
+
   function applyTemplate(templateId: string) {
-    const t = THEME_TEMPLATES[templateId]
-    if (!t) return
-    overrides.value = { ...t.palette }
+    const builtIn = THEME_TEMPLATES[templateId]
+    if (builtIn) {
+      overrides.value = { ...builtIn.palette }
+    } else {
+      const user = userTemplates.value.find((t) => t.id === templateId)
+      if (user) overrides.value = { ...user.palette }
+      else return
+    }
     applyToDocument(overrides.value)
     saveToStorage(overrides.value)
+  }
+
+  function saveUserTheme(name: string) {
+    const trimmed = name.trim()
+    if (!trimmed) return
+    const palette = getCurrentPalette()
+    const id = 'user-' + Math.random().toString(36).slice(2, 11)
+    const newTheme: UserSavedTheme = { id, name: trimmed, palette }
+    userTemplates.value = [...userTemplates.value, newTheme]
+    saveUserTemplates(userTemplates.value)
   }
 
   function get(key: ThemeKey): string {
@@ -266,10 +337,14 @@ export const useThemeStore = defineStore('theme', () => {
     defaults: THEME_DEFAULTS,
     THEME_KEYS,
     THEME_TEMPLATES,
+    templatesList,
+    userTemplates,
     init,
     set,
     reset,
     applyTemplate,
+    saveUserTheme,
+    getCurrentPalette,
     get,
   }
 })

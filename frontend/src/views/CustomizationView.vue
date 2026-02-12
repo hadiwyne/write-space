@@ -7,12 +7,12 @@
       <h2 class="section-title">Theme templates</h2>
       <div class="templates-grid">
         <button
-          v-for="(t, id) in theme.THEME_TEMPLATES"
-          :key="id"
+          v-for="t in theme.templatesList"
+          :key="t.id"
           type="button"
           class="template-card"
           :aria-label="`Apply ${t.name} theme`"
-          @click="theme.applyTemplate(id)"
+          @click="applyTemplateAndClearDirty(t.id)"
         >
           <span class="template-preview" :style="previewStyle(t.palette)"></span>
           <span class="template-name">{{ t.name }}</span>
@@ -66,19 +66,75 @@
 
     <div class="actions">
       <button type="button" class="btn btn-primary" @click="randomizeAll">Randomize</button>
-      <button type="button" class="btn btn-outline" @click="theme.reset()">Reset to default</button>
+      <button type="button" class="btn btn-outline" :disabled="!userHasEdited" @click="openSaveModal">Save theme</button>
+      <button type="button" class="btn btn-outline" @click="resetAndClearDirty">Reset to default</button>
     </div>
+
+    <Teleport to="body">
+      <div v-if="showSaveModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="save-theme-title" @click.self="closeSaveModal">
+        <div class="modal save-theme-modal">
+          <h2 id="save-theme-title" class="modal-heading">Save theme</h2>
+          <p class="modal-hint">Give your theme a name. It will appear in the theme templates above.</p>
+          <div class="save-theme-preview" :style="previewStyle(theme.getCurrentPalette())"></div>
+          <input
+            v-model="saveThemeName"
+            type="text"
+            class="save-theme-input"
+            placeholder="Theme name"
+            maxlength="50"
+            @keydown.enter.prevent="confirmSaveTheme"
+          />
+          <div class="modal-actions">
+            <button type="button" class="btn btn-outline" @click="closeSaveModal">Cancel</button>
+            <button type="button" class="btn btn-primary" :disabled="!saveThemeName.trim()" @click="confirmSaveTheme">Save</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useThemeStore } from '@/stores/theme'
 import type { ThemeKey, ThemeTemplate } from '@/stores/theme'
 
 const theme = useThemeStore()
+const userHasEdited = ref(false)
+const showSaveModal = ref(false)
+const saveThemeName = ref('')
+
 const allKeys = ([] as ThemeKey[]).concat(
   ...(Object.values(theme.THEME_KEYS) as readonly ThemeKey[][])
 )
+
+function applyTemplateAndClearDirty(id: string) {
+  theme.applyTemplate(id)
+  userHasEdited.value = false
+}
+
+function resetAndClearDirty() {
+  theme.reset()
+  userHasEdited.value = false
+}
+
+function openSaveModal() {
+  saveThemeName.value = ''
+  showSaveModal.value = true
+}
+
+function closeSaveModal() {
+  showSaveModal.value = false
+  saveThemeName.value = ''
+}
+
+function confirmSaveTheme() {
+  const name = saveThemeName.value.trim()
+  if (!name) return
+  theme.saveUserTheme(name)
+  closeSaveModal()
+  userHasEdited.value = false
+}
 
 function randomHex(): string {
   return '#' + Math.floor(Math.random() * 0x1000000).toString(16).padStart(6, '0')
@@ -86,10 +142,12 @@ function randomHex(): string {
 
 function randomizeOne(key: ThemeKey) {
   theme.set(key, randomHex())
+  userHasEdited.value = true
 }
 
 function randomizeAll() {
   for (const key of allKeys) theme.set(key, randomHex())
+  userHasEdited.value = true
 }
 
 const sectionTitles: Record<string, string> = {
@@ -121,12 +179,18 @@ const colorLabels: Record<ThemeKey, string> = {
 
 function onColorInput(key: ThemeKey, e: Event) {
   const target = (e.target as HTMLInputElement)
-  if (target?.value) theme.set(key, target.value)
+  if (target?.value) {
+    theme.set(key, target.value)
+    userHasEdited.value = true
+  }
 }
 
 function onHexInput(key: ThemeKey, e: Event) {
   const value = (e.target as HTMLInputElement).value?.trim().replace(/^#/, '') ?? ''
-  if (/^[0-9A-Fa-f]{6}$/.test(value)) theme.set(key, `#${value}`)
+  if (/^[0-9A-Fa-f]{6}$/.test(value)) {
+    theme.set(key, `#${value}`)
+    userHasEdited.value = true
+  }
 }
 
 function resetOne(key: ThemeKey) {
@@ -249,4 +313,49 @@ function previewStyle(palette: ThemeTemplate) {
 .btn-primary:hover { filter: brightness(1.08); }
 .btn-outline { background: transparent; border-color: var(--border-medium); color: var(--text-secondary); }
 .btn-outline:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
+.btn-outline:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-outline:disabled:hover { border-color: var(--border-medium); color: var(--text-secondary); }
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(44, 24, 16, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+.save-theme-modal {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 2px solid var(--border-light);
+  box-shadow: var(--shadow-lg);
+  padding: 1.5rem;
+  max-width: 360px;
+  width: 100%;
+}
+.modal-heading { margin: 0 0 0.5rem; font-size: 1.25rem; font-weight: 700; color: var(--text-primary); }
+.modal-hint { font-size: 0.875rem; color: var(--text-secondary); margin: 0 0 1rem; }
+.save-theme-preview {
+  height: 4rem;
+  width: 100%;
+  border-radius: var(--radius-md);
+  margin-bottom: 1rem;
+  border: 2px solid var(--border-light);
+}
+.save-theme-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9375rem;
+  font-family: inherit;
+  border: 2px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+}
+.save-theme-input:focus { outline: none; border-color: var(--accent-primary); }
+.save-theme-input::placeholder { color: var(--text-tertiary); }
+.modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; }
 </style>
