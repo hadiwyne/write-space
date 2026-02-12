@@ -5,7 +5,12 @@
     </header>
 
     <section class="feed-filters">
-      <div class="filter-tabs">
+      <div ref="filterTabsRef" class="filter-tabs">
+        <div
+          class="filter-tabs-indicator"
+          :style="indicatorStyle"
+          aria-hidden="true"
+        />
         <button
           type="button"
           class="filter-tab"
@@ -99,7 +104,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
@@ -115,6 +120,23 @@ const sort = ref<'latest' | 'popular' | 'friends'>('latest')
 const tagFilter = ref('')
 const viewMode = ref<'list' | 'grid'>('list')
 const repostedIds = ref<Set<string>>(new Set())
+const filterTabsRef = ref<HTMLElement | null>(null)
+const indicatorStyle = ref<{ left: string; width: string }>({ left: '0px', width: '0px' })
+
+function updateTabIndicator() {
+  nextTick(() => {
+    const container = filterTabsRef.value
+    if (!container) return
+    const tabs = container.querySelectorAll<HTMLButtonElement>('.filter-tab')
+    const index = sort.value === 'latest' ? 0 : sort.value === 'popular' ? 1 : 2
+    const active = tabs[index]
+    if (!active) return
+    indicatorStyle.value = {
+      left: `${active.offsetLeft}px`,
+      width: `${active.offsetWidth}px`,
+    }
+  })
+}
 
 async function handleRepost(postId: string) {
   try {
@@ -189,13 +211,17 @@ function onPageShow(e: PageTransitionEvent) {
 watch(() => route.path, (path) => {
   if (path === '/feed') load()
 })
+watch(sort, updateTabIndicator)
 
 onMounted(() => {
   load()
+  updateTabIndicator()
   window.addEventListener('pageshow', onPageShow)
+  window.addEventListener('resize', updateTabIndicator)
 })
 onUnmounted(() => {
   window.removeEventListener('pageshow', onPageShow)
+  window.removeEventListener('resize', updateTabIndicator)
 })
 </script>
 
@@ -243,6 +269,7 @@ onUnmounted(() => {
 }
 
 .filter-tabs {
+  position: relative;
   display: flex;
   flex-shrink: 0;
   background: var(--bg-primary);
@@ -250,7 +277,22 @@ onUnmounted(() => {
   border-radius: var(--radius-md);
   border: 2px solid var(--border-light);
 }
+.filter-tabs-indicator {
+  position: absolute;
+  top: 0.25rem;
+  bottom: 0.25rem;
+  left: 0;
+  width: 0;
+  border-radius: calc(var(--radius-md) - 2px);
+  background: var(--accent-primary);
+  box-shadow: 0 2px 8px rgba(139, 69, 19, 0.25);
+  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  z-index: 0;
+}
 .filter-tab {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -263,16 +305,13 @@ onUnmounted(() => {
   font-family: inherit;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: color 0.2s ease;
 }
 .filter-tab:hover:not(.active) {
-  background: rgba(139, 69, 19, 0.08);
   color: var(--accent-primary);
 }
 .filter-tab.active {
-  background: var(--accent-primary);
   color: white;
-  box-shadow: 0 2px 8px rgba(139, 69, 19, 0.25);
 }
 .filter-tab .pi { font-size: 1rem; }
 
