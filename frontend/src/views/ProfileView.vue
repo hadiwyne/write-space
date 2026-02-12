@@ -43,7 +43,12 @@
         </template>
       </div>
       <div id="posts-section" class="posts-section">
-        <div class="profile-tabs">
+        <div ref="profileTabsRef" class="profile-tabs">
+          <div
+            class="profile-tabs-indicator"
+            :style="tabIndicatorStyle"
+            aria-hidden="true"
+          />
           <button type="button" class="profile-tab" :class="{ active: profileTab === 'posts' }" @click="profileTab = 'posts'">
             Posts {{ totalPosts }}
           </button>
@@ -164,7 +169,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { api, avatarSrc } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
@@ -187,6 +192,23 @@ const reposts = ref<Record<string, unknown>[]>([])
 const likedPosts = ref<{ id: string; [key: string]: unknown }[]>([])
 const likedLoading = ref(false)
 const profileTab = ref<'posts' | 'liked'>('posts')
+const profileTabsRef = ref<HTMLElement | null>(null)
+const tabIndicatorStyle = ref<{ left: string; width: string }>({ left: '0px', width: '0px' })
+
+function updateProfileTabIndicator() {
+  nextTick(() => {
+    const container = profileTabsRef.value
+    if (!container) return
+    const tabs = container.querySelectorAll<HTMLButtonElement>('.profile-tab')
+    const index = profileTab.value === 'posts' ? 0 : 1
+    const active = tabs[index]
+    if (!active) return
+    tabIndicatorStyle.value = {
+      left: `${active.offsetLeft}px`,
+      width: `${active.offsetWidth}px`,
+    }
+  })
+}
 
 type FeedItem = { type: 'post'; post: Record<string, unknown> } | { type: 'repost'; post: Record<string, unknown>; repostedAt: string }
 
@@ -398,8 +420,18 @@ function handleLike(_postId: string, isLiked: boolean) {
   }
 }
 
-onMounted(load)
+watch(profileTab, updateProfileTabIndicator)
+watch(isOwnProfile, updateProfileTabIndicator)
 watch(() => route.params.username, load)
+
+onMounted(() => {
+  load()
+  updateProfileTabIndicator()
+  window.addEventListener('resize', updateProfileTabIndicator)
+})
+onUnmounted(() => {
+  window.removeEventListener('resize', updateProfileTabIndicator)
+})
 </script>
 
 <style scoped>
@@ -539,6 +571,7 @@ watch(() => route.params.username, load)
 .btn-following:hover:not(:disabled) { background: var(--bg-primary); border-color: var(--border-medium); }
 .posts-section { margin-top: 1.5rem; }
 .profile-tabs {
+  position: relative;
   display: flex;
   gap: 0.5rem;
   margin-bottom: 1rem;
@@ -547,7 +580,22 @@ watch(() => route.params.username, load)
   border-radius: var(--radius-md);
   border: 2px solid var(--border-light);
 }
+.profile-tabs-indicator {
+  position: absolute;
+  top: 0.25rem;
+  bottom: 0.25rem;
+  left: 0;
+  width: 0;
+  border-radius: calc(var(--radius-md) - 2px);
+  background: var(--accent-primary);
+  box-shadow: 0 2px 8px rgba(139, 69, 19, 0.25);
+  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  z-index: 0;
+}
 .profile-tab {
+  position: relative;
+  z-index: 1;
   padding: 0.625rem 1.25rem;
   border-radius: calc(var(--radius-md) - 2px);
   border: none;
@@ -557,10 +605,10 @@ watch(() => route.params.username, load)
   font-family: inherit;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: color 0.2s ease;
 }
-.profile-tab:hover:not(.active) { background: rgba(139, 69, 19, 0.08); color: var(--accent-primary); }
-.profile-tab.active { background: var(--accent-primary); color: white; box-shadow: 0 2px 8px rgba(139, 69, 19, 0.25); }
+.profile-tab:hover:not(.active) { color: var(--accent-primary); }
+.profile-tab.active { color: white; }
 .empty { color: var(--text-secondary); padding: 1rem 0; }
 .post-list { display: flex; flex-direction: column; gap: clamp(1rem, 3vw, 1.5rem); }
 .feed-item-wrap { display: contents; }
