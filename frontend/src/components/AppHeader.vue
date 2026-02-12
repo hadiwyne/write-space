@@ -265,7 +265,7 @@ onUnmounted(() => {
   gap: clamp(0.75rem, 2vw, 1.5rem);
   width: 100%;
   padding: 0.75rem clamp(1rem, 4vw, 2rem);
-  background: rgba(250, 247, 240, 0.95);
+  background: var(--nav-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 2px solid var(--border-medium);

@@ -5,6 +5,7 @@ const STORAGE_KEY = 'writespace-theme'
 
 export const THEME_KEYS = {
   backgrounds: ['bg-primary', 'bg-secondary', 'bg-card'] as const,
+  navigation: ['nav-bg'] as const,
   text: ['text-primary', 'text-secondary', 'text-tertiary'] as const,
   accents: ['accent-primary', 'accent-secondary', 'accent-tertiary', 'accent-green', 'accent-burgundy'] as const,
   borders: ['border-light', 'border-medium'] as const,
@@ -17,6 +18,7 @@ export type ThemeKey =
   | (typeof THEME_KEYS.accents)[number]
   | (typeof THEME_KEYS.borders)[number]
   | (typeof THEME_KEYS.actions)[number]
+  | (typeof THEME_KEYS.navigation)[number]
 
 export const THEME_DEFAULTS: Record<ThemeKey, string> = {
   'bg-primary': '#F5F1E8',
@@ -33,6 +35,7 @@ export const THEME_DEFAULTS: Record<ThemeKey, string> = {
   'border-light': '#E5DCC8',
   'border-medium': '#D4C4AC',
   'like-color': '#DC143C',
+  'nav-bg': '#FAF7F0',
 }
 
 function loadFromStorage(): Partial<Record<ThemeKey, string>> {

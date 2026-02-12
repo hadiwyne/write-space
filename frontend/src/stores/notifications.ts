@@ -39,6 +39,9 @@ export const useNotificationsStore = defineStore('notifications', () => {
   function connectSocket(token: string) {
     if (socket?.connected) return
     const origin = typeof window !== 'undefined' ? window.location.origin : ''
+    // In dev, Vite may not proxy /socket.io; avoid connection attempts that can cause reloads
+    const isDev = import.meta.env.DEV && !import.meta.env.VITE_API_URL
+    if (isDev) return
     socket = io(`${origin}/notifications`, {
       path: '/socket.io',
       auth: { token },

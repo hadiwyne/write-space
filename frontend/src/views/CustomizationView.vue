@@ -56,6 +56,7 @@ const sectionTitles: Record<string, string> = {
   accents: 'Accent colors',
   borders: 'Borders',
   actions: 'Actions & highlights',
+  navigation: 'Navigation',
 }
 
 const colorLabels: Record<ThemeKey, string> = {
@@ -73,6 +74,7 @@ const colorLabels: Record<ThemeKey, string> = {
   'border-light': 'Light borders',
   'border-medium': 'Medium borders',
   'like-color': 'Like / heart color',
+  'nav-bg': 'Nav bar background',
 }
 
 function onColorInput(key: ThemeKey, e: Event) {
