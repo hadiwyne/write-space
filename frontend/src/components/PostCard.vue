@@ -575,16 +575,34 @@ function formatDate(s: string | undefined) {
   .author-avatar { width: 44px; height: 44px; font-size: 1rem; }
   .author-name { font-size: 0.9375rem; }
   .author-meta { font-size: 0.8125rem; gap: 0.5rem; }
+  .card-footer {
+    gap: 0.375rem;
+    padding-top: 1rem;
+  }
   .card-footer .action-stat,
   .card-footer .action-btn {
-    min-width: calc(50% - 0.25rem);
-    padding: 0.5rem 0.75rem;
-    font-size: 0.875rem;
+    padding: 0.375rem 0.625rem;
+    font-size: 0.8125rem;
+    gap: 0.375rem;
   }
-  .card-actions { margin-left: 0; width: 100%; justify-content: flex-end; }
+  .card-footer .action-stat .pi,
+  .card-footer .action-btn .pi { font-size: 1rem; }
+  .card-actions { margin-left: auto; }
 }
 @media (max-width: 480px) {
   .card { padding: 1rem; }
+  .card-footer {
+    gap: 0.25rem;
+    padding-top: 0.75rem;
+  }
+  .card-footer .action-stat,
+  .card-footer .action-btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    gap: 0.25rem;
+  }
+  .card-footer .action-stat .pi,
+  .card-footer .action-btn .pi { font-size: 0.9375rem; }
   .card-thumbnails--2 .card-thumb { min-width: 100%; max-height: 140px; }
   .card-thumbnails--3 .card-thumb,
   .card-thumbnails--4 .card-thumb {
