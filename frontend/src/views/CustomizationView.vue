@@ -3,6 +3,23 @@
     <h1>Customization</h1>
     <p class="intro">Change how WriteSpace looks for you.</p>
 
+    <section class="theme-section templates-section">
+      <h2 class="section-title">Theme templates</h2>
+      <div class="templates-grid">
+        <button
+          v-for="(t, id) in theme.THEME_TEMPLATES"
+          :key="id"
+          type="button"
+          class="template-card"
+          :aria-label="`Apply ${t.name} theme`"
+          @click="theme.applyTemplate(id)"
+        >
+          <span class="template-preview" :style="previewStyle(t.palette)"></span>
+          <span class="template-name">{{ t.name }}</span>
+        </button>
+      </div>
+    </section>
+
     <section v-for="(keys, group) in theme.THEME_KEYS" :key="group" class="theme-section">
       <h2 class="section-title">{{ sectionTitles[group] }}</h2>
       <div class="color-grid">
@@ -56,7 +73,7 @@
 
 <script setup lang="ts">
 import { useThemeStore } from '@/stores/theme'
-import type { ThemeKey } from '@/stores/theme'
+import type { ThemeKey, ThemeTemplate } from '@/stores/theme'
 
 const theme = useThemeStore()
 const allKeys = ([] as ThemeKey[]).concat(
@@ -115,6 +132,12 @@ function onHexInput(key: ThemeKey, e: Event) {
 function resetOne(key: ThemeKey) {
   theme.set(key, theme.defaults[key])
 }
+
+function previewStyle(palette: ThemeTemplate) {
+  return {
+    background: `linear-gradient(135deg, ${palette['bg-primary']} 0%, ${palette['accent-primary']} 50%, ${palette['bg-card']} 100%)`,
+  }
+}
 </script>
 
 <style scoped>
@@ -122,6 +145,42 @@ function resetOne(key: ThemeKey) {
 .customization-page h1 { font-size: clamp(1.5rem, 4vw, 2rem); margin: 0 0 0.5rem; color: var(--text-primary); }
 .intro { color: var(--text-secondary); font-size: 0.9375rem; margin: 0 0 2rem; }
 .theme-section { margin-bottom: 2rem; }
+.templates-section .section-title { margin-bottom: 0.75rem; }
+.templates-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 0.75rem;
+}
+.template-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0;
+  border: 2px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  font-family: inherit;
+}
+.template-card:hover {
+  border-color: var(--accent-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+.template-preview {
+  display: block;
+  height: 3rem;
+  width: 100%;
+  flex-shrink: 0;
+}
+.template-name {
+  padding: 0.5rem 0.5rem 0.625rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: center;
+}
 .section-title {
   font-size: 1.125rem;
   font-weight: 700;
