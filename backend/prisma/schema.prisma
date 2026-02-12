@@ -47,6 +47,7 @@ model User {
   collections   Collection[]
   reposts       Repost[]
   postImages    PostImage[]
+  themes        UserTheme[]
 
   isSuperadmin  Boolean   @default(false) @map("is_superadmin")
   createdAt     DateTime  @default(now()) @map("created_at")
@@ -261,4 +262,16 @@ model PostImage {
 
   @@index([userId])
   @@map("post_images")
+}
+
+model UserTheme {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  palette   Json     // { [key: string]: string } theme variables
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("user_themes")
 }

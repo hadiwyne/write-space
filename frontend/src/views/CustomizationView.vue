@@ -84,6 +84,7 @@
             maxlength="50"
             @keydown.enter.prevent="confirmSaveTheme"
           />
+          <p v-if="saveThemeError" class="save-theme-error" role="alert">{{ saveThemeError }}</p>
           <div class="modal-actions">
             <button type="button" class="btn btn-outline" @click="closeSaveModal">Cancel</button>
             <button type="button" class="btn btn-primary" :disabled="!saveThemeName.trim()" @click="confirmSaveTheme">Save</button>
@@ -95,7 +96,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useThemeStore } from '@/stores/theme'
 import type { ThemeKey, ThemeTemplate } from '@/stores/theme'
 
@@ -103,6 +104,7 @@ const theme = useThemeStore()
 const userHasEdited = ref(false)
 const showSaveModal = ref(false)
 const saveThemeName = ref('')
+const saveThemeError = ref('')
 
 const allKeys = ([] as ThemeKey[]).concat(
   ...(Object.values(theme.THEME_KEYS) as readonly ThemeKey[][])
@@ -118,22 +120,33 @@ function resetAndClearDirty() {
   userHasEdited.value = false
 }
 
+onMounted(() => {
+  theme.fetchUserThemes()
+})
+
 function openSaveModal() {
   saveThemeName.value = ''
+  saveThemeError.value = ''
   showSaveModal.value = true
 }
 
 function closeSaveModal() {
   showSaveModal.value = false
   saveThemeName.value = ''
+  saveThemeError.value = ''
 }
 
-function confirmSaveTheme() {
+async function confirmSaveTheme() {
   const name = saveThemeName.value.trim()
   if (!name) return
-  theme.saveUserTheme(name)
-  closeSaveModal()
-  userHasEdited.value = false
+  saveThemeError.value = ''
+  try {
+    await theme.saveUserTheme(name)
+    closeSaveModal()
+    userHasEdited.value = false
+  } catch {
+    saveThemeError.value = 'Failed to save theme. Please try again.'
+  }
 }
 
 function randomHex(): string {
@@ -357,5 +370,6 @@ function previewStyle(palette: ThemeTemplate) {
 }
 .save-theme-input:focus { outline: none; border-color: var(--accent-primary); }
 .save-theme-input::placeholder { color: var(--text-tertiary); }
+.save-theme-error { font-size: 0.875rem; color: var(--accent-burgundy, #c53030); margin: 0.5rem 0 0; }
 .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; }
 </style>

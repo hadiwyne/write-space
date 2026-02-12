@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
+import { api } from '@/api/client'
 
 const STORAGE_KEY = 'writespace-theme'
-const USER_TEMPLATES_KEY = 'writespace-user-themes'
 
 export const THEME_KEYS = {
   backgrounds: ['bg-primary', 'bg-secondary', 'bg-card'] as const,
@@ -41,33 +41,6 @@ export const THEME_DEFAULTS: Record<ThemeKey, string> = {
 
 export type ThemeTemplate = Record<ThemeKey, string>
 export type UserSavedTheme = { id: string; name: string; palette: ThemeTemplate }
-
-function loadUserTemplates(): UserSavedTheme[] {
-  try {
-    const raw = localStorage.getItem(USER_TEMPLATES_KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw) as unknown[]
-    if (!Array.isArray(parsed)) return []
-    return parsed.filter(
-      (t): t is UserSavedTheme =>
-        t != null &&
-        typeof t === 'object' &&
-        typeof (t as UserSavedTheme).id === 'string' &&
-        typeof (t as UserSavedTheme).name === 'string' &&
-        typeof (t as UserSavedTheme).palette === 'object'
-    )
-  } catch {
-    return []
-  }
-}
-
-function saveUserTemplates(templates: UserSavedTheme[]) {
-  try {
-    localStorage.setItem(USER_TEMPLATES_KEY, JSON.stringify(templates))
-  } catch {
-    // ignore
-  }
-}
 
 export const THEME_TEMPLATES: Record<string, { name: string; palette: ThemeTemplate }> = {
   default: {
@@ -254,7 +227,7 @@ const allKeys = Object.keys(THEME_DEFAULTS) as ThemeKey[]
 
 export const useThemeStore = defineStore('theme', () => {
   const overrides = ref<Partial<Record<ThemeKey, string>>>(loadFromStorage())
-  const userTemplates = ref<UserSavedTheme[]>(loadUserTemplates())
+  const userTemplates = ref<UserSavedTheme[]>([])
 
   const templatesList = computed(() => {
     const builtIn = Object.entries(THEME_TEMPLATES).map(([id, t]) => ({
@@ -309,14 +282,37 @@ export const useThemeStore = defineStore('theme', () => {
     saveToStorage(overrides.value)
   }
 
-  function saveUserTheme(name: string) {
+  async function fetchUserThemes() {
+    try {
+      const { data } = await api.get<{ id: string; name: string; palette: Record<string, string> }[]>('/themes')
+      userTemplates.value = Array.isArray(data)
+        ? data.map((t) => ({ id: t.id, name: t.name, palette: t.palette as ThemeTemplate }))
+        : []
+    } catch {
+      userTemplates.value = []
+    }
+  }
+
+  function clearUserThemes() {
+    userTemplates.value = []
+  }
+
+  async function saveUserTheme(name: string) {
     const trimmed = name.trim()
     if (!trimmed) return
     const palette = getCurrentPalette()
-    const id = 'user-' + Math.random().toString(36).slice(2, 11)
-    const newTheme: UserSavedTheme = { id, name: trimmed, palette }
-    userTemplates.value = [...userTemplates.value, newTheme]
-    saveUserTemplates(userTemplates.value)
+    try {
+      const { data } = await api.post<{ id: string; name: string; palette: Record<string, string> }>('/themes', {
+        name: trimmed,
+        palette,
+      })
+      userTemplates.value = [
+        ...userTemplates.value,
+        { id: data.id, name: data.name, palette: data.palette as ThemeTemplate },
+      ]
+    } catch {
+      throw new Error('Failed to save theme')
+    }
   }
 
   function get(key: ThemeKey): string {
@@ -343,6 +339,8 @@ export const useThemeStore = defineStore('theme', () => {
     set,
     reset,
     applyTemplate,
+    fetchUserThemes,
+    clearUserThemes,
     saveUserTheme,
     getCurrentPalette,
     get,

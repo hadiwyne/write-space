@@ -116,11 +116,13 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useThemeStore } from '@/stores/theme'
 import { useNotificationsStore } from '@/stores/notifications'
 import { avatarSrc } from '@/api/client'
 import type { NotificationItem } from '@/stores/notifications'
 
 const auth = useAuthStore()
+const theme = useThemeStore()
 const router = useRouter()
 const route = useRoute()
 const notifications = useNotificationsStore()
@@ -175,6 +177,7 @@ function logout() {
   dropdownOpen.value = false
   notifOpen.value = false
   notifications.disconnectSocket()
+  theme.clearUserThemes()
   auth.logout()
   router.push('/')
 }
