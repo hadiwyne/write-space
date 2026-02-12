@@ -110,7 +110,10 @@
       </div>
       <div class="actions">
         <button type="button" class="btn btn-outline" @click="() => saveDraft()" :disabled="savingDraft">Save draft</button>
-        <button type="submit" class="btn btn-primary" :disabled="loading">Publish</button>
+        <button type="submit" class="btn btn-primary btn-publish" :disabled="loading">
+          <i v-if="loading" class="pi pi-spin pi-spinner publish-spinner" aria-hidden="true"></i>
+          <span>{{ loading ? 'Publishing' : 'Publish' }}</span>
+        </button>
       </div>
     </form>
   </div>
@@ -474,5 +477,8 @@ async function onRichEditorImageUpload(file: File) {
 .actions { display: flex; gap: 0.75rem; margin-top: 0.5rem; }
 .btn { padding: 0.5rem 1rem; border-radius: var(--radius); border: none; cursor: pointer; font-size: 0.9375rem; }
 .btn-primary { background: var(--primary); color: #fff; }
+.btn-publish { display: inline-flex; align-items: center; gap: 0.5rem; }
+.btn-publish:disabled { opacity: 0.8; cursor: not-allowed; }
+.publish-spinner { font-size: 1.125rem; }
 .btn-outline { background: transparent; border: 1px solid var(--gray-300); color: var(--gray-700); }
 </style>
