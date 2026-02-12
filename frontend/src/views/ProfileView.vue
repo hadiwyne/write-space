@@ -262,6 +262,7 @@ const totalPosts = computed(() => {
 
 async function load() {
   const username = route.params.username as string
+  profileTab.value = 'posts'
   loading.value = true
   isFollowing.value = false
   reposts.value = []
