@@ -361,12 +361,15 @@ onUnmounted(() => {
   .filter-tag-and-view { flex-direction: column; align-items: stretch; flex-wrap: wrap; }
   .filter-tag-and-view .filter-tag { flex: none; max-width: none; }
   .filter-tabs { justify-content: center; }
-  .view-toggle { justify-content: center; }
+  .view-toggle { display: none; }
   .tag-input { max-width: none; }
+  .post-list--grid {
+    display: flex;
+    flex-direction: column;
+  }
 }
 @media (max-width: 480px) {
   .filter-tabs { flex-wrap: wrap; justify-content: center; }
   .filter-tab { flex: 1 1 calc(33.333% - 0.5rem); min-width: 0; justify-content: center; }
-  .post-list--grid { grid-template-columns: 1fr; }
 }
 </style>
