@@ -32,7 +32,7 @@
           </button>
           <div v-if="auth.isLoggedIn" class="dropdown-wrap">
             <button type="button" class="action" v-tooltip.bottom="'Add to collection'" @click="toggleCollectionDropdown">
-              <i class="pi pi-folder-plus"></i> Add to collection
+              <i class="pi pi-folder-plus"></i>
             </button>
             <div v-if="collectionDropdownOpen" class="action-dropdown">
               <div v-if="collectionsLoading" class="dropdown-loading">Loading…</div>
@@ -406,7 +406,6 @@ watch(() => route.params.id, load)
   padding: clamp(1rem, 4vw, 2rem);
   box-shadow: var(--shadow-md);
   border: 2px solid var(--border-light);
-  overflow: hidden;
 }
 .post-title {
   font-size: clamp(1.5rem, 4vw, 2rem);
@@ -472,7 +471,7 @@ watch(() => route.params.id, load)
   border: 2px solid var(--border-light);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
-  z-index: 10;
+  z-index: 100;
   min-width: 12rem;
   max-height: 16rem;
   overflow-y: auto;
@@ -508,7 +507,7 @@ watch(() => route.params.id, load)
   border: 2px solid var(--border-light);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
-  z-index: 10;
+  z-index: 100;
   min-width: 10rem;
 }
 .export-option {
@@ -592,17 +591,32 @@ watch(() => route.params.id, load)
 
 @media (max-width: 768px) {
   .post-meta { flex-wrap: wrap; gap: 0.5rem; font-size: 0.8125rem; }
-  .post-actions { gap: 0.5rem; }
-  .action { padding: 0.5rem 0.75rem; font-size: 0.875rem; }
+  .post-actions {
+    gap: 0.375rem;
+    padding-top: 1rem;
+    margin-top: 1.25rem;
+  }
+  .action {
+    padding: 0.375rem 0.625rem;
+    font-size: 0.8125rem;
+    gap: 0.375rem;
+  }
   .action .pi { font-size: 1rem; }
   .comments h2 { font-size: 1.125rem; }
   .comment-form textarea { padding: 0.625rem; font-size: 0.875rem; }
 }
 @media (max-width: 480px) {
-  .post-actions { flex-direction: column; align-items: stretch; }
-  .action { justify-content: center; }
-  .dropdown-wrap { width: 100%; }
-  .export-wrap { width: 100%; }
+  .post-actions {
+    gap: 0.25rem;
+    padding-top: 0.75rem;
+    margin-top: 1rem;
+  }
+  .action {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    gap: 0.25rem;
+  }
+  .action .pi { font-size: 0.9375rem; }
   .comment-reply-form { margin-left: 1rem; }
   .comment-replies { margin-left: 1rem; }
 }
