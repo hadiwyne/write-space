@@ -64,11 +64,11 @@ watch(() => route.params.idOrSlug, load)
 
 <style scoped>
 .collection-page { padding: 0; }
-.collection-header { margin-bottom: 1.5rem; }
-.collection-header h1 { font-size: 1.75rem; margin: 0 0 0.5rem; }
+.collection-header { margin-bottom: clamp(1rem, 3vw, 1.5rem); }
+.collection-header h1 { font-size: clamp(1.25rem, 4vw, 1.75rem); margin: 0 0 0.5rem; }
 .description { color: var(--gray-700); margin: 0 0 0.5rem; }
 .owner { font-size: 0.9375rem; color: var(--primary); text-decoration: none; }
 .owner:hover { text-decoration: underline; }
-.post-list { display: flex; flex-direction: column; gap: 1rem; }
+.post-list { display: flex; flex-direction: column; gap: clamp(1rem, 3vw, 1.5rem); }
 .loading, .empty, .error { color: var(--gray-700); padding: 1rem 0; }
 </style>

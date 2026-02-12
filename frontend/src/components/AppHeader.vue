@@ -1,5 +1,5 @@
 <template>
-  <header class="header" :class="{ 'header--animated': mounted, 'header--hidden': !headerVisible }">
+  <header class="header">
     <router-link to="/" class="logo" aria-label="WriteSpace home">WriteSpace</router-link>
 
     <div class="search-wrap">
@@ -121,11 +121,6 @@ const notifOpen = ref(false)
 const searchQuery = ref('')
 const avatarWrapRef = ref<HTMLElement | null>(null)
 const notifWrapRef = ref<HTMLElement | null>(null)
-const mounted = ref(false)
-const headerVisible = ref(true)
-const lastScrollY = ref(0)
-const scrollThreshold = 10
-
 
 function closeDropdown() {
   dropdownOpen.value = false
@@ -149,18 +144,6 @@ function onDocumentClick(e: MouseEvent) {
   const target = e.target as Node
   if (avatarWrapRef.value && !avatarWrapRef.value.contains(target)) dropdownOpen.value = false
   if (notifWrapRef.value && !notifWrapRef.value.contains(target)) notifOpen.value = false
-}
-
-function onScroll() {
-  const y = window.scrollY || document.documentElement.scrollTop
-  if (y < scrollThreshold) {
-    headerVisible.value = true
-  } else if (y > lastScrollY.value + scrollThreshold) {
-    headerVisible.value = false
-  } else if (y < lastScrollY.value - scrollThreshold) {
-    headerVisible.value = true
-  }
-  lastScrollY.value = y
 }
 
 function notifText(n: NotificationItem) {
@@ -200,53 +183,43 @@ watch(() => auth.token, (token) => {
   else notifications.disconnectSocket()
 })
 
-watch(() => route.path, () => {
-  headerVisible.value = true
-})
-
 onMounted(() => {
-  mounted.value = true
-  lastScrollY.value = window.scrollY || document.documentElement.scrollTop
   if (auth.token) {
     auth.fetchUser()
     notifications.init()
   }
   document.addEventListener('click', onDocumentClick)
-  window.addEventListener('scroll', onScroll, { passive: true })
 })
 onUnmounted(() => {
   document.removeEventListener('click', onDocumentClick)
-  window.removeEventListener('scroll', onScroll)
   notifications.disconnectSocket()
 })
 </script>
 
 <style scoped>
 .header {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 100;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1.5rem;
+  gap: clamp(0.75rem, 2vw, 1.5rem);
   width: 100%;
-  padding: 1rem 2rem;
+  padding: 0.75rem clamp(1rem, 4vw, 2rem);
   background: rgba(250, 247, 240, 0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 2px solid var(--border-medium);
   box-shadow: 0 2px 12px rgba(44, 24, 16, 0.06);
   animation: slideDown 0.5s ease-out;
-  transition: transform 0.25s ease;
+  flex-wrap: wrap;
 }
-.header.header--hidden {
-  transform: translateY(-100%);
-}
-
 .logo {
   flex-shrink: 0;
-  font-size: 1.5rem;
+  font-size: clamp(1.25rem, 4vw, 1.5rem);
   font-weight: 800;
   color: var(--accent-primary);
   letter-spacing: -0.03em;
@@ -259,7 +232,8 @@ onUnmounted(() => {
 }
 
 .search-wrap {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   max-width: 500px;
   position: relative;
 }
@@ -416,7 +390,13 @@ onUnmounted(() => {
   background: var(--like-color);
   border-radius: 999px;
 }
-.notif-dropdown { min-width: 20rem; max-width: 22rem; max-height: 24rem; display: flex; flex-direction: column; }
+.notif-dropdown {
+  min-width: min(20rem, 90vw);
+  max-width: 22rem;
+  max-height: min(24rem, 70vh);
+  display: flex;
+  flex-direction: column;
+}
 .notif-dropdown-header { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border-light); }
 .notif-dropdown-title { font-weight: 600; font-size: 0.9375rem; }
 .notif-mark-all { padding: 0.25rem 0.5rem; font-size: 0.75rem; color: var(--accent-primary); background: none; border: none; cursor: pointer; font-family: inherit; }
@@ -434,7 +414,18 @@ onUnmounted(() => {
 .notif-see-all:hover { background: var(--bg-primary); }
 
 @media (max-width: 768px) {
-  .header { padding: 1rem 1.5rem; flex-wrap: wrap; }
-  .search-wrap { order: 3; width: 100%; max-width: none; margin-top: 1rem; }
+  .header { padding: 0.75rem 1rem; }
+  .search-wrap { order: 3; width: 100%; max-width: none; margin-top: 0.75rem; flex: 1 1 100%; }
+  .nav { flex-wrap: wrap; }
+  .nav-btn, .avatar-btn { width: 40px; height: 40px; font-size: 1.125rem; }
+  /* Only adjust notifications dropdown on tablets; keep avatar menu right-aligned */
+  .notif-dropdown { left: 0; right: auto; min-width: min(20rem, 90vw); }
+}
+@media (max-width: 480px) {
+  .header { padding: 0.5rem 0.75rem; gap: 0.5rem; }
+  .search-wrap { margin-top: 0.5rem; }
+  .search-input { padding: 0.625rem 0.75rem 0.625rem 2.5rem; font-size: 0.875rem; }
+  .search-icon { left: 0.75rem; }
+  .notif-dropdown { right: -0.5rem; left: auto; }
 }
 </style>

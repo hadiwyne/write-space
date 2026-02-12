@@ -90,21 +90,25 @@ async function createCollection() {
 
 <style scoped>
 .collections-page { padding: 0; }
-.collections-page h1 { font-size: 1.5rem; margin: 0 0 0.5rem; }
+.collections-page h1 { font-size: clamp(1.25rem, 4vw, 1.5rem); margin: 0 0 0.5rem; }
 .intro { color: var(--gray-700); margin: 0 0 1rem; font-size: 0.9375rem; }
 .toolbar { margin-bottom: 1rem; }
 .collection-list { list-style: none; margin: 0; padding: 0; }
 .collection-item { margin-bottom: 0.5rem; }
-.collection-link { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; background: var(--gray-50); border-radius: var(--radius); text-decoration: none; color: inherit; }
+.collection-link { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; background: var(--gray-50); border-radius: var(--radius); text-decoration: none; color: inherit; min-width: 0; }
 .collection-link:hover { background: var(--gray-100); }
-.collection-title { font-weight: 500; }
-.collection-count { font-size: 0.875rem; color: var(--gray-600); }
-.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; z-index: 100; }
-.modal { background: #fff; padding: 1.5rem; border-radius: var(--radius); min-width: 20rem; }
+.collection-title { font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.collection-count { font-size: 0.875rem; color: var(--gray-600); flex-shrink: 0; margin-left: 0.5rem; }
+.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 1rem; }
+.modal { background: #fff; padding: 1.5rem; border-radius: var(--radius); min-width: 20rem; max-width: min(28rem, calc(100vw - 2rem)); width: 100%; }
 .modal h2 { margin: 0 0 1rem; font-size: 1.25rem; }
 .form-group { margin-bottom: 1rem; }
 .form-group label { display: block; font-size: 0.875rem; margin-bottom: 0.25rem; }
-.form-group input, .form-group textarea { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--gray-300); border-radius: var(--radius); }
-.modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1rem; }
+.form-group input, .form-group textarea { width: 100%; min-width: 0; padding: 0.5rem 0.75rem; border: 1px solid var(--gray-300); border-radius: var(--radius); }
+.modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1rem; flex-wrap: wrap; }
+@media (max-width: 480px) {
+  .modal { padding: 1rem; min-width: 0; }
+  .collection-link { padding: 0.625rem 0.75rem; }
+}
 .btn-ghost { background: transparent; border: 1px solid var(--gray-300); color: var(--gray-700); }
 </style>

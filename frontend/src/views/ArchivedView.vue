@@ -85,8 +85,8 @@ async function onDeleteConfirm() {
 
 <style scoped>
 .archived-page { padding: 0; }
-.archived-page h1 { font-size: 1.5rem; margin: 0 0 0.5rem; }
+.archived-page h1 { font-size: clamp(1.25rem, 4vw, 1.5rem); margin: 0 0 0.5rem; }
 .intro { color: var(--gray-700); font-size: 0.9375rem; margin: 0 0 1.5rem; }
 .loading, .empty { padding: 1rem 0; color: var(--gray-700); }
-.post-list { display: flex; flex-direction: column; gap: 1rem; }
+.post-list { display: flex; flex-direction: column; gap: clamp(1rem, 3vw, 1.5rem); }
 </style>

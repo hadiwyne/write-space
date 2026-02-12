@@ -51,17 +51,30 @@ async function submit() {
 </script>
 
 <style scoped>
-.auth-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem; }
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(1rem, 5vw, 2rem);
+}
 .auth-card {
   background: var(--bg-card);
-  padding: 2rem;
+  padding: clamp(1.25rem, 4vw, 2rem);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   border: 2px solid var(--border-light);
   width: 100%;
   max-width: 380px;
+  min-width: 0;
 }
-.auth-card h1 { margin: 0 0 1.5rem; font-size: 1.5rem; font-weight: 800; letter-spacing: -0.03em; color: var(--text-primary); }
+.auth-card h1 {
+  margin: 0 0 1.25rem;
+  font-size: clamp(1.25rem, 4vw, 1.5rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+}
 .form { display: flex; flex-direction: column; gap: 1rem; }
 .form-group { display: flex; flex-direction: column; gap: 0.25rem; }
 .form-group label { font-size: 0.875rem; font-weight: 600; color: var(--text-secondary); }
@@ -73,11 +86,12 @@ async function submit() {
   font-family: inherit;
   background: var(--bg-card);
   transition: border-color 0.2s ease;
+  min-width: 0;
 }
 .form-group input:focus { outline: none; border-color: var(--accent-primary); box-shadow: 0 0 0 4px rgba(139, 69, 19, 0.1); }
 .error { color: var(--like-color); font-size: 0.875rem; margin: 0; }
 .btn-primary { background: var(--accent-primary); color: white; border: 2px solid var(--accent-primary); }
 .btn-primary:hover:not(:disabled) { background: var(--accent-burgundy); border-color: var(--accent-burgundy); }
 .btn-block { width: 100%; padding: 0.75rem; margin-top: 0.5rem; font-weight: 600; border-radius: var(--radius-md); }
-.footer { margin: 1.5rem 0 0; font-size: 0.875rem; color: var(--text-secondary); }
+.footer { margin: 1.25rem 0 0; font-size: 0.875rem; color: var(--text-secondary); }
 </style>

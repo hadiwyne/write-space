@@ -14,8 +14,8 @@
 <style scoped>
 .fab {
   position: fixed;
-  bottom: 2rem;
-  right: 2rem;
+  bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
+  right: max(1.5rem, env(safe-area-inset-right, 0px));
   width: 64px;
   height: 64px;
   display: flex;
@@ -46,8 +46,8 @@
 }
 @media (max-width: 768px) {
   .fab {
-    bottom: 1.5rem;
-    right: 1.5rem;
+    bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+    right: max(1rem, env(safe-area-inset-right, 0px));
     width: 56px;
     height: 56px;
     border-width: 2px;

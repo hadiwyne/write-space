@@ -109,10 +109,11 @@ async function save() {
 
 <style scoped>
 .edit-page { padding: 0; }
-.form { display: flex; flex-direction: column; gap: 1rem; }
-.title-input { width: 100%; font-size: 1.25rem; padding: 0.5rem 0; border: none; border-bottom: 1px solid var(--gray-200); }
-.editor { width: 100%; padding: 0.75rem; border: 1px solid var(--gray-300); border-radius: var(--radius); font-family: inherit; resize: vertical; }
-.tags-input { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--gray-300); border-radius: var(--radius); }
+.edit-page h1 { font-size: clamp(1.25rem, 4vw, 1.5rem); margin: 0 0 1rem; }
+.form { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+.title-input { width: 100%; min-width: 0; font-size: clamp(1.125rem, 4vw, 1.25rem); padding: 0.5rem 0; border: none; border-bottom: 1px solid var(--gray-200); }
+.editor { width: 100%; min-width: 0; padding: 0.75rem; border: 1px solid var(--gray-300); border-radius: var(--radius); font-family: inherit; resize: vertical; box-sizing: border-box; }
+.tags-input { width: 100%; min-width: 0; padding: 0.5rem 0.75rem; border: 1px solid var(--gray-300); border-radius: var(--radius); }
 .visibility-row { display: flex; align-items: center; gap: 0.75rem; }
 .dropdown-wrap { position: relative; }
 .dropdown-trigger {
@@ -141,6 +142,7 @@ async function save() {
   top: calc(100% + 0.25rem);
   left: 0;
   min-width: 12rem;
+  max-width: min(20rem, calc(100vw - 2rem));
   padding: 0.25rem 0;
   background: var(--bg-card);
   border: 2px solid var(--border-light);

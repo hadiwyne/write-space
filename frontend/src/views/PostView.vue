@@ -398,28 +398,30 @@ watch(() => route.params.id, load)
 
 <style scoped>
 .post-page { padding: 0; }
-.loading, .error { padding: 2rem 0; color: var(--text-secondary); }
+.loading, .error { padding: clamp(1rem, 4vw, 2rem) 0; color: var(--text-secondary); }
 .post {
-  margin-bottom: 2rem;
+  margin-bottom: clamp(1rem, 4vw, 2rem);
   background: var(--bg-card);
   border-radius: var(--radius-lg);
-  padding: 2rem;
+  padding: clamp(1rem, 4vw, 2rem);
   box-shadow: var(--shadow-md);
   border: 2px solid var(--border-light);
+  overflow: hidden;
 }
 .post-title {
-  font-size: 2rem;
+  font-size: clamp(1.5rem, 4vw, 2rem);
   font-weight: 800;
-  margin: 0 0 1rem;
+  margin: 0 0 0.75rem;
   letter-spacing: -0.02em;
   line-height: 1.3;
   color: var(--text-primary);
+  word-break: break-word;
 }
 .post-meta { display: flex; gap: 1rem; margin-bottom: 1.5rem; font-size: 0.875rem; color: var(--text-tertiary); }
 .post-meta .author { color: var(--accent-primary); font-weight: 600; text-decoration: none; }
 .post-meta .author:hover { color: var(--accent-burgundy); text-decoration: underline; }
 .post-content { line-height: 1.75; color: var(--text-secondary); }
-.post-content :deep(img) { max-width: 100%; }
+.post-content :deep(img) { max-width: 100%; height: auto; display: block; }
 .post-tags { margin-top: 1.25rem; display: flex; gap: 0.625rem; flex-wrap: wrap; }
 .post-tags .tag {
   padding: 0.5rem 1rem;
@@ -587,4 +589,21 @@ watch(() => route.params.id, load)
 .comment-reply .comment-avatar-link { width: 28px; height: 28px; }
 .comment-reply .comment-avatar, .comment-reply .comment-avatar-placeholder { width: 28px; height: 28px; font-size: 0.75rem; line-height: 28px; }
 .comment-reply .comment-author, .comment-reply .comment-body { font-size: 0.8125rem; }
+
+@media (max-width: 768px) {
+  .post-meta { flex-wrap: wrap; gap: 0.5rem; font-size: 0.8125rem; }
+  .post-actions { gap: 0.5rem; }
+  .action { padding: 0.5rem 0.75rem; font-size: 0.875rem; }
+  .action .pi { font-size: 1rem; }
+  .comments h2 { font-size: 1.125rem; }
+  .comment-form textarea { padding: 0.625rem; font-size: 0.875rem; }
+}
+@media (max-width: 480px) {
+  .post-actions { flex-direction: column; align-items: stretch; }
+  .action { justify-content: center; }
+  .dropdown-wrap { width: 100%; }
+  .export-wrap { width: 100%; }
+  .comment-reply-form { margin-left: 1rem; }
+  .comment-replies { margin-left: 1rem; }
+}
 </style>

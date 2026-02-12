@@ -262,7 +262,7 @@ function formatDate(s: string | undefined) {
   overflow: hidden;
   background: var(--bg-card);
   border-radius: var(--radius-lg);
-  padding: 2rem;
+  padding: clamp(1rem, 4vw, 2rem);
   margin-bottom: 0;
   box-shadow: var(--shadow-md);
   border: 2px solid var(--border-light);
@@ -336,8 +336,8 @@ function formatDate(s: string | undefined) {
 
 .card-menu {
   position: absolute;
-  top: 2rem;
-  right: 2rem;
+  top: clamp(1rem, 2vw, 2rem);
+  right: clamp(1rem, 2vw, 2rem);
   padding: 0.5rem;
   border: none;
   background: none;
@@ -360,13 +360,14 @@ function formatDate(s: string | undefined) {
 }
 .card-body:hover { text-decoration: none; color: inherit; }
 .card-title {
-  font-size: 1.75rem;
+  font-size: clamp(1.25rem, 4vw, 1.75rem);
   font-weight: 800;
-  margin: 0 0 1rem;
+  margin: 0 0 0.75rem;
   letter-spacing: -0.02em;
   line-height: 1.3;
   color: var(--text-primary);
   transition: color 0.2s ease;
+  word-break: break-word;
 }
 .card:hover .card-title { color: var(--accent-primary); }
 .card-excerpt {
@@ -382,33 +383,37 @@ function formatDate(s: string | undefined) {
   flex-wrap: wrap;
 }
 .card-thumb {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
   object-fit: cover;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-light);
   background: var(--bg-primary);
+  display: block;
 }
 /* One image: large preview */
 .card-thumbnails--1 .card-thumb {
-  width: 100%;
-  max-width: 420px;
-  height: 240px;
+  max-height: 240px;
+  object-position: center;
 }
 /* Two images: medium, side by side */
 .card-thumbnails--2 .card-thumb {
   flex: 1 1 0;
   min-width: 0;
-  height: 160px;
+  max-height: 160px;
 }
 /* Three or four: small grid */
 .card-thumbnails--3 .card-thumb,
 .card-thumbnails--4 .card-thumb {
   width: 72px;
   height: 72px;
+  max-width: 72px;
 }
 
 .card-link-preview {
   display: block;
-  max-width: 420px;
+  max-width: 100%;
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
   overflow: hidden;
@@ -566,8 +571,28 @@ function formatDate(s: string | undefined) {
 .action-delete:hover { color: var(--like-color); border-color: var(--like-color); }
 
 @media (max-width: 768px) {
-  .card { padding: 1.5rem; }
-  .card-title { font-size: 1.5rem; }
-  .card-footer .action-stat, .card-footer .action-btn { min-width: calc(50% - 0.25rem); }
+  .card-author { gap: 0.75rem; margin-bottom: 1rem; padding-bottom: 0.75rem; }
+  .author-avatar { width: 44px; height: 44px; font-size: 1rem; }
+  .author-name { font-size: 0.9375rem; }
+  .author-meta { font-size: 0.8125rem; gap: 0.5rem; }
+  .card-footer .action-stat,
+  .card-footer .action-btn {
+    min-width: calc(50% - 0.25rem);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+  }
+  .card-actions { margin-left: 0; width: 100%; justify-content: flex-end; }
+}
+@media (max-width: 480px) {
+  .card { padding: 1rem; }
+  .card-thumbnails--2 .card-thumb { min-width: 100%; max-height: 140px; }
+  .card-thumbnails--3 .card-thumb,
+  .card-thumbnails--4 .card-thumb {
+    width: 56px;
+    height: 56px;
+    max-width: 56px;
+  }
+  .card-link-preview-media { height: 120px; }
+  .card-link-preview-body { padding: 0.5rem 0.75rem; }
 }
 </style>

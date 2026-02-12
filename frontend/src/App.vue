@@ -1,7 +1,7 @@
 <template>
   <div class="app">
     <AppHeader v-if="!hideLayout" />
-    <main class="main" :class="{ 'main--full': hideLayout }">
+    <main class="main" :class="{ 'main--full': hideLayout, 'main--with-header': !hideLayout }">
       <RouterView />
     </main>
     <FloatingActionButton v-if="!hideLayout && auth.isLoggedIn" />
@@ -24,6 +24,7 @@ const hideLayout = computed(() => route.meta.hideLayout === true)
 @import '@/assets/design-tokens.css';
 
 * { box-sizing: border-box; }
+html { overflow-x: hidden; scroll-behavior: smooth; }
 body {
   margin: 0;
   font-family: 'Manrope', system-ui, -apple-system, sans-serif;
@@ -31,6 +32,8 @@ body {
   color: var(--text-primary);
   line-height: 1.6;
   letter-spacing: -0.02em;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
 }
 body::before {
   content: '';
@@ -45,7 +48,17 @@ body::before {
 }
 
 .app { min-height: 100vh; display: flex; flex-direction: column; position: relative; z-index: 1; }
-.main { flex: 1; max-width: 880px; margin: 0 auto; padding: 2.5rem 2rem 5rem; width: 100%; }
+.main {
+  flex: 1;
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: clamp(1.25rem, 4vw, 2.5rem) var(--container-padding) var(--container-padding-bottom);
+  width: 100%;
+  min-width: 0; /* allow shrink for small screens */
+}
+.main--with-header {
+  padding-top: calc(4.5rem + clamp(1.25rem, 4vw, 2.5rem));
+}
 .main--full { max-width: none; }
 a { color: var(--accent-primary); text-decoration: none; transition: color 0.2s ease; }
 a:hover { text-decoration: underline; color: var(--accent-burgundy); }

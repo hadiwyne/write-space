@@ -104,6 +104,7 @@ async function markAllRead() {
 
 <style scoped>
 .notifications-page { padding: 0; }
+.notifications-page h1 { font-size: clamp(1.25rem, 4vw, 1.5rem); margin: 0 0 1rem; }
 .loading, .empty { color: var(--gray-700); padding: 1rem 0; }
 .notification-list { list-style: none; margin: 0; padding: 0; }
 .notification-item { border-bottom: 1px solid var(--gray-100); }
@@ -116,4 +117,9 @@ async function markAllRead() {
 .notif-date { font-size: 0.8125rem; color: var(--gray-600); margin-top: 0.25rem; }
 .mark-all { margin-top: 1rem; padding: 0.375rem 0.75rem; font-size: 0.875rem; border-radius: var(--radius); border: 1px solid var(--gray-300); background: #fff; cursor: pointer; }
 .mark-all:hover { background: var(--gray-100); }
+@media (max-width: 480px) {
+  .notification-link { padding: 0.625rem; gap: 0.5rem; }
+  .notif-avatar, .notif-avatar-placeholder { width: 36px; height: 36px; line-height: 36px; font-size: 0.875rem; }
+  .notif-text { font-size: 0.875rem; }
+}
 </style>

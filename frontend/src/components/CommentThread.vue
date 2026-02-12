@@ -118,7 +118,7 @@ function onReplyContentInput(e: Event) {
   position: relative;
 }
 .comment-thread.comment-reply {
-  margin-left: 1.5rem;
+  margin-left: clamp(1rem, 4vw, 1.5rem);
   padding-left: 0;
 }
 /* Curved connector from vertical line to this reply */
@@ -258,5 +258,14 @@ function onReplyContentInput(e: Event) {
   background: var(--bg-card);
   color: var(--text-primary);
   border-color: var(--border-medium);
+}
+
+@media (max-width: 480px) {
+  .comment { padding: 0.625rem; gap: 0.5rem; }
+  .comment-avatar, .comment-avatar-placeholder { width: 32px; height: 32px; font-size: 0.8125rem; line-height: 32px; }
+  .comment-reply .comment-avatar, .comment-reply .comment-avatar-placeholder { width: 24px; height: 24px; font-size: 0.6875rem; line-height: 24px; }
+  .comment-body, .comment-reply .comment-body { font-size: 0.875rem; }
+  .reply-form-wrap { margin-left: 1rem; }
+  .comment-replies { margin-left: 1rem; padding-left: 0.5rem; }
 }
 </style>
