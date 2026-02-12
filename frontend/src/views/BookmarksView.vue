@@ -39,7 +39,7 @@ onMounted(async () => {
 
 <style scoped>
 .bookmarks-page { padding: 0; }
-.bookmarks-page h1 { font-size: 1.5rem; margin: 0 0 1rem; }
+.bookmarks-page h1 { font-size: clamp(1.25rem, 4vw, 1.5rem); margin: 0 0 1rem; }
 .hint, .loading, .empty { margin: 0 0 1rem; color: var(--gray-700); }
-.post-list { display: flex; flex-direction: column; gap: 1rem; }
+.post-list { display: flex; flex-direction: column; gap: clamp(1rem, 3vw, 1.5rem); }
 </style>

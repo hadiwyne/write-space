@@ -64,7 +64,7 @@ function onCancel() {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   border: 2px solid var(--border-light);
-  max-width: 400px;
+  max-width: min(400px, calc(100vw - 2rem));
   width: 100%;
 }
 .confirm-modal-header {
@@ -94,6 +94,14 @@ function onCancel() {
   gap: 0.75rem;
   padding: 1rem 1.25rem;
   border-top: 2px solid var(--border-light);
+  flex-wrap: wrap;
+}
+@media (max-width: 480px) {
+  .confirm-modal-backdrop { padding: 0.75rem; }
+  .confirm-modal-header, .confirm-modal-body, .confirm-modal-footer { padding: 0.875rem 1rem; }
+  .confirm-modal-title { font-size: 1.125rem; }
+  .confirm-modal-footer { flex-direction: column-reverse; }
+  .confirm-modal-btn { width: 100%; justify-content: center; }
 }
 .confirm-modal-btn {
   padding: 0.5rem 1rem;

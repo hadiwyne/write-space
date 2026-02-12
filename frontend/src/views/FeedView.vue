@@ -34,35 +34,37 @@
           Friends
         </button>
       </div>
-      <div class="filter-tag">
-        <input
-          v-model="tagFilter"
-          type="text"
-          placeholder="Filter by tag"
-          class="tag-input"
-          @keyup.enter="load()"
-        />
-        <button type="button" class="tag-btn" @click="load()">Apply</button>
-      </div>
-      <div class="view-toggle">
-        <button
-          type="button"
-          class="view-btn"
-          :class="{ active: viewMode === 'list' }"
-          aria-label="List view"
-          @click="viewMode = 'list'"
-        >
-          <i class="pi pi-list"></i>
-        </button>
-        <button
-          type="button"
-          class="view-btn"
-          :class="{ active: viewMode === 'grid' }"
-          aria-label="Grid view"
-          @click="viewMode = 'grid'"
-        >
-          <i class="pi pi-th-large"></i>
-        </button>
+      <div class="filter-tag-and-view">
+        <div class="filter-tag">
+          <input
+            v-model="tagFilter"
+            type="text"
+            placeholder="Filter by tag"
+            class="tag-input"
+            @keyup.enter="load()"
+          />
+          <button type="button" class="tag-btn" @click="load()">Apply</button>
+        </div>
+        <div class="view-toggle">
+          <button
+            type="button"
+            class="view-btn"
+            :class="{ active: viewMode === 'list' }"
+            aria-label="List view"
+            @click="viewMode = 'list'"
+          >
+            <i class="pi pi-list"></i>
+          </button>
+          <button
+            type="button"
+            class="view-btn"
+            :class="{ active: viewMode === 'grid' }"
+            aria-label="Grid view"
+            @click="viewMode = 'grid'"
+          >
+            <i class="pi pi-th-large"></i>
+          </button>
+        </div>
       </div>
     </section>
 
@@ -199,9 +201,9 @@ onUnmounted(() => {
 
 <style scoped>
 .feed { padding: 0; }
-.feed-hero { margin-bottom: 3rem; }
+.feed-hero { margin-bottom: clamp(1.5rem, 5vw, 3rem); }
 .feed-hero h1 {
-  font-size: 2.5rem;
+  font-size: clamp(1.75rem, 5vw, 2.5rem);
   font-weight: 800;
   line-height: 1.2;
   letter-spacing: -0.03em;
@@ -211,19 +213,38 @@ onUnmounted(() => {
 
 .feed-filters {
   display: flex;
-  gap: 1rem;
+  gap: clamp(0.5rem, 2vw, 1rem);
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   background: var(--bg-card);
-  padding: 1rem;
+  padding: clamp(0.75rem, 2vw, 1rem);
   border-radius: var(--radius-lg);
   border: 2px solid var(--border-light);
   box-shadow: var(--shadow-sm);
-  margin-bottom: 2rem;
+  margin-bottom: clamp(1rem, 4vw, 2rem);
+}
+
+.filter-tag-and-view {
+  display: flex;
+  align-items: center;
+  gap: clamp(0.5rem, 2vw, 1rem);
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+.filter-tag-and-view .filter-tag {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+.filter-tag-and-view .view-toggle {
+  flex-shrink: 0;
+  margin-left: 0;
 }
 
 .filter-tabs {
   display: flex;
+  flex-shrink: 0;
   background: var(--bg-primary);
   padding: 0.25rem;
   border-radius: var(--radius-md);
@@ -233,11 +254,11 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.625rem 1.5rem;
+  padding: 0.5rem clamp(0.75rem, 2vw, 1.5rem);
   border-radius: calc(var(--radius-md) - 2px);
   border: none;
   background: transparent;
-  font-size: 0.9375rem;
+  font-size: clamp(0.8125rem, 2vw, 0.9375rem);
   font-weight: 600;
   font-family: inherit;
   color: var(--text-secondary);
@@ -255,14 +276,17 @@ onUnmounted(() => {
 }
 .filter-tab .pi { font-size: 1rem; }
 
-.filter-tag { display: flex; gap: 0.5rem; }
+.filter-tag { display: flex; gap: 0.5rem; flex: 1 1 auto; min-width: 0; }
 .tag-input {
   padding: 0.5rem 0.75rem;
   border: 2px solid var(--border-light);
   border-radius: var(--radius-sm);
   font-size: 0.9375rem;
   font-family: inherit;
-  width: 10rem;
+  min-width: 0;
+  flex: 1 1 6rem;
+  width: 100%;
+  max-width: 14rem;
   background: var(--bg-card);
 }
 .tag-input:focus {
@@ -287,13 +311,13 @@ onUnmounted(() => {
 }
 
 .view-toggle {
-  margin-left: auto;
   display: flex;
   gap: 0.5rem;
+  align-items: center;
 }
 .view-btn {
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -324,18 +348,28 @@ onUnmounted(() => {
 .post-list {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: clamp(1rem, 3vw, 1.5rem);
 }
 .post-list--grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: clamp(1rem, 3vw, 1.5rem);
 }
 
 @media (max-width: 768px) {
-  .feed-hero h1 { font-size: 2rem; }
-  .feed-filters { flex-direction: column; align-items: stretch; padding: 0.75rem; }
+  .feed-filters { flex-wrap: wrap; flex-direction: column; align-items: stretch; }
+  .filter-tag-and-view { flex-direction: column; align-items: stretch; flex-wrap: wrap; }
+  .filter-tag-and-view .filter-tag { flex: none; max-width: none; }
   .filter-tabs { justify-content: center; }
-  .view-toggle { margin-left: 0; justify-content: center; }
+  .view-toggle { display: none; }
+  .tag-input { max-width: none; }
+  .post-list--grid {
+    display: flex;
+    flex-direction: column;
+  }
+}
+@media (max-width: 480px) {
+  .filter-tabs { flex-wrap: wrap; justify-content: center; }
+  .filter-tab { flex: 1 1 calc(33.333% - 0.5rem); min-width: 0; justify-content: center; }
 }
 </style>

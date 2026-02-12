@@ -404,12 +404,12 @@ watch(() => route.params.username, load)
 
 <style scoped>
 .profile-page { padding: 0; }
-.loading, .error { padding: 2rem 0; color: var(--text-secondary); }
+.loading, .error { padding: clamp(1rem, 4vw, 2rem) 0; color: var(--text-secondary); }
 .profile-header {
   text-align: center;
-  padding: 2rem;
+  padding: clamp(1rem, 4vw, 2rem);
   border-bottom: 2px solid var(--border-light);
-  margin-bottom: 1.5rem;
+  margin-bottom: clamp(1rem, 3vw, 1.5rem);
   background: var(--bg-card);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
@@ -424,8 +424,8 @@ watch(() => route.params.username, load)
   margin-bottom: 1rem;
 }
 .avatar {
-  width: 96px;
-  height: 96px;
+  width: clamp(72px, 20vw, 96px);
+  height: clamp(72px, 20vw, 96px);
   border-radius: 50%;
   object-fit: cover;
   box-shadow: 0 4px 12px rgba(139, 69, 19, 0.25);
@@ -434,15 +434,15 @@ watch(() => route.params.username, load)
   display: block;
 }
 .avatar-placeholder {
-  width: 96px;
-  height: 96px;
+  width: clamp(72px, 20vw, 96px);
+  height: clamp(72px, 20vw, 96px);
   border-radius: 50%;
   background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
   display: flex;
   align-items: center;
   justify-content: center;
   line-height: 1;
-  font-size: 2.25rem;
+  font-size: clamp(1.75rem, 5vw, 2.25rem);
   font-weight: 700;
   color: white;
   box-shadow: 0 4px 12px rgba(139, 69, 19, 0.25);
@@ -451,26 +451,38 @@ watch(() => route.params.username, load)
 }
 .profile-header h1 {
   margin: 0 0 0.25rem;
-  font-size: 1.5rem;
+  font-size: clamp(1.25rem, 4vw, 1.5rem);
   font-weight: 800;
   letter-spacing: -0.03em;
   color: var(--text-primary);
+  word-break: break-word;
 }
 .bio { color: var(--text-secondary); margin: 0 0 0.5rem; font-size: 0.9375rem; }
-.profile-html { margin: 0.5rem 0; font-size: 0.9375rem; line-height: 1.6; text-align: left; max-width: 480px; margin-left: auto; margin-right: auto; color: var(--text-secondary); }
+.profile-html {
+  margin: 0.5rem 0;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  text-align: left;
+  max-width: min(480px, 100%);
+  margin-left: auto;
+  margin-right: auto;
+  color: var(--text-secondary);
+  padding: 0 0.5rem;
+}
 .profile-html :deep(p) { margin: 0.5rem 0; }
-.profile-html :deep(img) { max-width: 100%; }
+.profile-html :deep(img) { max-width: 100%; height: auto; }
 
 .profile-stats {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 2rem;
+  gap: clamp(1rem, 4vw, 2rem);
   margin: 1rem 0 0;
   padding: 1rem 0;
   border-top: 1px solid var(--border-light);
   width: 100%;
   max-width: 360px;
+  flex-wrap: wrap;
 }
 .stat-item {
   display: flex;
@@ -550,8 +562,29 @@ watch(() => route.params.username, load)
 .profile-tab:hover:not(.active) { background: rgba(139, 69, 19, 0.08); color: var(--accent-primary); }
 .profile-tab.active { background: var(--accent-primary); color: white; box-shadow: 0 2px 8px rgba(139, 69, 19, 0.25); }
 .empty { color: var(--text-secondary); padding: 1rem 0; }
-.post-list { display: flex; flex-direction: column; gap: 1.5rem; }
+.post-list { display: flex; flex-direction: column; gap: clamp(1rem, 3vw, 1.5rem); }
 .feed-item-wrap { display: contents; }
+
+@media (max-width: 768px) {
+  .profile-avatar-wrap { margin-bottom: 0.75rem; }
+  .avatar, .avatar-placeholder { width: 80px; height: 80px; font-size: 1.875rem; }
+  .profile-stats { gap: 1rem; padding: 0.75rem 0; max-width: none; }
+  .profile-tab { padding: 0.5rem 1rem; font-size: 0.875rem; }
+  .profile-actions { gap: 0.75rem; }
+  .edit-link { font-size: 0.8125rem; }
+}
+@media (max-width: 480px) {
+  .profile-header { padding: 1rem 0.75rem; }
+  .avatar, .avatar-placeholder { width: 72px; height: 72px; font-size: 1.75rem; }
+  .profile-stats { gap: 0.75rem; flex-wrap: wrap; justify-content: center; }
+  .stat-item { padding: 0.375rem 0.75rem; }
+  .stat-value { font-size: 1.125rem; }
+  .stat-label { font-size: 0.75rem; }
+  .profile-tabs { flex-wrap: wrap; }
+  .profile-tab { flex: 1 1 auto; min-width: 0; }
+  .modal { max-width: min(400px, calc(100vw - 2rem)); max-height: 85vh; }
+  .modal-backdrop { padding: 0.75rem; }
+}
 
 /* Modal (teleported) */
 .modal-backdrop { position: fixed; inset: 0; background: rgba(44, 24, 16, 0.4); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }

@@ -111,17 +111,21 @@ async function saveProfile() {
 
 <style scoped>
 .settings-page { padding: 0; }
-.settings-page h1 { font-size: 1.5rem; margin: 0 0 1rem; }
-.form { max-width: 400px; display: flex; flex-direction: column; gap: 1rem; }
+.settings-page h1 { font-size: clamp(1.25rem, 4vw, 1.5rem); margin: 0 0 1rem; }
+.form { max-width: 400px; width: 100%; min-width: 0; display: flex; flex-direction: column; gap: 1rem; }
 .form-group label { display: block; font-size: 0.875rem; font-weight: 500; color: var(--gray-700); margin-bottom: 0.25rem; }
 .avatar-section { }
-.avatar-row { display: flex; align-items: center; gap: 1rem; }
+.avatar-row { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+@media (max-width: 480px) {
+  .avatar-row { flex-direction: column; align-items: flex-start; }
+  .avatar-actions { width: 100%; }
+}
 .avatar-preview, .avatar-placeholder { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; background: var(--gray-200); display: inline-block; line-height: 64px; font-size: 1.5rem; text-align: center; flex-shrink: 0; }
 .avatar-actions { }
 .btn-sm { padding: 0.375rem 0.75rem; font-size: 0.875rem; }
 .btn-outline { background: transparent; border: 1px solid var(--gray-300); color: var(--gray-700); }
 .hint { font-size: 0.75rem; color: var(--gray-700); margin: 0.25rem 0 0; }
-.input, .textarea { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 1rem; }
+.input, .textarea { width: 100%; min-width: 0; padding: 0.5rem 0.75rem; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 1rem; }
 .textarea { resize: vertical; font-family: inherit; }
 .error { color: #dc2626; font-size: 0.875rem; margin: 0; }
 .success { color: #16a34a; font-size: 0.875rem; margin: 0; }
