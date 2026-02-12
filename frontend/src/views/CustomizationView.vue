@@ -26,7 +26,16 @@
             />
             <button
               type="button"
-              class="btn-reset-one"
+              class="btn-icon-small"
+              :aria-label="`Randomize ${colorLabels[key]}`"
+              title="Randomize"
+              @click="randomizeOne(key)"
+            >
+              <i class="pi pi-play" aria-hidden="true"></i>
+            </button>
+            <button
+              type="button"
+              class="btn-icon-small"
               :aria-label="`Reset ${colorLabels[key]} to default`"
               title="Reset to default"
               @click="resetOne(key)"
@@ -39,6 +48,7 @@
     </section>
 
     <div class="actions">
+      <button type="button" class="btn btn-primary" @click="randomizeAll">Randomize</button>
       <button type="button" class="btn btn-outline" @click="theme.reset()">Reset to default</button>
     </div>
   </div>
@@ -49,6 +59,21 @@ import { useThemeStore } from '@/stores/theme'
 import type { ThemeKey } from '@/stores/theme'
 
 const theme = useThemeStore()
+const allKeys = ([] as ThemeKey[]).concat(
+  ...(Object.values(theme.THEME_KEYS) as readonly ThemeKey[][])
+)
+
+function randomHex(): string {
+  return '#' + Math.floor(Math.random() * 0x1000000).toString(16).padStart(6, '0')
+}
+
+function randomizeOne(key: ThemeKey) {
+  theme.set(key, randomHex())
+}
+
+function randomizeAll() {
+  for (const key of allKeys) theme.set(key, randomHex())
+}
 
 const sectionTitles: Record<string, string> = {
   backgrounds: 'Backgrounds',
@@ -136,7 +161,7 @@ function resetOne(key: ThemeKey) {
   color: var(--text-primary);
 }
 .color-hex:focus { outline: none; border-color: var(--accent-primary); }
-.btn-reset-one {
+.btn-icon-small {
   width: 2rem;
   height: 2rem;
   padding: 0;
@@ -150,10 +175,19 @@ function resetOne(key: ThemeKey) {
   cursor: pointer;
   transition: color 0.2s ease, background 0.2s ease;
 }
-.btn-reset-one:hover { color: var(--accent-primary); background: rgba(139, 69, 19, 0.08); }
-.btn-reset-one .pi { font-size: 0.875rem; }
-.actions { margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid var(--border-light); }
-.btn { padding: 0.5rem 1rem; border-radius: var(--radius-md); font-size: 0.9375rem; font-weight: 600; cursor: pointer; font-family: inherit; }
-.btn-outline { background: transparent; border: 2px solid var(--border-medium); color: var(--text-secondary); }
+.btn-icon-small:hover { color: var(--accent-primary); background: rgba(139, 69, 19, 0.08); }
+.btn-icon-small .pi { font-size: 0.875rem; }
+.actions {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid var(--border-light);
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.btn { padding: 0.5rem 1rem; border-radius: var(--radius-md); font-size: 0.9375rem; font-weight: 600; cursor: pointer; font-family: inherit; border: 2px solid transparent; }
+.btn-primary { background: var(--accent-primary); color: #fff; border-color: var(--accent-primary); }
+.btn-primary:hover { filter: brightness(1.08); }
+.btn-outline { background: transparent; border-color: var(--border-medium); color: var(--text-secondary); }
 .btn-outline:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
 </style>
