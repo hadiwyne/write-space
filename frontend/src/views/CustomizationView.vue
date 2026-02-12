@@ -249,9 +249,9 @@ const editingColorKey = ref<ThemeKey | null>(null)
 const editingHex = ref('#000000')
 const editingHsl = ref({ h: 0, s: 0, l: 0 })
 
-const allKeys = ([] as ThemeKey[]).concat(
-  ...(Object.values(theme.THEME_KEYS) as readonly ThemeKey[][])
-)
+const allKeys: ThemeKey[] = (
+  Object.values(theme.THEME_KEYS) as readonly (readonly ThemeKey[])[]
+).flat()
 
 function applyTemplateAndClearDirty(id: string) {
   theme.applyTemplate(id)

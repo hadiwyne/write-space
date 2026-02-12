@@ -352,7 +352,8 @@ function applyToDocument(overrides: Partial<Record<ThemeKey, string>>) {
   const allKeys = Object.keys(THEME_DEFAULTS) as ThemeKey[]
   for (const key of allKeys) {
     const varName = `--${key}`
-    if (overrides[key] != null) root.style.setProperty(varName, overrides[key])
+    const value = overrides[key]
+    if (value != null) root.style.setProperty(varName, value)
     else root.style.removeProperty(varName)
   }
 }
