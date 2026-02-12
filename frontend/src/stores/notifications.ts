@@ -61,14 +61,17 @@ export const useNotificationsStore = defineStore('notifications', () => {
   }
 
   async function markOneRead(id: string) {
+    const wasUnread = list.value.some((n) => n.id === id && !n.readAt)
+    const now = new Date().toISOString()
+    // Optimistic update so the UI updates immediately when user clicks (before navigation)
+    list.value = list.value.map((n) => (n.id === id ? { ...n, readAt: now } : n))
+    if (wasUnread) unreadCount.value = Math.max(0, unreadCount.value - 1)
     try {
-      const wasUnread = list.value.some((n) => n.id === id && !n.readAt)
       await api.post(`/notifications/${id}/read`)
-      const now = new Date().toISOString()
-      list.value = list.value.map((n) => (n.id === id ? { ...n, readAt: now } : n))
-      if (wasUnread) unreadCount.value = Math.max(0, unreadCount.value - 1)
     } catch {
-      // ignore
+      // Revert on failure
+      list.value = list.value.map((n) => (n.id === id ? { ...n, readAt: null } : n))
+      if (wasUnread) unreadCount.value += 1
     }
   }
 
