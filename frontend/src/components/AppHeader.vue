@@ -455,14 +455,27 @@ onUnmounted(() => {
   .search-wrap { order: 3; width: 100%; max-width: none; margin-top: 0.75rem; flex: 1 1 100%; }
   .nav { flex-wrap: wrap; }
   .nav-btn, .avatar-btn { width: 40px; height: 40px; font-size: 1.125rem; }
-  /* Only adjust notifications dropdown on tablets; keep avatar menu right-aligned */
-  .notif-dropdown { left: 0; right: auto; min-width: min(20rem, 90vw); }
+  .notif-dropdown {
+    position: fixed;
+    left: 0.75rem;
+    right: 0.75rem;
+    top: 4.75rem;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    max-height: min(20rem, 60vh);
+  }
 }
 @media (max-width: 480px) {
   .header { padding: 0.5rem 0.75rem; gap: 0.5rem; }
   .search-wrap { margin-top: 0.5rem; }
   .search-input { padding: 0.625rem 0.75rem 0.625rem 2.5rem; font-size: 0.875rem; }
   .search-icon { left: 0.75rem; }
-  .notif-dropdown { right: -0.5rem; left: auto; }
+  .notif-dropdown {
+    left: 0.5rem;
+    right: 0.5rem;
+    top: 5.25rem;
+    max-height: min(18rem, 55vh);
+  }
 }
 </style>
