@@ -5,9 +5,11 @@
 
     <section class="theme-section templates-section">
       <h2 class="section-title">Theme templates</h2>
+
+      <h3 class="subsection-title">Light</h3>
       <div class="templates-grid">
         <button
-          v-for="t in theme.templatesList"
+          v-for="t in theme.lightTemplatesList"
           :key="t.id"
           type="button"
           class="template-card"
@@ -18,6 +20,51 @@
           <span class="template-name">{{ t.name }}</span>
         </button>
       </div>
+
+      <h3 class="subsection-title">Dark</h3>
+      <div class="templates-grid">
+        <button
+          v-for="t in theme.darkTemplatesList"
+          :key="t.id"
+          type="button"
+          class="template-card"
+          :aria-label="`Apply ${t.name} theme`"
+          @click="applyTemplateAndClearDirty(t.id)"
+        >
+          <span class="template-preview" :style="previewStyle(t.palette)"></span>
+          <span class="template-name">{{ t.name }}</span>
+        </button>
+      </div>
+
+      <template v-if="theme.userTemplates.length">
+        <h3 class="subsection-title">Your saved themes</h3>
+        <div class="templates-grid">
+          <div
+            v-for="t in theme.userTemplates"
+            :key="t.id"
+            class="template-card-wrap"
+          >
+            <button
+              type="button"
+              class="template-card"
+              :aria-label="`Apply ${t.name} theme`"
+              @click="applyTemplateAndClearDirty(t.id)"
+            >
+              <span class="template-preview" :style="previewStyle(t.palette)"></span>
+              <span class="template-name">{{ t.name }}</span>
+            </button>
+            <button
+              type="button"
+              class="template-delete"
+              :aria-label="`Delete ${t.name} theme`"
+              title="Delete theme"
+              @click.stop="onDeleteUserTheme(t.id)"
+            >
+              <i class="pi pi-trash" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+      </template>
     </section>
 
     <section v-for="(keys, group) in theme.THEME_KEYS" :key="group" class="theme-section">
@@ -113,6 +160,14 @@ const allKeys = ([] as ThemeKey[]).concat(
 function applyTemplateAndClearDirty(id: string) {
   theme.applyTemplate(id)
   userHasEdited.value = false
+}
+
+async function onDeleteUserTheme(id: string) {
+  try {
+    await theme.deleteUserTheme(id)
+  } catch {
+    // Could show a toast on failure
+  }
 }
 
 function resetAndClearDirty() {
@@ -223,10 +278,44 @@ function previewStyle(palette: ThemeTemplate) {
 .intro { color: var(--text-secondary); font-size: 0.9375rem; margin: 0 0 2rem; }
 .theme-section { margin-bottom: 2rem; }
 .templates-section .section-title { margin-bottom: 0.75rem; }
+.subsection-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 1.25rem 0 0.5rem;
+}
+.subsection-title:first-of-type { margin-top: 0; }
 .templates-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
   gap: 0.75rem;
+}
+.template-card-wrap {
+  position: relative;
+}
+.template-delete {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  z-index: 1;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm, 4px);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  transition: color 0.2s, background 0.2s;
+}
+.template-delete:hover {
+  color: var(--accent-burgundy, #6b2c3e);
+  background: var(--bg-secondary);
 }
 .template-card {
   display: flex;

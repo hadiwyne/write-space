@@ -42,13 +42,15 @@ export const THEME_DEFAULTS: Record<ThemeKey, string> = {
 export type ThemeTemplate = Record<ThemeKey, string>
 export type UserSavedTheme = { id: string; name: string; palette: ThemeTemplate }
 
-export const THEME_TEMPLATES: Record<string, { name: string; palette: ThemeTemplate }> = {
+export const THEME_TEMPLATES: Record<string, { name: string; palette: ThemeTemplate; dark?: boolean }> = {
   default: {
     name: 'Default',
     palette: { ...THEME_DEFAULTS },
+    dark: false,
   },
   ocean: {
     name: 'Ocean',
+    dark: false,
     palette: {
       'bg-primary': '#E8EEF2',
       'bg-secondary': '#F0F5F8',
@@ -69,6 +71,7 @@ export const THEME_TEMPLATES: Record<string, { name: string; palette: ThemeTempl
   },
   rose: {
     name: 'Rose',
+    dark: false,
     palette: {
       'bg-primary': '#FDF2F4',
       'bg-secondary': '#FAEBED',
@@ -89,6 +92,7 @@ export const THEME_TEMPLATES: Record<string, { name: string; palette: ThemeTempl
   },
   dark: {
     name: 'Dark',
+    dark: true,
     palette: {
       'bg-primary': '#1A1A1A',
       'bg-secondary': '#252525',
@@ -109,6 +113,7 @@ export const THEME_TEMPLATES: Record<string, { name: string; palette: ThemeTempl
   },
   midnight: {
     name: 'Midnight',
+    dark: true,
     palette: {
       'bg-primary': '#141C24',
       'bg-secondary': '#1E2A36',
@@ -129,6 +134,7 @@ export const THEME_TEMPLATES: Record<string, { name: string; palette: ThemeTempl
   },
   pine: {
     name: 'Pine',
+    dark: true,
     palette: {
       'bg-primary': '#141C18',
       'bg-secondary': '#1E2A24',
@@ -147,8 +153,93 @@ export const THEME_TEMPLATES: Record<string, { name: string; palette: ThemeTempl
       'nav-bg': '#1E2A24',
     },
   },
+  obsidian: {
+    name: 'Obsidian',
+    dark: true,
+    palette: {
+      'bg-primary': '#0D0D0F',
+      'bg-secondary': '#161619',
+      'bg-card': '#1E1E22',
+      'text-primary': '#E6E6E8',
+      'text-secondary': '#9898A0',
+      'text-tertiary': '#686870',
+      'accent-primary': '#A88B4C',
+      'accent-secondary': '#B8A06A',
+      'accent-tertiary': '#D4C490',
+      'accent-green': '#5A9A6A',
+      'accent-burgundy': '#B86B7A',
+      'border-light': '#2E2E34',
+      'border-medium': '#404048',
+      'like-color': '#E85A6B',
+      'nav-bg': '#161619',
+    },
+  },
+  eclipse: {
+    name: 'Eclipse',
+    dark: true,
+    palette: {
+      'bg-primary': '#12121A',
+      'bg-secondary': '#1A1A26',
+      'bg-card': '#242432',
+      'text-primary': '#E8E8F0',
+      'text-secondary': '#A0A0B0',
+      'text-tertiary': '#707084',
+      'accent-primary': '#7A6BB8',
+      'accent-secondary': '#9080C8',
+      'accent-tertiary': '#A898D8',
+      'accent-green': '#5A9A7A',
+      'accent-burgundy': '#B87A8A',
+      'border-light': '#36364A',
+      'border-medium': '#48485C',
+      'like-color': '#E86A7A',
+      'nav-bg': '#1A1A26',
+    },
+  },
+  ember: {
+    name: 'Ember',
+    dark: true,
+    palette: {
+      'bg-primary': '#1A1410',
+      'bg-secondary': '#261C16',
+      'bg-card': '#32281E',
+      'text-primary': '#F0E8E0',
+      'text-secondary': '#B0A098',
+      'text-tertiary': '#807068',
+      'accent-primary': '#C86A3A',
+      'accent-secondary': '#D48A5A',
+      'accent-tertiary': '#E8AA82',
+      'accent-green': '#5A9A6A',
+      'accent-burgundy': '#B86B6A',
+      'border-light': '#403830',
+      'border-medium': '#524A42',
+      'like-color': '#E85A5A',
+      'nav-bg': '#261C16',
+    },
+  },
+  violet: {
+    name: 'Violet',
+    dark: true,
+    palette: {
+      'bg-primary': '#16121E',
+      'bg-secondary': '#1E1A28',
+      'bg-card': '#282432',
+      'text-primary': '#ECE8F0',
+      'text-secondary': '#A89AB0',
+      'text-tertiary': '#786A88',
+      'accent-primary': '#8A6AB8',
+      'accent-secondary': '#A080C8',
+      'accent-tertiary': '#B898D8',
+      'accent-green': '#5A9A7A',
+      'accent-burgundy': '#B87A92',
+      'border-light': '#3A3648',
+      'border-medium': '#4C4858',
+      'like-color': '#E86A88',
+      'nav-bg': '#1E1A28',
+    },
+  },
   forest: {
     name: 'Forest',
+    dark: false,
     palette: {
       'bg-primary': '#E8EDE6',
       'bg-secondary': '#F0F4EE',
@@ -169,6 +260,7 @@ export const THEME_TEMPLATES: Record<string, { name: string; palette: ThemeTempl
   },
   sunset: {
     name: 'Sunset',
+    dark: false,
     palette: {
       'bg-primary': '#F5EDE8',
       'bg-secondary': '#FAF2EB',
@@ -189,6 +281,7 @@ export const THEME_TEMPLATES: Record<string, { name: string; palette: ThemeTempl
   },
   slate: {
     name: 'Slate',
+    dark: false,
     palette: {
       'bg-primary': '#E8EAED',
       'bg-secondary': '#EEF0F2',
@@ -209,6 +302,7 @@ export const THEME_TEMPLATES: Record<string, { name: string; palette: ThemeTempl
   },
   lavender: {
     name: 'Lavender',
+    dark: false,
     palette: {
       'bg-primary': '#EDE8F0',
       'bg-secondary': '#F2EBF5',
@@ -285,6 +379,18 @@ export const useThemeStore = defineStore('theme', () => {
     return [...builtIn, ...user]
   })
 
+  const lightTemplatesList = computed(() =>
+    Object.entries(THEME_TEMPLATES)
+      .filter(([, t]) => !t.dark)
+      .map(([id, t]) => ({ id, name: t.name, palette: t.palette, isUser: false as const }))
+  )
+
+  const darkTemplatesList = computed(() =>
+    Object.entries(THEME_TEMPLATES)
+      .filter(([, t]) => t.dark)
+      .map(([id, t]) => ({ id, name: t.name, palette: t.palette, isUser: false as const }))
+  )
+
   function init() {
     applyToDocument(overrides.value)
   }
@@ -355,6 +461,15 @@ export const useThemeStore = defineStore('theme', () => {
     }
   }
 
+  async function deleteUserTheme(id: string) {
+    try {
+      await api.delete(`/themes/${id}`)
+      userTemplates.value = userTemplates.value.filter((t) => t.id !== id)
+    } catch {
+      throw new Error('Failed to delete theme')
+    }
+  }
+
   function get(key: ThemeKey): string {
     return overrides.value[key] ?? THEME_DEFAULTS[key]
   }
@@ -374,6 +489,8 @@ export const useThemeStore = defineStore('theme', () => {
     THEME_KEYS,
     THEME_TEMPLATES,
     templatesList,
+    lightTemplatesList,
+    darkTemplatesList,
     userTemplates,
     init,
     set,
@@ -382,6 +499,7 @@ export const useThemeStore = defineStore('theme', () => {
     fetchUserThemes,
     clearUserThemes,
     saveUserTheme,
+    deleteUserTheme,
     getCurrentPalette,
     get,
   }
