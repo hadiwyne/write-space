@@ -31,6 +31,7 @@ model User {
   avatarUrl     String?   @map("avatar_url")
   avatarData    Bytes?    @map("avatar_data")
   avatarMimeType String?  @map("avatar_mime_type")
+  avatarShape   String?   @map("avatar_shape")
 
   posts         Post[]
   drafts        Draft[]

@@ -17,15 +17,29 @@
     </template>
 
     <template v-else>
-      <div class="crop-stage">
-        <p class="crop-instructions">Drag to position, use the slider to zoom. The circle shows how your avatar will look.</p>
+      <!-- GIF: no crop (would lose animation), just preview and confirm -->
+      <div v-if="cropState.isGif" class="crop-stage">
+        <p class="crop-instructions">GIFs are used as-is so the animation is preserved.</p>
+        <div class="crop-container crop-container--preview">
+          <img :src="cropState.imageUrl" alt="Preview" class="crop-image crop-image--preview" />
+        </div>
+        <div class="crop-actions">
+          <button type="button" class="btn btn-ghost" @click="cancelCrop">Cancel</button>
+          <button type="button" class="btn btn-primary" @click="useGif" :disabled="applying">
+            {{ applying ? 'Applying…' : 'Use this GIF' }}
+          </button>
+        </div>
+      </div>
+      <!-- Non-GIF: crop/zoom then export as JPEG -->
+      <div v-else class="crop-stage">
+        <p class="crop-instructions">Drag to position, use the slider to zoom. The square shows the area that will be used (your avatar shape is applied when displayed).</p>
         <div
           class="crop-container"
           ref="cropContainerRef"
           @mousedown="startDrag"
           @touchstart.prevent="startDrag"
         >
-          <div class="crop-circle">
+          <div class="crop-box">
             <img
               ref="cropImageRef"
               :src="cropState.imageUrl"
@@ -64,7 +78,6 @@
 import { ref, reactive, computed, onUnmounted } from 'vue'
 
 const CROP_SIZE = 280
-const RADIUS = CROP_SIZE / 2
 const OUTPUT_SIZE = 256
 
 withDefaults(
@@ -96,6 +109,9 @@ interface CropState {
   dragStartY: number
   dragStartPanX: number
   dragStartPanY: number
+  /** When true, file is a GIF and we use it as-is (no crop) so animation is preserved */
+  isGif: boolean
+  originalFile: File | null
 }
 
 const cropState = reactive<CropState>({
@@ -110,14 +126,17 @@ const cropState = reactive<CropState>({
   dragStartY: 0,
   dragStartPanX: 0,
   dragStartPanY: 0,
+  isGif: false,
+  originalFile: null,
 })
 
 const imageStyle = computed(() => {
   const s = cropState
+  const half = CROP_SIZE / 2
   const w = s.naturalWidth * s.scale
   const h = s.naturalHeight * s.scale
-  const left = RADIUS - w / 2 + s.panX
-  const top = RADIUS - h / 2 + s.panY
+  const left = half - w / 2 + s.panX
+  const top = half - h / 2 + s.panY
   return {
     width: `${w}px`,
     height: `${h}px`,
@@ -145,6 +164,8 @@ function onFileSelect(e: Event) {
   cropState.panY = 0
   cropState.naturalWidth = 0
   cropState.naturalHeight = 0
+  cropState.isGif = file.type === 'image/gif'
+  cropState.originalFile = cropState.isGif ? file : null
   input.value = ''
 }
 
@@ -207,6 +228,16 @@ function cancelCrop() {
     URL.revokeObjectURL(cropState.imageUrl)
     cropState.imageUrl = ''
   }
+  cropState.isGif = false
+  cropState.originalFile = null
+}
+
+function useGif() {
+  if (!cropState.originalFile) return
+  applying.value = true
+  emit('crop', cropState.originalFile)
+  cancelCrop()
+  applying.value = false
 }
 
 function getCroppedBlob(): Promise<Blob> {
@@ -227,7 +258,8 @@ function getCroppedBlob(): Promise<Blob> {
     const { scale, panX, panY } = cropState
     const nw = cropState.naturalWidth
     const nh = cropState.naturalHeight
-    const canvasScale = (OUTPUT_SIZE / 2 / RADIUS) * scale
+    // Map the CROP_SIZE x CROP_SIZE view to OUTPUT_SIZE x OUTPUT_SIZE (square crop – no circle clip)
+    const canvasScale = (OUTPUT_SIZE / CROP_SIZE) * scale
     const imgCenterX = nw / 2 - panX / scale
     const imgCenterY = nh / 2 - panY / scale
     const drawX = OUTPUT_SIZE / 2 - imgCenterX * canvasScale
@@ -235,10 +267,6 @@ function getCroppedBlob(): Promise<Blob> {
     const drawW = nw * canvasScale
     const drawH = nh * canvasScale
 
-    ctx.beginPath()
-    ctx.arc(OUTPUT_SIZE / 2, OUTPUT_SIZE / 2, OUTPUT_SIZE / 2, 0, Math.PI * 2)
-    ctx.closePath()
-    ctx.clip()
     ctx.drawImage(img, 0, 0, nw, nh, drawX, drawY, drawW, drawH)
 
     canvas.toBlob(
@@ -294,7 +322,7 @@ onUnmounted(() => {
 .crop-container {
   width: 280px;
   height: 280px;
-  border-radius: 50%;
+  border-radius: 8px;
   overflow: hidden;
   position: relative;
   background: var(--gray-200);
@@ -302,13 +330,20 @@ onUnmounted(() => {
   user-select: none;
   touch-action: none;
 }
-.crop-circle { position: relative; width: 100%; height: 100%; overflow: hidden; border-radius: 50%; }
+.crop-box { position: relative; width: 100%; height: 100%; overflow: hidden; }
 .crop-image {
   position: absolute;
   top: 0;
   left: 0;
   pointer-events: none;
   user-select: none;
+}
+.crop-container--preview { cursor: default; }
+.crop-image--preview {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 .zoom-row { display: flex; align-items: center; gap: 0.75rem; margin-top: 1rem; }
 .zoom-label { font-size: 0.875rem; color: var(--gray-700); min-width: 2.5rem; }

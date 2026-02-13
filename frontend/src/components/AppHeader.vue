@@ -49,8 +49,8 @@
                   @click="onNotifClick(n)"
                 >
                   <span class="notif-dot" :class="{ unread: !n.readAt }" aria-hidden="true"></span>
-                  <img v-if="n.actor?.avatarUrl" :src="avatarSrc(n.actor.avatarUrl)" alt="" class="notif-avatar" />
-                  <span v-else class="notif-avatar-placeholder">{{ (n.actor?.displayName || n.actor?.username || '?')[0] }}</span>
+                  <img v-if="n.actor?.avatarUrl" :src="avatarSrc(n.actor.avatarUrl, n.actor?.id === auth.user?.id ? auth.avatarVersion : undefined)" alt="" class="notif-avatar" :class="avatarShapeClass(n.actor?.avatarShape)" />
+                  <span v-else class="notif-avatar-placeholder" :class="avatarShapeClass(n.actor?.avatarShape)">{{ (n.actor?.displayName || n.actor?.username || '?')[0] }}</span>
                   <div class="notif-body">
                     <span class="notif-text">{{ notifText(n) }}</span>
                     <span class="notif-time">{{ notifTime(n.createdAt) }}</span>
@@ -65,8 +65,8 @@
           <i class="pi pi-pencil"></i>
         </router-link>
         <div class="avatar-wrap" ref="avatarWrapRef">
-          <button type="button" class="avatar-btn" aria-label="Account menu" aria-haspopup="true" :aria-expanded="dropdownOpen" @click="dropdownOpen = !dropdownOpen">
-            <img v-if="auth.user?.avatarUrl" :src="avatarSrc(auth.user.avatarUrl)" alt="" class="avatar-img" />
+          <button type="button" class="avatar-btn" :class="avatarShapeClass(auth.user?.avatarShape)" aria-label="Account menu" aria-haspopup="true" :aria-expanded="dropdownOpen" @click="dropdownOpen = !dropdownOpen">
+            <img v-if="auth.user?.avatarUrl" :src="avatarSrc(auth.user.avatarUrl, auth.avatarVersion)" alt="" class="avatar-img" />
             <span v-else class="avatar-initial">{{ (auth.user?.displayName || auth.user?.username || '?')[0] }}</span>
           </button>
           <Transition name="dropdown">
@@ -119,6 +119,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 import { useNotificationsStore } from '@/stores/notifications'
 import { avatarSrc } from '@/api/client'
+import { avatarShapeClass } from '@/utils/avatar'
 import type { NotificationItem } from '@/stores/notifications'
 
 const auth = useAuthStore()
@@ -389,7 +390,11 @@ onUnmounted(() => {
   overflow: hidden;
   transition: opacity 0.2s ease;
 }
+.avatar-btn:has(.avatar-img) { background: none; }
 .avatar-btn:hover { opacity: 0.8; }
+.avatar-btn.avatar-shape-rounded { border-radius: 12%; }
+.avatar-btn.avatar-shape-square { border-radius: 0; }
+.avatar-btn.avatar-shape-squircle { border-radius: 25%; }
 .avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .avatar-initial {
   font-size: 1.125rem;
@@ -476,6 +481,9 @@ onUnmounted(() => {
 .notif-item:hover { background: var(--bg-primary); }
 .notif-item.unread { background: rgba(139, 69, 19, 0.05); }
 .notif-avatar, .notif-avatar-placeholder { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: var(--border-light); flex-shrink: 0; display: block; line-height: 36px; text-align: center; font-size: 0.875rem; }
+.notif-avatar.avatar-shape-rounded, .notif-avatar-placeholder.avatar-shape-rounded { border-radius: 12%; }
+.notif-avatar.avatar-shape-square, .notif-avatar-placeholder.avatar-shape-square { border-radius: 0; }
+.notif-avatar.avatar-shape-squircle, .notif-avatar-placeholder.avatar-shape-squircle { border-radius: 25%; }
 .notif-body { min-width: 0; flex: 1; }
 .notif-text { font-size: 0.875rem; display: block; }
 .notif-time { font-size: 0.75rem; color: var(--text-tertiary); }

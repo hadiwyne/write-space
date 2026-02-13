@@ -4,7 +4,7 @@ import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 
-const authorSelect = { id: true, username: true, displayName: true, avatarUrl: true };
+const authorSelect = { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true };
 
 export type CommentWithReplies = {
   id: string;
@@ -98,7 +98,7 @@ export class CommentsService {
     return this.prisma.comment.update({
       where: { id },
       data: { content: dto.content },
-      include: { author: { select: { id: true, username: true, displayName: true, avatarUrl: true } } },
+      include: { author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true } } },
     });
   }
 

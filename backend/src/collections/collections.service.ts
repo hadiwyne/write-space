@@ -4,7 +4,7 @@ import { CreateCollectionDto } from './dto/create-collection.dto';
 import { UpdateCollectionDto } from './dto/update-collection.dto';
 
 const postInclude = {
-  author: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
+  author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true } },
   _count: { select: { likes: true, comments: true } },
 };
 
@@ -69,7 +69,7 @@ export class CollectionsService {
     const col = await this.prisma.collection.findFirst({
       where: isUuid ? { id: idOrSlug } : { slug: idOrSlug },
       include: {
-        user: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
+        user: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true } },
         items: { orderBy: { order: 'asc' }, include: { post: { include: postInclude } } },
       },
     });

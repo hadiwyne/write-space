@@ -23,7 +23,7 @@ export class SearchService {
       take: limit,
       skip: offset,
       include: {
-        author: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
+        author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true } },
         _count: { select: { likes: true, comments: true } },
       },
     });
@@ -48,6 +48,7 @@ export class SearchService {
         username: true,
         displayName: true,
         avatarUrl: true,
+        avatarShape: true,
         bio: true,
         _count: { select: { posts: true, followers: true, following: true } },
       },

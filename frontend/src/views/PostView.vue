@@ -101,7 +101,7 @@
             :reply-content="replyContent"
             :is-logged-in="!!auth.isLoggedIn"
             :can-delete-fn="canDeleteComment"
-            :avatar-src="avatarSrc"
+            :avatar-src="(url, userId) => avatarSrc(url, userId === auth.user?.id ? auth.avatarVersion : undefined)"
             @reply="replyToId = replyToId === $event ? null : $event"
             @update:reply-content="replyContent = $event"
             @submit-reply="addComment($event)"

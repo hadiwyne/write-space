@@ -9,7 +9,7 @@ export type NotificationItem = {
   type: string
   readAt: string | null
   createdAt: string
-  actor?: { id: string; username: string; displayName: string | null; avatarUrl: string | null }
+  actor?: { id: string; username: string; displayName: string | null; avatarUrl: string | null; avatarShape?: string | null }
   post?: { id: string; title: string }
 }
 

@@ -5,7 +5,9 @@ import { useLikedPostsStore } from './likedPosts'
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(localStorage.getItem('writespace_token'))
-  const user = ref<{ id: string; username: string; displayName?: string; avatarUrl?: string; isSuperadmin?: boolean } | null>(null)
+  const user = ref<{ id: string; username: string; displayName?: string; avatarUrl?: string; avatarShape?: string | null; isSuperadmin?: boolean } | null>(null)
+  /** Bump after avatar upload so avatar URLs get ?v= and browser refetches instead of using cache */
+  const avatarVersion = ref(0)
   const isLoggedIn = computed(() => !!token.value)
 
   function setToken(t: string) {
@@ -37,5 +39,9 @@ export const useAuthStore = defineStore('auth', () => {
     useLikedPostsStore().clear()
     clear()
   }
-  return { token, user, isLoggedIn, login, register, logout, fetchUser, setToken, clear }
+  function bumpAvatarVersion() {
+    avatarVersion.value = Date.now()
+  }
+
+  return { token, user, avatarVersion, isLoggedIn, login, register, logout, fetchUser, setToken, clear, bumpAvatarVersion }
 }, { persist: { paths: ['token'] } })

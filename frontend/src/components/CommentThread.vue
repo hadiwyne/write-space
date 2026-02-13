@@ -2,8 +2,8 @@
   <div class="comment-thread" :class="{ 'comment-reply': depth > 0 }">
     <div class="comment">
       <router-link :to="`/u/${comment.author?.username}`" class="comment-avatar-link">
-        <img v-if="comment.author?.avatarUrl" :src="avatarSrc(comment.author.avatarUrl)" alt="" class="comment-avatar" />
-        <span v-else class="comment-avatar-placeholder">{{ (comment.author?.displayName || comment.author?.username || '?')[0] }}</span>
+        <img v-if="comment.author?.avatarUrl" :src="avatarSrc(comment.author.avatarUrl, comment.author?.id)" alt="" class="comment-avatar" :class="avatarShapeClass(comment.author?.avatarShape)" />
+        <span v-else class="comment-avatar-placeholder" :class="avatarShapeClass(comment.author?.avatarShape)">{{ (comment.author?.displayName || comment.author?.username || '?')[0] }}</span>
       </router-link>
       <div class="comment-content">
         <span class="comment-meta">
@@ -55,13 +55,14 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { avatarShapeClass } from '@/utils/avatar'
 defineOptions({ name: 'CommentThread' })
 
 export type CommentNode = {
   id: string
   content: string
   createdAt?: string
-  author?: { id?: string; username?: string; displayName?: string | null; avatarUrl?: string | null }
+  author?: { id?: string; username?: string; displayName?: string | null; avatarUrl?: string | null; avatarShape?: string | null }
   replies?: CommentNode[]
 }
 
@@ -93,7 +94,7 @@ const props = defineProps<{
   isLoggedIn: boolean
   /** When provided, each thread uses this to decide delete visibility for its own comment (avoids inheriting parent's). */
   canDeleteFn?: (c: CommentNode) => boolean
-  avatarSrc: (url: string | null | undefined) => string
+  avatarSrc: (url: string | null | undefined, userId?: string) => string
 }>()
 
 const canDelete = computed(() => (props.canDeleteFn ? props.canDeleteFn(props.comment) : false))
@@ -149,6 +150,11 @@ function onReplyContentInput(e: Event) {
   border-radius: 50%;
   object-fit: cover;
   background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+}
+.comment-avatar.avatar-shape-rounded, .comment-avatar-placeholder.avatar-shape-rounded { border-radius: 12%; }
+.comment-avatar.avatar-shape-square, .comment-avatar-placeholder.avatar-shape-square { border-radius: 0; }
+.comment-avatar.avatar-shape-squircle, .comment-avatar-placeholder.avatar-shape-squircle { border-radius: 25%; }
+.comment-avatar-placeholder {
   display: block;
   line-height: 36px;
   font-size: 0.875rem;

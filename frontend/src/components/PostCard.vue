@@ -2,8 +2,8 @@
   <article class="card" :style="{ animationDelay }">
     <header class="card-header">
       <router-link :to="'/u/' + (post.author && post.author.username)" class="card-author">
-        <div class="author-avatar">
-          <img v-if="post.author && post.author.avatarUrl" :src="avatarSrc(post.author.avatarUrl)" alt="" class="avatar-img" />
+        <div class="author-avatar" :class="avatarShapeClass(post.author?.avatarShape)">
+          <img v-if="post.author && post.author.avatarUrl" :src="avatarSrc(post.author.avatarUrl, post.author.id === auth.user?.id ? auth.avatarVersion : undefined)" alt="" class="avatar-img" />
           <span v-else class="avatar-initial">{{ (post.author && (post.author.displayName || post.author.username)) ? (post.author.displayName || post.author.username)[0] : '?' }}</span>
         </div>
         <div class="author-info">
@@ -127,6 +127,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { api, avatarSrc } from '@/api/client'
+import { avatarShapeClass } from '@/utils/avatar'
 import { useAuthStore } from '@/stores/auth'
 import { useLikedPostsStore } from '@/stores/likedPosts'
 
@@ -315,6 +316,10 @@ function formatDate(s: string | undefined) {
   border: 3px solid var(--bg-card);
   outline: 2px solid var(--border-medium);
 }
+.author-avatar:has(.avatar-img) { background: none; }
+.author-avatar.avatar-shape-rounded { border-radius: 12%; }
+.author-avatar.avatar-shape-square { border-radius: 0; }
+.author-avatar.avatar-shape-squircle { border-radius: 25%; }
 .avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .avatar-initial { line-height: 1; }
 .author-info { min-width: 0; }
