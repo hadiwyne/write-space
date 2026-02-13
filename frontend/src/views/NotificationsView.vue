@@ -6,8 +6,10 @@
     <ul v-else class="notification-list">
       <li v-for="n in notifications" :key="notifId(n)" class="notification-item" :class="{ unread: !n.readAt }">
         <router-link :to="notificationLink(n)" class="notification-link" @click="markRead(notifId(n))">
-          <img v-if="n.actor?.avatarUrl" :src="actorAvatarSrc(n.actor)" alt="" class="notif-avatar" :class="avatarShapeClass(n.actor?.avatarShape)" />
-          <span v-else class="notif-avatar-placeholder" :class="avatarShapeClass(n.actor?.avatarShape)">{{ (n.actor?.displayName || n.actor?.username || '?')[0] }}</span>
+          <AvatarFrame :frame="n.actor?.avatarFrame ?? null" :shape-class="avatarShapeClass(n.actor?.avatarShape)">
+            <img v-if="n.actor?.avatarUrl" :src="actorAvatarSrc(n.actor)" alt="" class="notif-avatar" :class="avatarShapeClass(n.actor?.avatarShape)" />
+            <span v-else class="notif-avatar-placeholder" :class="avatarShapeClass(n.actor?.avatarShape)">{{ (n.actor?.displayName || n.actor?.username || '?')[0] }}</span>
+          </AvatarFrame>
           <div class="notif-body">
             <span class="notif-text">{{ notificationText(n) }}</span>
             <span class="notif-date">{{ formatDate(n.createdAt) }}</span>
@@ -23,6 +25,7 @@
 import { ref, onMounted } from 'vue'
 import { api, avatarSrc } from '@/api/client'
 import { avatarShapeClass } from '@/utils/avatar'
+import AvatarFrame from '@/components/AvatarFrame.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationsStore } from '@/stores/notifications'
 
@@ -33,7 +36,7 @@ type NotifRecord = Record<string, unknown> & {
   type?: string
   readAt?: string | null
   createdAt?: string
-  actor?: { id?: string; displayName?: string; username?: string; avatarUrl?: string | null; avatarShape?: string | null }
+  actor?: { id?: string; displayName?: string; username?: string; avatarUrl?: string | null; avatarShape?: string | null; avatarFrame?: unknown }
   postId?: string
 }
 

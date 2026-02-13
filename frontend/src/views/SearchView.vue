@@ -22,8 +22,10 @@
         <ul v-else class="user-list">
           <li v-for="u in users" :key="userKey(u)" class="user-item">
             <router-link :to="`/u/${userUsername(u)}`" class="user-link">
-              <img v-if="userAvatarUrl(u)" :src="avatarSrc(userAvatarUrl(u), u?.id === auth.user?.id ? auth.avatarVersion : undefined)" alt="" class="user-avatar" :class="avatarShapeClass(userAvatarShape(u))" />
-              <span v-else class="user-avatar-placeholder" :class="avatarShapeClass(userAvatarShape(u))">{{ (userDisplayName(u) || userUsername(u) || '?')[0] }}</span>
+              <AvatarFrame :frame="userAvatarFrame(u) ?? null" :shape-class="avatarShapeClass(userAvatarShape(u))">
+                <img v-if="userAvatarUrl(u)" :src="avatarSrc(userAvatarUrl(u), u?.id === auth.user?.id ? auth.avatarVersion : undefined)" alt="" class="user-avatar" :class="avatarShapeClass(userAvatarShape(u))" />
+                <span v-else class="user-avatar-placeholder" :class="avatarShapeClass(userAvatarShape(u))">{{ (userDisplayName(u) || userUsername(u) || '?')[0] }}</span>
+              </AvatarFrame>
               <div class="user-info">
                 <span class="user-name">{{ userDisplayName(u) || userUsername(u) }}</span>
                 <span class="user-handle">@{{ userUsername(u) }}</span>
@@ -41,6 +43,7 @@ import { ref, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { api, avatarSrc } from '@/api/client'
 import { avatarShapeClass } from '@/utils/avatar'
+import AvatarFrame from '@/components/AvatarFrame.vue'
 import { useAuthStore } from '@/stores/auth'
 import PostCard from '@/components/PostCard.vue'
 
@@ -77,6 +80,10 @@ function userAvatarUrl(u: Record<string, unknown>) {
 
 function userAvatarShape(u: Record<string, unknown>): string | null | undefined {
   return (u as { avatarShape?: string | null }).avatarShape
+}
+
+function userAvatarFrame(u: Record<string, unknown>) {
+  return (u as { avatarFrame?: unknown }).avatarFrame
 }
 
 async function search() {

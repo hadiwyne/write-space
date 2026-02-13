@@ -5,18 +5,20 @@
       <div class="form-group avatar-section">
         <label>Avatar</label>
         <div class="avatar-row">
-          <div
-            v-if="avatarPreview || auth.user?.avatarUrl"
-            class="avatar-preview-clip"
-            :class="avatarShapeClass(auth.user?.avatarShape)"
-          >
-            <img :src="avatarPreview || avatarSrc(auth.user?.avatarUrl, auth.avatarVersion)" alt="" class="avatar-preview-img" />
-          </div>
-          <span
-            v-else
-            class="avatar-placeholder"
-            :class="avatarShapeClass(auth.user?.avatarShape)"
-          >{{ (auth.user?.displayName || auth.user?.username || '?')[0] }}</span>
+          <AvatarFrame :frame="avatarFrame" :shape-class="avatarShapeClass(auth.user?.avatarShape)">
+            <div
+              v-if="avatarPreview || auth.user?.avatarUrl"
+              class="avatar-preview-clip"
+              :class="avatarShapeClass(auth.user?.avatarShape)"
+            >
+              <img :src="avatarPreview || avatarSrc(auth.user?.avatarUrl, auth.avatarVersion)" alt="" class="avatar-preview-img" />
+            </div>
+            <span
+              v-else
+              class="avatar-placeholder"
+              :class="avatarShapeClass(auth.user?.avatarShape)"
+            >{{ (auth.user?.displayName || auth.user?.username || '?')[0] }}</span>
+          </AvatarFrame>
           <div class="avatar-actions">
             <AvatarUploadCrop
               :current-preview-url="avatarPreview || avatarSrc(auth.user?.avatarUrl, auth.avatarVersion) || null"
@@ -42,6 +44,63 @@
                 <span>Squircle</span>
               </label>
             </div>
+            <label class="avatar-shape-label">Avatar frame</label>
+            <div class="frame-type-options">
+              <label class="avatar-shape-option">
+                <input type="radio" value="none" :checked="frameBorderType === 'none'" @change="frameBorderType = 'none'" />
+                <span>None</span>
+              </label>
+              <label class="avatar-shape-option">
+                <input type="radio" value="gradient" :checked="frameBorderType === 'gradient'" @change="frameBorderType = 'gradient'" />
+                <span>Gradient</span>
+              </label>
+              <label class="avatar-shape-option">
+                <input type="radio" value="glow" :checked="frameBorderType === 'glow'" @change="frameBorderType = 'glow'" />
+                <span>Glow</span>
+              </label>
+              <label class="avatar-shape-option">
+                <input type="radio" value="preset" :checked="frameBorderType === 'preset'" @change="frameBorderType = 'preset'" />
+                <span>Preset</span>
+              </label>
+            </div>
+            <template v-if="frameBorderType === 'gradient'">
+              <div class="frame-colors">
+                <label class="frame-label">Colors (2–4)</label>
+                <div class="color-row">
+                  <input v-for="(_, i) in gradientColors" :key="i" v-model="gradientColors[i]" type="color" class="color-input" />
+                </div>
+              </div>
+              <div class="frame-row">
+                <label class="frame-label">Angle</label>
+                <input v-model.number="gradientAngle" type="range" min="0" max="360" class="frame-slider" />
+                <span class="frame-value">{{ gradientAngle }}°</span>
+              </div>
+              <label class="frame-check"><input v-model="gradientConic" type="checkbox" /> Circular (conic)</label>
+              <label class="frame-check"><input v-model="gradientAnimated" type="checkbox" /> Animated</label>
+              <div v-if="gradientAnimated" class="frame-row">
+                <label class="frame-label">Speed</label>
+                <input v-model.number="gradientSpeed" type="range" min="0.2" max="3" step="0.1" class="frame-slider" />
+              </div>
+            </template>
+            <template v-if="frameBorderType === 'glow'">
+              <div class="frame-row">
+                <label class="frame-label">Color</label>
+                <input v-model="glowColor" type="color" class="color-input-inline" />
+              </div>
+              <div class="frame-row">
+                <label class="frame-label">Intensity</label>
+                <input v-model.number="glowIntensity" type="range" min="0" max="1" step="0.1" class="frame-slider" />
+              </div>
+              <label class="frame-check"><input v-model="glowPulse" type="checkbox" /> Pulse</label>
+            </template>
+            <template v-if="frameBorderType === 'preset'">
+              <select v-model="presetName" class="frame-select">
+                <option value="gamer">Gamer (RGB ring)</option>
+                <option value="soft">Soft (pastel halo)</option>
+                <option value="premium">Premium (gold)</option>
+                <option value="fire">Fire</option>
+              </select>
+            </template>
           </div>
         </div>
       </div>
@@ -66,11 +125,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { api, avatarSrc } from '@/api/client'
 import AvatarUploadCrop from '@/components/AvatarUploadCrop.vue'
+import AvatarFrame from '@/components/AvatarFrame.vue'
 import { avatarShapeClass } from '@/utils/avatar'
+import type { AvatarFrame as AvatarFrameType } from '@/types/avatarFrame'
 
 const auth = useAuthStore()
 const displayName = ref('')
@@ -83,12 +144,74 @@ const error = ref('')
 const success = ref('')
 const saving = ref(false)
 
+const frameBorderType = ref<'none' | 'gradient' | 'glow' | 'preset'>('none')
+const gradientColors = ref(['#ff7a18', '#ff0066', '#7a00ff'])
+const gradientAngle = ref(90)
+const gradientConic = ref(false)
+const gradientAnimated = ref(true)
+const gradientSpeed = ref(1)
+const glowColor = ref('#ff00cc')
+const glowIntensity = ref(0.5)
+const glowPulse = ref(false)
+const presetName = ref<'gamer' | 'soft' | 'premium' | 'fire'>('gamer')
+
+const avatarFrame = computed<AvatarFrameType>(() => {
+  if (frameBorderType.value === 'none') return null
+  if (frameBorderType.value === 'gradient') {
+    const colors = gradientColors.value.filter((c) => c)
+    if (colors.length < 2) return null
+    return {
+      borderType: 'gradient',
+      gradient: {
+        colors,
+        angle: gradientAngle.value,
+        conic: gradientConic.value,
+        animated: gradientAnimated.value,
+        speed: gradientSpeed.value,
+      },
+    }
+  }
+  if (frameBorderType.value === 'glow') {
+    return {
+      borderType: 'glow',
+      glow: { enabled: true, color: glowColor.value, intensity: glowIntensity.value, pulse: glowPulse.value },
+    }
+  }
+  if (frameBorderType.value === 'preset') {
+    return { borderType: 'preset', preset: presetName.value }
+  }
+  return null
+})
+
+function loadAvatarFrame(f: AvatarFrameType | null | undefined) {
+  if (!f || typeof f !== 'object') {
+    frameBorderType.value = 'none'
+    return
+  }
+  frameBorderType.value = (f.borderType as 'none' | 'gradient' | 'glow' | 'preset') || 'none'
+  if (f.gradient) {
+    gradientColors.value = [...f.gradient.colors.slice(0, 4)]
+    while (gradientColors.value.length < 3) gradientColors.value.push('#888')
+    gradientAngle.value = f.gradient.angle ?? 90
+    gradientConic.value = !!f.gradient.conic
+    gradientAnimated.value = !!f.gradient.animated
+    gradientSpeed.value = f.gradient.speed ?? 1
+  }
+  if (f.glow) {
+    glowColor.value = f.glow.color ?? '#ff00cc'
+    glowIntensity.value = f.glow.intensity ?? 0.5
+    glowPulse.value = !!f.glow.pulse
+  }
+  if (f.preset) presetName.value = f.preset
+}
+
 onMounted(() => {
   if (auth.user) {
     displayName.value = auth.user.displayName || ''
     bio.value = (auth.user as { bio?: string }).bio || ''
     const s = (auth.user as { avatarShape?: string | null }).avatarShape
     avatarShape.value = ['square', 'rounded', 'squircle'].includes(s || '') ? (s as typeof avatarShape.value) : 'circle'
+    loadAvatarFrame((auth.user as { avatarFrame?: AvatarFrameType }).avatarFrame)
   }
   auth.fetchUser().then(() => {
     if (auth.user) {
@@ -96,6 +219,7 @@ onMounted(() => {
       bio.value = (auth.user as { bio?: string }).bio || ''
       const s = (auth.user as { avatarShape?: string | null }).avatarShape
       avatarShape.value = ['square', 'rounded', 'squircle'].includes(s || '') ? (s as typeof avatarShape.value) : 'circle'
+      loadAvatarFrame((auth.user as { avatarFrame?: AvatarFrameType }).avatarFrame)
     }
   })
 })
@@ -129,6 +253,7 @@ async function saveProfile() {
       bio: bio.value || undefined,
       profileHTML: profileHTML.value || undefined,
       avatarShape: avatarShape.value,
+      avatarFrame: frameBorderType.value === 'none' ? null : avatarFrame.value,
     })
     await auth.fetchUser()
     success.value = 'Profile saved.'
@@ -179,6 +304,19 @@ async function saveProfile() {
 .avatar-shape-options { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; }
 .avatar-shape-option { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.9375rem; cursor: pointer; }
 .avatar-shape-option input { cursor: pointer; }
+.frame-type-options { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; margin-top: 0.35rem; }
+.frame-colors { margin-top: 0.5rem; }
+.frame-colors .frame-label { margin-bottom: 0.25rem; }
+.color-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.color-input { width: 36px; height: 28px; padding: 2px; border: 1px solid var(--gray-300); border-radius: 4px; cursor: pointer; }
+.frame-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap; }
+.frame-label { font-size: 0.8125rem; font-weight: 500; color: var(--gray-600); min-width: 4rem; }
+.frame-slider { flex: 1; min-width: 80px; max-width: 160px; }
+.frame-value { font-size: 0.8125rem; color: var(--gray-600); }
+.frame-check { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.875rem; margin-top: 0.5rem; margin-right: 1rem; cursor: pointer; }
+.frame-check input { cursor: pointer; }
+.frame-select { padding: 0.35rem 0.5rem; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 0.9375rem; margin-top: 0.35rem; }
+.color-input-inline { width: 36px; height: 28px; padding: 2px; border: 1px solid var(--gray-300); border-radius: 4px; cursor: pointer; }
 .avatar-actions { }
 .btn-sm { padding: 0.375rem 0.75rem; font-size: 0.875rem; }
 .btn-outline { background: transparent; border: 1px solid var(--gray-300); color: var(--gray-700); }

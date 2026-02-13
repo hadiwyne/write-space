@@ -1,11 +1,54 @@
 import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
 const DOMPurify = require('isomorphic-dompurify') as { sanitize: (html: string, options?: object) => string };
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from '../auth/dto/register.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+
+const MAX_AVATAR_FRAME_BYTES = 2048;
+
+/** Sanitize avatarFrame object: only allowed keys, reasonable values. Returns undefined if invalid. */
+function sanitizeAvatarFrame(
+  raw: Record<string, unknown> | null | undefined,
+): Record<string, unknown> | null | undefined {
+  if (raw === null || raw === undefined) return raw;
+  if (typeof raw !== 'object' || Array.isArray(raw)) return undefined;
+  const out: Record<string, unknown> = {};
+  const allowed = ['borderType', 'gradient', 'glow', 'preset'];
+  for (const key of Object.keys(raw)) {
+    if (!allowed.includes(key)) continue;
+    const v = raw[key];
+    if (key === 'borderType' && (v === 'none' || v === 'gradient' || v === 'glow' || v === 'preset')) out[key] = v;
+    else if (key === 'gradient' && typeof v === 'object' && v !== null && !Array.isArray(v)) {
+      const g = v as Record<string, unknown>;
+      const colors = Array.isArray(g.colors) ? g.colors.filter((c) => typeof c === 'string').slice(0, 4) : [];
+      if (colors.length >= 2) {
+        out[key] = {
+          colors,
+          angle: typeof g.angle === 'number' && g.angle >= 0 && g.angle <= 360 ? g.angle : 90,
+          conic: !!g.conic,
+          animated: !!g.animated,
+          speed: typeof g.speed === 'number' && g.speed >= 0.2 && g.speed <= 3 ? g.speed : 1,
+        };
+      }
+    } else if (key === 'glow' && typeof v === 'object' && v !== null && !Array.isArray(v)) {
+      const gl = v as Record<string, unknown>;
+      out[key] = {
+        enabled: !!gl.enabled,
+        color: typeof gl.color === 'string' ? gl.color : '#ff00cc',
+        intensity: typeof gl.intensity === 'number' && gl.intensity >= 0 && gl.intensity <= 1 ? gl.intensity : 0.5,
+        pulse: !!gl.pulse,
+      };
+    } else if (key === 'preset' && typeof v === 'string' && ['gamer', 'soft', 'premium', 'fire'].includes(v)) out[key] = v;
+  }
+  if (Object.keys(out).length === 0) return undefined;
+  const json = JSON.stringify(out);
+  if (Buffer.byteLength(json, 'utf8') > MAX_AVATAR_FRAME_BYTES) return undefined;
+  return out;
+}
 
 const userSelectWithoutPassword = {
   id: true,
@@ -16,6 +59,7 @@ const userSelectWithoutPassword = {
   profileHTML: true,
   avatarUrl: true,
   avatarShape: true,
+  avatarFrame: true,
   isSuperadmin: true,
   createdAt: true,
   updatedAt: true,
@@ -55,6 +99,7 @@ export class UsersService {
         profileHTML: true,
         avatarUrl: true,
         avatarShape: true,
+        avatarFrame: true,
         isSuperadmin: true,
         createdAt: true,
         updatedAt: true,
@@ -74,6 +119,7 @@ export class UsersService {
         profileHTML: true,
         avatarUrl: true,
         avatarShape: true,
+        avatarFrame: true,
         isSuperadmin: true,
         createdAt: true,
         updatedAt: true,
@@ -130,6 +176,13 @@ export class UsersService {
         : dto.avatarShape === '' || dto.avatarShape === null
           ? null
           : undefined;
+    const avatarFrame = sanitizeAvatarFrame(dto.avatarFrame);
+    const avatarFrameData =
+      avatarFrame === undefined
+        ? undefined
+        : avatarFrame === null
+          ? Prisma.DbNull
+          : (avatarFrame as Prisma.InputJsonValue);
     return this.prisma.user.update({
       where: { id: userId },
       data: {
@@ -138,6 +191,7 @@ export class UsersService {
         avatarUrl: dto.avatarUrl,
         ...(profileHTML !== undefined && { profileHTML }),
         ...(avatarShape !== undefined && { avatarShape }),
+        ...(avatarFrameData !== undefined && { avatarFrame: avatarFrameData }),
       },
       select: userSelectWithoutPassword,
     });
