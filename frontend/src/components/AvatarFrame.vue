@@ -8,7 +8,7 @@
     >
       <slot />
       <span v-if="showBadge" class="avatar-frame-badge" :class="['avatar-frame-badge--' + badgePosition]" aria-hidden="true">
-        <img v-if="badgeKey === 'custom' && badgeUrl" :src="badgeSrc" alt="" class="avatar-frame-badge-img" />
+        <img v-if="(badgeKey as string) === 'custom' && badgeUrl" :src="badgeSrc" alt="" class="avatar-frame-badge-img" />
         <template v-else>{{ badgeEmoji }}</template>
       </span>
     </div>
@@ -18,7 +18,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { AvatarFrame as AvatarFrameType } from '@/types/avatarFrame'
+import type { AvatarFrame as AvatarFrameType, AvatarBadge } from '@/types/avatarFrame'
 import { BADGE_EMOJI } from '@/types/avatarFrame'
 import { avatarSrc } from '@/api/client'
 
@@ -46,7 +46,7 @@ const hasFrame = computed(() => {
   return hasBorder || !!hasBadge
 })
 
-const badgeKey = computed(() => {
+const badgeKey = computed((): AvatarBadge | null => {
   const b = props.frame?.badge
   return b && b !== 'none' ? b : null
 })
@@ -54,13 +54,13 @@ const badgeKey = computed(() => {
 const showBadge = computed(() => {
   const key = badgeKey.value
   if (!key) return false
-  if (key === 'custom') return !!props.badgeUrl
+  if ((key as string) === 'custom') return !!props.badgeUrl
   return !!(BADGE_EMOJI as Record<string, string>)[key]
 })
 
 const badgeEmoji = computed(() => {
   const key = badgeKey.value
-  return key && key !== 'custom' ? (BADGE_EMOJI as Record<string, string>)[key] ?? null : null
+  return key && (key as string) !== 'custom' ? (BADGE_EMOJI as Record<string, string>)[key] ?? null : null
 })
 
 const badgeSrc = computed(() => avatarSrc(props.badgeUrl, props.badgeCacheBust))

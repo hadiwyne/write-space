@@ -68,7 +68,7 @@
         </router-link>
         <div class="avatar-wrap" ref="avatarWrapRef">
           <button type="button" class="avatar-btn" :class="avatarShapeClass(auth.user?.avatarShape)" aria-label="Account menu" aria-haspopup="true" :aria-expanded="dropdownOpen" @click="dropdownOpen = !dropdownOpen">
-            <AvatarFrame :frame="auth.user?.avatarFrame ?? null" :shape-class="avatarShapeClass(auth.user?.avatarShape)" :badge-url="auth.user?.badgeUrl ?? null" :badge-cache-bust="auth.avatarVersion">
+            <AvatarFrame :frame="auth.user?.avatarFrame ?? null" :shape-class="avatarShapeClass(auth.user?.avatarShape)" :badge-url="authUserBadgeUrl()" :badge-cache-bust="auth.avatarVersion">
               <img v-if="auth.user?.avatarUrl" :src="avatarSrc(auth.user.avatarUrl, auth.avatarVersion)" alt="" class="avatar-img" />
               <span v-else class="avatar-initial">{{ (auth.user?.displayName || auth.user?.username || '?')[0] }}</span>
             </AvatarFrame>
@@ -201,6 +201,10 @@ function actorFrame(actor: NotificationItem['actor']): AvatarFrameType | null {
 
 function actorBadgeUrl(actor: NotificationItem['actor']): string | null {
   return (actor as { badgeUrl?: string } | null)?.badgeUrl ?? null
+}
+
+function authUserBadgeUrl(): string | null {
+  return (auth.user as { badgeUrl?: string } | null)?.badgeUrl ?? null
 }
 
 function notifText(n: NotificationItem) {

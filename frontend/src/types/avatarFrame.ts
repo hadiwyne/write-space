@@ -1,5 +1,5 @@
-/** Badge shown as corner overlay on avatar. */
-export type AvatarBadge = 'none' | 'star' | 'crown' | 'flame' | 'heart' | 'sparkle' | 'bolt'
+/** Badge shown as corner overlay on avatar. 'custom' = user-uploaded image. */
+export type AvatarBadge = 'none' | 'star' | 'crown' | 'flame' | 'heart' | 'sparkle' | 'bolt' | 'custom'
 
 /** Where the badge sits on the frame. */
 export type AvatarBadgePosition = 'bottom-right' | 'top-right' | 'top-left' | 'bottom-left'
@@ -49,9 +49,10 @@ export const BADGE_LABELS: Record<AvatarBadge, string> = {
   heart: 'Heart',
   sparkle: 'Sparkle',
   bolt: 'Bolt',
+  custom: 'Custom (upload)',
 }
 
-export const BADGE_EMOJI: Record<Exclude<AvatarBadge, 'none'>, string> = {
+export const BADGE_EMOJI: Record<Exclude<AvatarBadge, 'none' | 'custom'>, string> = {
   star: '⭐',
   crown: '👑',
   flame: '🔥',
