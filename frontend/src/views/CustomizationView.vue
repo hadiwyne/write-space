@@ -130,6 +130,18 @@
               <span>Tile</span>
             </label>
           </div>
+          <p class="bg-arrange-label">Crop</p>
+          <p class="bg-crop-hint">Select only the part of the image you want as your wallpaper. The cropped area will fill your screen.</p>
+          <div class="bg-crop-actions">
+            <button type="button" class="btn btn-outline" @click="openCropModal">Crop wallpaper</button>
+            <button
+              v-if="theme.bgImageOptions.crop"
+              type="button"
+              class="btn btn-outline"
+              @click="theme.setBgImageOptions({ crop: null })"
+            >Use full image</button>
+          </div>
+          <p v-if="theme.bgImageOptions.crop" class="bg-crop-active">A crop is applied. Open “Crop wallpaper” to change it.</p>
         </div>
         <div class="bg-image-actions">
           <button type="button" class="btn btn-outline" @click="theme.clearBgImage()">Remove background image</button>
@@ -323,6 +335,47 @@
           </div>
         </div>
       </div>
+
+      <div
+        v-if="showCropModal && theme.bgImageUrl"
+        class="modal-backdrop"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="crop-modal-title"
+        @click.self="closeCropModal"
+      >
+        <div class="modal crop-modal">
+          <h2 id="crop-modal-title" class="modal-heading">Crop wallpaper</h2>
+          <p class="modal-hint">Drag the box to move it, or drag the corners or edges to resize. Only the area inside the box will show as your background.</p>
+          <div
+            ref="cropContainerRef"
+            class="crop-editor-container"
+            :style="{ backgroundImage: `url(${theme.bgImageUrl})` }"
+            @mousedown="onCropContainerMouseDown"
+            @touchstart.passive="onCropContainerTouchStart"
+          >
+            <div
+              class="crop-box"
+              :style="cropBoxStyle()"
+              @mousedown.stop="onCropBoxMouseDown($event, 'move')"
+              @touchstart.stop.prevent="onCropBoxTouchStart($event, 'move')"
+            >
+              <div class="crop-handle n" @mousedown.stop="onCropBoxMouseDown($event, 'n')" @touchstart.stop.prevent="onCropBoxTouchStart($event, 'n')"></div>
+              <div class="crop-handle s" @mousedown.stop="onCropBoxMouseDown($event, 's')" @touchstart.stop.prevent="onCropBoxTouchStart($event, 's')"></div>
+              <div class="crop-handle e" @mousedown.stop="onCropBoxMouseDown($event, 'e')" @touchstart.stop.prevent="onCropBoxTouchStart($event, 'e')"></div>
+              <div class="crop-handle w" @mousedown.stop="onCropBoxMouseDown($event, 'w')" @touchstart.stop.prevent="onCropBoxTouchStart($event, 'w')"></div>
+              <div class="crop-handle ne" @mousedown.stop="onCropBoxMouseDown($event, 'ne')" @touchstart.stop.prevent="onCropBoxTouchStart($event, 'ne')"></div>
+              <div class="crop-handle nw" @mousedown.stop="onCropBoxMouseDown($event, 'nw')" @touchstart.stop.prevent="onCropBoxTouchStart($event, 'nw')"></div>
+              <div class="crop-handle se" @mousedown.stop="onCropBoxMouseDown($event, 'se')" @touchstart.stop.prevent="onCropBoxTouchStart($event, 'se')"></div>
+              <div class="crop-handle sw" @mousedown.stop="onCropBoxMouseDown($event, 'sw')" @touchstart.stop.prevent="onCropBoxTouchStart($event, 'sw')"></div>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-outline" @click="closeCropModal">Cancel</button>
+            <button type="button" class="btn btn-primary" @click="applyCrop">Use this crop</button>
+          </div>
+        </div>
+      </div>
     </Teleport>
   </div>
 </template>
@@ -330,7 +383,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useThemeStore } from '@/stores/theme'
-import type { ThemeKey, ThemeTemplate, BgImagePosition } from '@/stores/theme'
+import type { ThemeKey, ThemeTemplate, BgImagePosition, BgImageCrop } from '@/stores/theme'
 
 const theme = useThemeStore()
 const userHasEdited = ref(false)
@@ -344,6 +397,11 @@ const editingHsl = ref({ h: 0, s: 0, l: 0 })
 
 const bgFileInputRef = ref<HTMLInputElement | null>(null)
 const bgImageUrlInput = ref('')
+
+const showCropModal = ref(false)
+const cropEditing = ref<BgImageCrop>({ x: 0, y: 0, width: 1, height: 1 })
+const cropContainerRef = ref<HTMLDivElement | null>(null)
+const cropDrag = ref<{ mode: string; startX: number; startY: number; startCrop: BgImageCrop } | null>(null)
 
 const bgPositionOptions: BgImagePosition[] = [
   'top left',
@@ -361,6 +419,15 @@ function bgPreviewStyle() {
   const url = theme.bgImageUrl
   const opts = theme.bgImageOptions
   if (!url) return {}
+  if (opts.crop) {
+    const c = opts.crop
+    return {
+      backgroundImage: `url(${url})`,
+      backgroundPosition: `${(-c.x * 100) / c.width}% ${(-c.y * 100) / c.height}%`,
+      backgroundSize: `${100 / c.width}% ${100 / c.height}%`,
+      backgroundRepeat: opts.repeat,
+    }
+  }
   const size = opts.size === 'zoom' ? `${opts.sizeZoom}%` : opts.size
   return {
     backgroundImage: `url(${url})`,
@@ -368,6 +435,142 @@ function bgPreviewStyle() {
     backgroundSize: size,
     backgroundRepeat: opts.repeat,
   }
+}
+
+const MIN_CROP = 0.08
+
+function openCropModal() {
+  const current = theme.bgImageOptions.crop
+  cropEditing.value = current
+    ? { ...current }
+    : { x: 0, y: 0, width: 1, height: 1 }
+  showCropModal.value = true
+}
+
+function closeCropModal() {
+  showCropModal.value = false
+  cropDrag.value = null
+}
+
+function cropBoxStyle() {
+  const c = cropEditing.value
+  return {
+    left: `${c.x * 100}%`,
+    top: `${c.y * 100}%`,
+    width: `${c.width * 100}%`,
+    height: `${c.height * 100}%`,
+  }
+}
+
+function applyCrop() {
+  theme.setBgImageOptions({ crop: { ...cropEditing.value } })
+  closeCropModal()
+}
+
+function getNormFromEvent(e: MouseEvent | TouchEvent, container: DOMRect): { x: number; y: number } {
+  const clientX = 'touches' in e ? e.touches[0]?.clientX : e.clientX
+  const clientY = 'touches' in e ? e.touches[0]?.clientY : e.clientY
+  if (clientX == null || clientY == null) return { x: 0, y: 0 }
+  return {
+    x: Math.max(0, Math.min(1, (clientX - container.left) / container.width)),
+    y: Math.max(0, Math.min(1, (clientY - container.top) / container.height)),
+  }
+}
+
+function getNormFromPointer(clientX: number, clientY: number, container: DOMRect): { x: number; y: number } {
+  return {
+    x: Math.max(0, Math.min(1, (clientX - container.left) / container.width)),
+    y: Math.max(0, Math.min(1, (clientY - container.top) / container.height)),
+  }
+}
+
+function onCropContainerMouseDown() {
+  cropDrag.value = null
+}
+
+function onCropContainerTouchStart() {
+  cropDrag.value = null
+}
+
+function onCropBoxMouseDown(e: MouseEvent, mode: string) {
+  const el = cropContainerRef.value
+  if (!el) return
+  const rect = el.getBoundingClientRect()
+  const { x, y } = getNormFromEvent(e, rect)
+  cropDrag.value = { mode, startX: x, startY: y, startCrop: { ...cropEditing.value } }
+  const onMove = (e2: MouseEvent) => {
+    if (!cropDrag.value) return
+    const n = getNormFromPointer(e2.clientX, e2.clientY, rect)
+    updateCropFromDrag(n.x, n.y)
+  }
+  const onUp = () => {
+    document.removeEventListener('mousemove', onMove)
+    document.removeEventListener('mouseup', onUp)
+    cropDrag.value = null
+  }
+  document.addEventListener('mousemove', onMove)
+  document.addEventListener('mouseup', onUp)
+}
+
+function onCropBoxTouchStart(e: TouchEvent, mode: string) {
+  const el = cropContainerRef.value
+  if (!el) return
+  const rect = el.getBoundingClientRect()
+  const touch = e.touches[0]
+  if (!touch) return
+  const { x, y } = getNormFromPointer(touch.clientX, touch.clientY, rect)
+  cropDrag.value = { mode, startX: x, startY: y, startCrop: { ...cropEditing.value } }
+  const onMove = (e2: TouchEvent) => {
+    if (!cropDrag.value || !e2.touches[0]) return
+    e2.preventDefault()
+    const el2 = cropContainerRef.value
+    const r = el2 ? el2.getBoundingClientRect() : rect
+    const t = e2.touches[0]
+    const n = getNormFromPointer(t.clientX, t.clientY, r)
+    updateCropFromDrag(n.x, n.y)
+  }
+  const onEnd = () => {
+    document.removeEventListener('touchmove', onMove)
+    document.removeEventListener('touchend', onEnd)
+    document.removeEventListener('touchcancel', onEnd)
+    cropDrag.value = null
+  }
+  document.addEventListener('touchmove', onMove, { passive: false })
+  document.addEventListener('touchend', onEnd)
+  document.addEventListener('touchcancel', onEnd)
+}
+
+function updateCropFromDrag(normX: number, normY: number) {
+  const d = cropDrag.value
+  if (!d) return
+  const { mode, startX, startY, startCrop: c } = d
+  const dx = normX - startX
+  const dy = normY - startY
+  let next: BgImageCrop = { ...c }
+  if (mode === 'move') {
+    next.x = Math.max(0, Math.min(1 - c.width, c.x + dx))
+    next.y = Math.max(0, Math.min(1 - c.height, c.y + dy))
+  } else {
+    if (mode.includes('e')) {
+      const newW = normX - c.x
+      next.width = Math.max(MIN_CROP, Math.min(1 - c.x, newW))
+    }
+    if (mode.includes('w')) {
+      const newX = Math.min(c.x + c.width - MIN_CROP, normX)
+      next.x = Math.max(0, newX)
+      next.width = c.x + c.width - next.x
+    }
+    if (mode.includes('s')) {
+      const newH = normY - c.y
+      next.height = Math.max(MIN_CROP, Math.min(1 - c.y, newH))
+    }
+    if (mode.includes('n')) {
+      const newY = Math.min(c.y + c.height - MIN_CROP, normY)
+      next.y = Math.max(0, newY)
+      next.height = c.y + c.height - next.y
+    }
+  }
+  cropEditing.value = next
 }
 
 function onBgZoomInput(e: Event) {
@@ -744,7 +947,78 @@ function previewStyle(palette: ThemeTemplate) {
   border: 2px solid var(--bg-card);
   cursor: pointer;
 }
+.bg-crop-hint {
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+  margin: -0.25rem 0 0.5rem;
+}
+.bg-crop-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.25rem; }
+.bg-crop-active { font-size: 0.8125rem; color: var(--text-tertiary); margin: 0.25rem 0 0; }
 .bg-image-actions { margin-top: 1rem; }
+
+.crop-modal {
+  max-width: min(420px, calc(100vw - 2rem));
+  background: #ffffff;
+  color: #1a1a1a;
+  border: 2px solid #e0e0e0;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  padding: 1.5rem;
+}
+.crop-modal .modal-heading { color: #1a1a1a; }
+.crop-modal .modal-hint { color: #555; }
+.crop-modal .btn-primary {
+  background: #8B4513;
+  color: #fff;
+  border-color: #8B4513;
+}
+.crop-modal .btn-primary:hover { filter: brightness(1.08); }
+.crop-modal .btn-outline {
+  border-color: #ccc;
+  color: #333;
+}
+.crop-modal .btn-outline:hover { border-color: #8B4513; color: #8B4513; }
+.crop-editor-container {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  max-height: 280px;
+  background-size: 100% 100%;
+  background-position: 0 0;
+  background-repeat: no-repeat;
+  background-color: #f0f0f0;
+  border-radius: var(--radius-md);
+  border: 2px solid #ccc;
+  margin-bottom: 1rem;
+  touch-action: none;
+  user-select: none;
+}
+.crop-box {
+  position: absolute;
+  box-sizing: border-box;
+  border: 3px solid #8B4513;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
+  cursor: move;
+}
+.crop-handle {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  background: #fff;
+  border: 2px solid #8B4513;
+  border-radius: 50%;
+  cursor: pointer;
+  touch-action: none;
+}
+.crop-handle.n { top: 0; left: 50%; cursor: n-resize; }
+.crop-handle.s { bottom: 0; left: 50%; margin-bottom: -10px; margin-left: -10px; cursor: s-resize; }
+.crop-handle.e { right: 0; top: 50%; margin-right: -10px; margin-top: -10px; cursor: e-resize; }
+.crop-handle.w { left: 0; top: 50%; cursor: w-resize; }
+.crop-handle.ne { top: 0; right: 0; margin-right: -10px; cursor: ne-resize; }
+.crop-handle.nw { top: 0; left: 0; cursor: nw-resize; }
+.crop-handle.se { bottom: 0; right: 0; margin-bottom: -10px; margin-right: -10px; cursor: se-resize; }
+.crop-handle.sw { bottom: 0; left: 0; margin-bottom: -10px; cursor: sw-resize; }
 .bg-image-upload {
   display: flex;
   flex-wrap: wrap;

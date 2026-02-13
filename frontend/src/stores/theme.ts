@@ -19,11 +19,21 @@ export type BgImagePosition =
 
 export type BgImageSize = 'cover' | 'contain' | 'zoom'
 
+/** Normalized 0–1: the region of the image to show (x,y = top-left, width/height = size). When set, only this region is displayed, scaled to cover. */
+export interface BgImageCrop {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
 export interface BgImageOptions {
   position: BgImagePosition
   size: BgImageSize
   sizeZoom: number
   repeat: 'no-repeat' | 'repeat'
+  /** When set, only this cropped region of the image is shown (scaled to cover the viewport). */
+  crop: BgImageCrop | null
 }
 
 const DEFAULT_BG_OPTIONS: BgImageOptions = {
@@ -31,6 +41,7 @@ const DEFAULT_BG_OPTIONS: BgImageOptions = {
   size: 'cover',
   sizeZoom: 100,
   repeat: 'no-repeat',
+  crop: null,
 }
 
 export const THEME_KEYS = {
@@ -412,6 +423,12 @@ function loadBgOptionsFromStorage(): BgImageOptions {
     const raw = localStorage.getItem(STORAGE_BG_OPTIONS)
     if (!raw) return { ...DEFAULT_BG_OPTIONS }
     const parsed = JSON.parse(raw) as Partial<BgImageOptions>
+    const crop = parsed.crop
+    const validCrop: BgImageCrop | null =
+      crop && typeof crop.x === 'number' && typeof crop.y === 'number' && typeof crop.width === 'number' && typeof crop.height === 'number'
+      && crop.width > 0.05 && crop.height > 0.05 && crop.x >= 0 && crop.y >= 0 && crop.x + crop.width <= 1.01 && crop.y + crop.height <= 1.01
+        ? { x: crop.x, y: crop.y, width: crop.width, height: crop.height }
+        : null
     return {
       position: validPosition(parsed.position) ? parsed.position! : DEFAULT_BG_OPTIONS.position,
       size: validSize(parsed.size) ? parsed.size! : DEFAULT_BG_OPTIONS.size,
@@ -419,6 +436,7 @@ function loadBgOptionsFromStorage(): BgImageOptions {
         ? Math.round(parsed.sizeZoom)
         : DEFAULT_BG_OPTIONS.sizeZoom,
       repeat: parsed.repeat === 'repeat' ? 'repeat' : 'no-repeat',
+      crop: validCrop,
     }
   } catch {
     return { ...DEFAULT_BG_OPTIONS }
@@ -462,13 +480,19 @@ function applyBgImageToDocument(url: string | null, options?: BgImageOptions) {
     const escaped = url.replace(/"/g, '%22').replace(/'/g, "%27")
     root.style.setProperty('--bg-image', `url("${escaped}")`)
     body.style.backgroundImage = `url("${escaped}")`
-    body.style.backgroundPosition = opts.position
     body.style.backgroundRepeat = opts.repeat
     body.style.backgroundAttachment = 'fixed'
-    if (opts.size === 'zoom') {
-      body.style.backgroundSize = `${opts.sizeZoom}%`
+    if (opts.crop) {
+      const c = opts.crop
+      body.style.backgroundSize = `${100 / c.width}% ${100 / c.height}%`
+      body.style.backgroundPosition = `${(-c.x * 100) / c.width}% ${(-c.y * 100) / c.height}%`
     } else {
-      body.style.backgroundSize = opts.size
+      body.style.backgroundPosition = opts.position
+      if (opts.size === 'zoom') {
+        body.style.backgroundSize = `${opts.sizeZoom}%`
+      } else {
+        body.style.backgroundSize = opts.size
+      }
     }
   } else {
     root.style.removeProperty('--bg-image')
