@@ -6,8 +6,8 @@
     <ul v-else class="notification-list">
       <li v-for="n in notifications" :key="notifId(n)" class="notification-item" :class="{ unread: !n.readAt }">
         <router-link :to="notificationLink(n)" class="notification-link" @click="markRead(notifId(n))">
-          <img v-if="n.actor?.avatarUrl" :src="avatarSrc(n.actor.avatarUrl)" alt="" class="notif-avatar" />
-          <span v-else class="notif-avatar-placeholder">{{ (n.actor?.displayName || n.actor?.username || '?')[0] }}</span>
+          <img v-if="n.actor?.avatarUrl" :src="actorAvatarSrc(n.actor)" alt="" class="notif-avatar" :class="avatarShapeClass((n.actor as { avatarShape?: string })?.avatarShape)" />
+          <span v-else class="notif-avatar-placeholder" :class="avatarShapeClass((n.actor as { avatarShape?: string })?.avatarShape)">{{ (n.actor?.displayName || n.actor?.username || '?')[0] }}</span>
           <div class="notif-body">
             <span class="notif-text">{{ notificationText(n) }}</span>
             <span class="notif-date">{{ formatDate(n.createdAt) }}</span>
@@ -22,14 +22,18 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { api, avatarSrc } from '@/api/client'
+import { avatarShapeClass } from '@/utils/avatar'
+import { useAuthStore } from '@/stores/auth'
 import { useNotificationsStore } from '@/stores/notifications'
+
+const auth = useAuthStore()
 
 type NotifRecord = Record<string, unknown> & {
   id?: string
   type?: string
   readAt?: string | null
   createdAt?: string
-  actor?: { displayName?: string; username?: string; avatarUrl?: string | null }
+  actor?: { id?: string; displayName?: string; username?: string; avatarUrl?: string | null }
   postId?: string
 }
 
@@ -45,6 +49,12 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+function actorAvatarSrc(actor: NotifRecord['actor']) {
+  if (!actor?.avatarUrl) return ''
+  const id = (actor as { id?: string }).id
+  return avatarSrc(actor.avatarUrl, id === auth.user?.id ? auth.avatarVersion : undefined)
+}
 
 function notifId(n: NotifRecord) {
   return String(n.id ?? '')
@@ -112,6 +122,10 @@ async function markAllRead() {
 .notification-link { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; color: inherit; text-decoration: none; }
 .notification-link:hover { background: var(--gray-50); }
 .notif-avatar, .notif-avatar-placeholder { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: var(--gray-200); flex-shrink: 0; display: block; line-height: 40px; text-align: center; font-size: 1rem; }
+.notif-avatar.avatar-shape-rounded, .notif-avatar-placeholder.avatar-shape-rounded { border-radius: 12%; }
+.notif-avatar.avatar-shape-square, .notif-avatar-placeholder.avatar-shape-square { border-radius: 0; }
+.notif-avatar.avatar-shape-squircle, .notif-avatar-placeholder.avatar-shape-squircle { border-radius: 25%; }
+.notif-avatar.avatar-shape-hexagon, .notif-avatar-placeholder.avatar-shape-hexagon { border-radius: 0; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); }
 .notif-body { display: flex; flex-direction: column; min-width: 0; }
 .notif-text { font-size: 0.9375rem; }
 .notif-date { font-size: 0.8125rem; color: var(--gray-600); margin-top: 0.25rem; }

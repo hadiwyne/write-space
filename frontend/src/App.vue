@@ -114,6 +114,43 @@ a:hover { text-decoration: underline; color: var(--accent-burgundy); }
 .p-tooltip.p-tooltip-left .p-tooltip-arrow { right: -5px; top: 50%; margin-top: -5px; border-left-color: var(--text-primary); }
 .p-tooltip.p-tooltip-right .p-tooltip-arrow { left: -5px; top: 50%; margin-top: -5px; border-right-color: var(--text-primary); }
 
+/* Avatar shape: only the container has the shape; overflow hidden clips the image. Image keeps full picture, container shapes what’s visible. No background on container so nothing shows around the image. */
+.avatar-shape-circle,
+.avatar-shape-rounded,
+.avatar-shape-square,
+.avatar-shape-squircle,
+.avatar-shape-hexagon {
+  overflow: hidden;
+  background: none;
+}
+.avatar-shape-circle { border-radius: 50%; }
+.avatar-shape-rounded { border-radius: 12%; }
+.avatar-shape-square { border-radius: 0; }
+.avatar-shape-squircle { border-radius: 25%; }
+.avatar-shape-hexagon { border-radius: 0; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); }
+/* Inner image: no shape, no crop – full image fills container, container clips to shape */
+.avatar-shape-circle img,
+.avatar-shape-circle .avatar-img,
+.avatar-shape-rounded img,
+.avatar-shape-rounded .avatar-img,
+.avatar-shape-square img,
+.avatar-shape-square .avatar-img,
+.avatar-shape-squircle img,
+.avatar-shape-squircle .avatar-img,
+.avatar-shape-hexagon img,
+.avatar-shape-hexagon .avatar-img {
+  border-radius: 0 !important;
+  clip-path: none !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 100% !important;
+  min-height: 100% !important;
+  object-fit: cover !important;
+  object-position: center !important;
+  display: block !important;
+  vertical-align: top !important;
+}
+
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(30px); }
   to { opacity: 1; transform: translateY(0); }

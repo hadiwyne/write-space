@@ -4,8 +4,10 @@
     <template v-else-if="profile">
       <div class="profile-header">
         <div class="profile-avatar-wrap">
-          <img v-if="profile.avatarUrl" :src="avatarSrc(profile.avatarUrl)" alt="" class="avatar" />
-          <span v-else class="avatar-placeholder">{{ (profile.displayName || profile.username || '?')[0] }}</span>
+          <div v-if="profile.avatarUrl" class="avatar-clip" :class="avatarShapeClass((profile as { avatarShape?: string })?.avatarShape)">
+            <img :src="avatarSrc(profile.avatarUrl, isOwnProfile ? auth.avatarVersion : undefined)" alt="" class="avatar-img" />
+          </div>
+          <span v-else class="avatar-placeholder" :class="avatarShapeClass((profile as { avatarShape?: string })?.avatarShape)">{{ (profile.displayName || profile.username || '?')[0] }}</span>
         </div>
         <h1>{{ profile.displayName || profile.username }}</h1>
         <p v-if="profile.bio" class="bio">{{ profile.bio }}</p>
@@ -123,8 +125,8 @@
             <ul v-else class="modal-list">
               <li v-for="u in modalList" :key="u.id" class="modal-list-item">
                 <router-link :to="`/u/${u.username}`" class="modal-user" @click="modalOpen = false">
-                  <img v-if="u.avatarUrl" :src="avatarSrc(u.avatarUrl)" alt="" class="modal-avatar" />
-                  <span v-else class="modal-avatar-placeholder">{{ (u.displayName || u.username || '?')[0] }}</span>
+                  <img v-if="u.avatarUrl" :src="avatarSrc(u.avatarUrl, u.id === auth.user?.id ? auth.avatarVersion : undefined)" alt="" class="modal-avatar" :class="avatarShapeClass((u as { avatarShape?: string })?.avatarShape)" />
+                  <span v-else class="modal-avatar-placeholder" :class="avatarShapeClass((u as { avatarShape?: string })?.avatarShape)">{{ (u.displayName || u.username || '?')[0] }}</span>
                   <span class="modal-user-name">{{ u.displayName || u.username }}</span>
                   <span class="modal-user-handle">@{{ u.username }}</span>
                 </router-link>
@@ -172,6 +174,7 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { api, avatarSrc } from '@/api/client'
+import { avatarShapeClass } from '@/utils/avatar'
 import { useAuthStore } from '@/stores/auth'
 import PostCard from '@/components/PostCard.vue'
 import RepostCard from '@/components/RepostCard.vue'
@@ -459,6 +462,27 @@ onUnmounted(() => {
   justify-content: center;
   margin-bottom: 1rem;
 }
+/* Container has the shape; image fills it (full picture), container clips to shape. No background so no black/dark around image. */
+.avatar-clip {
+  width: clamp(72px, 20vw, 96px);
+  height: clamp(72px, 20vw, 96px);
+  overflow: hidden;
+  background: none;
+  box-shadow: 0 4px 12px rgba(139, 69, 19, 0.25);
+  border: 3px solid var(--bg-card);
+  outline: 2px solid var(--border-medium);
+  display: block;
+}
+.avatar-clip .avatar-img {
+  width: 100%;
+  height: 100%;
+  min-width: 100%;
+  min-height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  border-radius: 0;
+}
 .avatar {
   width: clamp(72px, 20vw, 96px);
   height: clamp(72px, 20vw, 96px);
@@ -469,6 +493,14 @@ onUnmounted(() => {
   outline: 2px solid var(--border-medium);
   display: block;
 }
+.avatar.avatar-shape-rounded, .avatar-placeholder.avatar-shape-rounded { border-radius: 12%; }
+.avatar.avatar-shape-square, .avatar-placeholder.avatar-shape-square { border-radius: 0; }
+.avatar.avatar-shape-squircle, .avatar-placeholder.avatar-shape-squircle { border-radius: 25%; }
+.avatar.avatar-shape-hexagon, .avatar-placeholder.avatar-shape-hexagon { border-radius: 0; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); }
+.modal-avatar.avatar-shape-rounded, .modal-avatar-placeholder.avatar-shape-rounded { border-radius: 12%; }
+.modal-avatar.avatar-shape-square, .modal-avatar-placeholder.avatar-shape-square { border-radius: 0; }
+.modal-avatar.avatar-shape-squircle, .modal-avatar-placeholder.avatar-shape-squircle { border-radius: 25%; }
+.modal-avatar.avatar-shape-hexagon, .modal-avatar-placeholder.avatar-shape-hexagon { border-radius: 0; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); }
 .avatar-placeholder {
   width: clamp(72px, 20vw, 96px);
   height: clamp(72px, 20vw, 96px);

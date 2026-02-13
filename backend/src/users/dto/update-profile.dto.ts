@@ -17,6 +17,11 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(20)
+  avatarShape?: string;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(10000)
   profileHTML?: string;
 }

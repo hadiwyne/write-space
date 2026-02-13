@@ -22,8 +22,8 @@
         <ul v-else class="user-list">
           <li v-for="u in users" :key="userKey(u)" class="user-item">
             <router-link :to="`/u/${userUsername(u)}`" class="user-link">
-              <img v-if="userAvatarUrl(u)" :src="avatarSrc(userAvatarUrl(u))" alt="" class="user-avatar" />
-              <span v-else class="user-avatar-placeholder">{{ (userDisplayName(u) || userUsername(u) || '?')[0] }}</span>
+              <img v-if="userAvatarUrl(u)" :src="avatarSrc(userAvatarUrl(u), (u as { id?: string }).id === auth.user?.id ? auth.avatarVersion : undefined)" alt="" class="user-avatar" :class="avatarShapeClass((u as { avatarShape?: string })?.avatarShape)" />
+              <span v-else class="user-avatar-placeholder" :class="avatarShapeClass((u as { avatarShape?: string })?.avatarShape)">{{ (userDisplayName(u) || userUsername(u) || '?')[0] }}</span>
               <div class="user-info">
                 <span class="user-name">{{ userDisplayName(u) || userUsername(u) }}</span>
                 <span class="user-handle">@{{ userUsername(u) }}</span>
@@ -40,7 +40,11 @@
 import { ref, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { api, avatarSrc } from '@/api/client'
+import { avatarShapeClass } from '@/utils/avatar'
+import { useAuthStore } from '@/stores/auth'
 import PostCard from '@/components/PostCard.vue'
+
+const auth = useAuthStore()
 
 const route = useRoute()
 const rawQ = route.query.q
@@ -135,6 +139,10 @@ onMounted(() => {
 .user-link { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0; color: inherit; text-decoration: none; min-width: 0; }
 .user-link:hover { color: var(--primary); }
 .user-avatar, .user-avatar-placeholder { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); flex-shrink: 0; display: block; line-height: 48px; text-align: center; font-size: 1.25rem; font-weight: 700; color: white; }
+.user-avatar.avatar-shape-rounded, .user-avatar-placeholder.avatar-shape-rounded { border-radius: 12%; }
+.user-avatar.avatar-shape-square, .user-avatar-placeholder.avatar-shape-square { border-radius: 0; }
+.user-avatar.avatar-shape-squircle, .user-avatar-placeholder.avatar-shape-squircle { border-radius: 25%; }
+.user-avatar.avatar-shape-hexagon, .user-avatar-placeholder.avatar-shape-hexagon { border-radius: 0; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); }
 .user-info { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 .user-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .user-handle { font-size: 0.875rem; color: var(--gray-600); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

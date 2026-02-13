@@ -5,19 +5,47 @@
       <div class="form-group avatar-section">
         <label>Avatar</label>
         <div class="avatar-row">
-          <img
+          <div
             v-if="avatarPreview || auth.user?.avatarUrl"
-            :src="avatarPreview || avatarSrc(auth.user?.avatarUrl)"
-            alt=""
-            class="avatar-preview"
-          />
-          <span v-else class="avatar-placeholder">{{ (auth.user?.displayName || auth.user?.username || '?')[0] }}</span>
+            class="avatar-preview-clip"
+            :class="avatarShapeClass(auth.user?.avatarShape)"
+          >
+            <img :src="avatarPreview || avatarSrc(auth.user?.avatarUrl, auth.avatarVersion)" alt="" class="avatar-preview-img" />
+          </div>
+          <span
+            v-else
+            class="avatar-placeholder"
+            :class="avatarShapeClass(auth.user?.avatarShape)"
+          >{{ (auth.user?.displayName || auth.user?.username || '?')[0] }}</span>
           <div class="avatar-actions">
             <AvatarUploadCrop
-              :current-preview-url="avatarPreview || avatarSrc(auth.user?.avatarUrl) || null"
+              :current-preview-url="avatarPreview || avatarSrc(auth.user?.avatarUrl, auth.avatarVersion) || null"
               @crop="onAvatarCrop"
             />
-            <p class="hint">JPEG, PNG, GIF or WebP. Max 5MB. Crop to a circle before saving.</p>
+            <p class="hint">JPEG, PNG, GIF or WebP. Max 5MB.</p>
+            <label class="avatar-shape-label">Avatar shape</label>
+            <div class="avatar-shape-options" role="group" aria-label="Avatar shape">
+              <label class="avatar-shape-option">
+                <input type="radio" value="circle" :checked="avatarShape === 'circle'" @change="avatarShape = 'circle'" />
+                <span>Circle</span>
+              </label>
+              <label class="avatar-shape-option">
+                <input type="radio" value="rounded" :checked="avatarShape === 'rounded'" @change="avatarShape = 'rounded'" />
+                <span>Rounded square</span>
+              </label>
+              <label class="avatar-shape-option">
+                <input type="radio" value="square" :checked="avatarShape === 'square'" @change="avatarShape = 'square'" />
+                <span>Square</span>
+              </label>
+              <label class="avatar-shape-option">
+                <input type="radio" value="squircle" :checked="avatarShape === 'squircle'" @change="avatarShape = 'squircle'" />
+                <span>Squircle</span>
+              </label>
+              <label class="avatar-shape-option">
+                <input type="radio" value="hexagon" :checked="avatarShape === 'hexagon'" @change="avatarShape = 'hexagon'" />
+                <span>Hexagon</span>
+              </label>
+            </div>
           </div>
         </div>
       </div>
@@ -46,27 +74,32 @@ import { ref, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { api, avatarSrc } from '@/api/client'
 import AvatarUploadCrop from '@/components/AvatarUploadCrop.vue'
+import { avatarShapeClass } from '@/utils/avatar'
 
 const auth = useAuthStore()
 const displayName = ref('')
 const bio = ref('')
 const profileHTML = ref('')
+const avatarShape = ref<'circle' | 'rounded' | 'square' | 'squircle' | 'hexagon'>('circle')
 const avatarPreview = ref<string | null>(null)
 const selectedFile = ref<File | null>(null)
 const error = ref('')
 const success = ref('')
 const saving = ref(false)
 
-
 onMounted(() => {
   if (auth.user) {
     displayName.value = auth.user.displayName || ''
     bio.value = (auth.user as { bio?: string }).bio || ''
+    const s = (auth.user as { avatarShape?: string | null }).avatarShape
+    avatarShape.value = ['square', 'rounded', 'squircle', 'hexagon'].includes(s || '') ? (s as typeof avatarShape.value) : 'circle'
   }
   auth.fetchUser().then(() => {
     if (auth.user) {
       displayName.value = auth.user.displayName || ''
       bio.value = (auth.user as { bio?: string }).bio || ''
+      const s = (auth.user as { avatarShape?: string | null }).avatarShape
+      avatarShape.value = ['square', 'rounded', 'squircle', 'hexagon'].includes(s || '') ? (s as typeof avatarShape.value) : 'circle'
     }
   })
 })
@@ -90,6 +123,7 @@ async function saveProfile() {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
       auth.user = { ...auth.user, ...data }
+      auth.bumpAvatarVersion()
       selectedFile.value = null
       if (avatarPreview.value) URL.revokeObjectURL(avatarPreview.value)
       avatarPreview.value = null
@@ -98,6 +132,7 @@ async function saveProfile() {
       displayName: displayName.value || undefined,
       bio: bio.value || undefined,
       profileHTML: profileHTML.value || undefined,
+      avatarShape: avatarShape.value,
     })
     await auth.fetchUser()
     success.value = 'Profile saved.'
@@ -120,7 +155,35 @@ async function saveProfile() {
   .avatar-row { flex-direction: column; align-items: flex-start; }
   .avatar-actions { width: 100%; }
 }
-.avatar-preview, .avatar-placeholder { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; background: var(--gray-200); display: inline-block; line-height: 64px; font-size: 1.5rem; text-align: center; flex-shrink: 0; }
+/* Preview: container shapes, image fills it (no background so no black/gray around image) */
+.avatar-preview-clip {
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  background: none;
+  flex-shrink: 0;
+  display: block;
+}
+.avatar-preview-clip .avatar-preview-img {
+  width: 100%;
+  height: 100%;
+  min-width: 100%;
+  min-height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  border-radius: 0;
+}
+.avatar-placeholder { width: 64px; height: 64px; object-fit: cover; background: var(--gray-200); display: inline-block; line-height: 64px; font-size: 1.5rem; text-align: center; flex-shrink: 0; }
+.avatar-shape-circle.avatar-placeholder { border-radius: 50%; }
+.avatar-shape-rounded.avatar-placeholder { border-radius: 12%; }
+.avatar-shape-square.avatar-placeholder { border-radius: 0; }
+.avatar-shape-squircle.avatar-placeholder { border-radius: 25%; }
+.avatar-shape-hexagon.avatar-placeholder { border-radius: 0; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); }
+.avatar-shape-label { display: block; font-size: 0.8125rem; font-weight: 500; color: var(--gray-600); margin: 0.75rem 0 0.35rem; }
+.avatar-shape-options { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; }
+.avatar-shape-option { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.9375rem; cursor: pointer; }
+.avatar-shape-option input { cursor: pointer; }
 .avatar-actions { }
 .btn-sm { padding: 0.375rem 0.75rem; font-size: 0.875rem; }
 .btn-outline { background: transparent; border: 1px solid var(--gray-300); color: var(--gray-700); }

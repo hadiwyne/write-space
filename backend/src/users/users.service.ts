@@ -15,6 +15,7 @@ const userSelectWithoutPassword = {
   bio: true,
   profileHTML: true,
   avatarUrl: true,
+  avatarShape: true,
   isSuperadmin: true,
   createdAt: true,
   updatedAt: true,
@@ -53,6 +54,7 @@ export class UsersService {
         bio: true,
         profileHTML: true,
         avatarUrl: true,
+        avatarShape: true,
         isSuperadmin: true,
         createdAt: true,
         updatedAt: true,
@@ -71,6 +73,7 @@ export class UsersService {
         bio: true,
         profileHTML: true,
         avatarUrl: true,
+        avatarShape: true,
         isSuperadmin: true,
         createdAt: true,
         updatedAt: true,
@@ -120,6 +123,13 @@ export class UsersService {
             ALLOWED_ATTR: ['href', 'src', 'alt', 'class'],
           })
         : undefined;
+    const allowed = ['circle', 'square', 'rounded', 'hexagon', 'squircle']
+    const avatarShape =
+      typeof dto.avatarShape === 'string' && allowed.includes(dto.avatarShape)
+        ? dto.avatarShape
+        : dto.avatarShape === '' || dto.avatarShape === null
+          ? null
+          : undefined;
     return this.prisma.user.update({
       where: { id: userId },
       data: {
@@ -127,6 +137,7 @@ export class UsersService {
         bio: dto.bio,
         avatarUrl: dto.avatarUrl,
         ...(profileHTML !== undefined && { profileHTML }),
+        ...(avatarShape !== undefined && { avatarShape }),
       },
       select: userSelectWithoutPassword,
     });
