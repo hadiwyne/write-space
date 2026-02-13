@@ -1,18 +1,22 @@
 <template>
-  <div
-    v-if="hasFrame"
-    class="avatar-frame"
-    :class="[frameClasses, shapeClass]"
-    :style="frameStyle"
-  >
-    <slot />
+  <div class="avatar-frame-root">
+    <div
+      v-if="hasFrame"
+      class="avatar-frame"
+      :class="[frameClasses, shapeClass]"
+      :style="frameStyle"
+    >
+      <slot />
+      <span v-if="badgeEmoji" class="avatar-frame-badge" :class="['avatar-frame-badge--' + badgeKey]" aria-hidden="true">{{ badgeEmoji }}</span>
+    </div>
+    <slot v-else />
   </div>
-  <slot v-else />
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { AvatarFrame as AvatarFrameType } from '@/types/avatarFrame'
+import { BADGE_EMOJI } from '@/types/avatarFrame'
 
 const props = withDefaults(
   defineProps<{
@@ -26,31 +30,42 @@ const props = withDefaults(
 const hasFrame = computed(() => {
   const f = props.frame
   if (!f || typeof f !== 'object') return false
-  const t = f.borderType
-  if (t === 'none' || !t) return false
-  if (t === 'gradient' && f.gradient?.colors?.length >= 2) return true
-  if (t === 'glow' && f.glow?.enabled) return true
-  if (t === 'preset' && f.preset) return true
-  return false
+  const hasBorder =
+    (f.borderType === 'gradient' && f.gradient?.colors?.length >= 2) ||
+    (f.borderType === 'glow' && f.glow?.enabled) ||
+    (f.borderType === 'preset' && f.preset)
+  const hasBadge = f.badge && f.badge !== 'none'
+  return hasBorder || !!hasBadge
+})
+
+const badgeKey = computed(() => {
+  const b = props.frame?.badge
+  return b && b !== 'none' ? b : null
+})
+
+const badgeEmoji = computed(() => {
+  const key = badgeKey.value
+  return key ? (BADGE_EMOJI as Record<string, string>)[key] ?? null : null
 })
 
 const frameClasses = computed(() => {
   const f = props.frame
   if (!f || !hasFrame.value) return []
-  const t = f.borderType
+  const t = f.borderType ?? 'none'
   const classes: string[] = ['avatar-frame--' + t]
   if (t === 'gradient' && f.gradient?.animated) {
     classes.push(f.gradient.conic ? 'avatar-frame--conic-animated' : 'avatar-frame--animated')
   }
   if (t === 'glow' && f.glow?.pulse) classes.push('avatar-frame--pulse')
   if (t === 'preset' && f.preset) classes.push('avatar-frame--preset-' + f.preset)
+  if (f.animation && f.animation !== 'none') classes.push('avatar-frame--anim-' + f.animation)
   return classes
 })
 
 const frameStyle = computed(() => {
   const f = props.frame
   if (!f || !hasFrame.value) return {}
-  const t = f.borderType
+  const t = f.borderType ?? 'none'
   const style: Record<string, string> = {}
 
   if (t === 'gradient' && f.gradient?.colors?.length >= 2) {
@@ -80,15 +95,41 @@ const frameStyle = computed(() => {
 </script>
 
 <style scoped>
-.avatar-frame {
+.avatar-frame-root {
+  display: inline-flex;
+  position: relative;
+}
+/* Do not set border-radius here – global .avatar-frame.avatar-shape-* in App.vue controls it */
+.avatar-frame-root .avatar-frame {
   padding: 4px;
-  border-radius: 50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
+  position: relative;
 }
-.avatar-frame :deep(*) {
+.avatar-frame :deep(> *) {
   border-radius: inherit;
+  overflow: hidden;
+}
+.avatar-frame-badge {
+  position: absolute;
+  bottom: -3px;
+  right: -3px;
+  width: clamp(14px, 35%, 22px);
+  height: clamp(14px, 35%, 22px);
+  font-size: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.35));
+  pointer-events: none;
+  animation: avatar-badge-float 2.5s ease-in-out infinite;
+  z-index: 2;
+}
+@keyframes avatar-badge-float {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
 }
 </style>

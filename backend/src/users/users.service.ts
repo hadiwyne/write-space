@@ -17,11 +17,15 @@ function sanitizeAvatarFrame(
   if (raw === null || raw === undefined) return raw;
   if (typeof raw !== 'object' || Array.isArray(raw)) return undefined;
   const out: Record<string, unknown> = {};
-  const allowed = ['borderType', 'gradient', 'glow', 'preset'];
+  const allowed = ['borderType', 'gradient', 'glow', 'preset', 'badge', 'animation'];
+  const allowedBadges = ['none', 'star', 'crown', 'flame', 'heart', 'sparkle', 'bolt'];
+  const allowedAnimations = ['none', 'shimmer', 'dashed', 'spin'];
   for (const key of Object.keys(raw)) {
     if (!allowed.includes(key)) continue;
     const v = raw[key];
     if (key === 'borderType' && (v === 'none' || v === 'gradient' || v === 'glow' || v === 'preset')) out[key] = v;
+    else if (key === 'badge' && typeof v === 'string' && allowedBadges.includes(v)) out[key] = v;
+    else if (key === 'animation' && typeof v === 'string' && allowedAnimations.includes(v)) out[key] = v;
     else if (key === 'gradient' && typeof v === 'object' && v !== null && !Array.isArray(v)) {
       const g = v as Record<string, unknown>;
       const colors = Array.isArray(g.colors) ? g.colors.filter((c) => typeof c === 'string').slice(0, 4) : [];
@@ -44,7 +48,7 @@ function sanitizeAvatarFrame(
       };
     } else if (key === 'preset' && typeof v === 'string' && ['gamer', 'soft', 'premium', 'fire'].includes(v)) out[key] = v;
   }
-  if (Object.keys(out).length === 0) return undefined;
+  if (Object.keys(out).length === 0 && !out.badge) return undefined;
   const json = JSON.stringify(out);
   if (Buffer.byteLength(json, 'utf8') > MAX_AVATAR_FRAME_BYTES) return undefined;
   return out;

@@ -147,14 +147,14 @@ a:hover { text-decoration: underline; color: var(--accent-burgundy); }
   vertical-align: top !important;
 }
 
-/* Avatar frame: gradient/glow/preset border around avatar */
+/* Avatar frame: gradient/glow/preset border around avatar. Use !important so shape wins over component scoped styles. */
 .avatar-frame {
   overflow: hidden;
 }
-.avatar-frame.avatar-shape-circle { border-radius: 50%; }
-.avatar-frame.avatar-shape-rounded { border-radius: 12%; }
-.avatar-frame.avatar-shape-square { border-radius: 0; }
-.avatar-frame.avatar-shape-squircle { border-radius: 25%; }
+.avatar-frame.avatar-shape-circle { border-radius: 50% !important; }
+.avatar-frame.avatar-shape-rounded { border-radius: 12% !important; }
+.avatar-frame.avatar-shape-square { border-radius: 0 !important; }
+.avatar-frame.avatar-shape-squircle { border-radius: 25% !important; }
 .avatar-frame--gradient.avatar-frame--animated {
   background-size: 200% 200% !important;
   animation: avatar-frame-linear var(--frame-speed, 3s) linear infinite;
@@ -201,6 +201,46 @@ a:hover { text-decoration: underline; color: var(--accent-burgundy); }
   padding: 4px;
   background: linear-gradient(180deg, #ff6b00, #ff0000, #ff6b00) !important;
   box-shadow: 0 0 20px rgba(255,100,0,0.6);
+}
+
+.avatar-frame--none { background: transparent !important; }
+
+/* Extra frame animations */
+.avatar-frame--anim-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.avatar-frame--anim-shimmer > * {
+  position: relative;
+  z-index: 0;
+}
+.avatar-frame--anim-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  z-index: 1;
+  background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.4) 50%, transparent 65%);
+  animation: avatar-frame-shimmer 3s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes avatar-frame-shimmer {
+  0% { transform: translateX(-100%) rotate(25deg); }
+  100% { transform: translateX(100%) rotate(25deg); }
+}
+
+.avatar-frame--anim-dashed {
+  border: 2px dashed var(--frame-dash-color, rgba(255,255,255,0.7));
+  animation: avatar-frame-rotate 8s linear infinite;
+}
+
+.avatar-frame--anim-spin {
+  animation: avatar-frame-spin 6s linear infinite;
+}
+.avatar-frame--anim-spin.avatar-frame--conic-animated,
+.avatar-frame--anim-spin.avatar-frame--animated { animation: avatar-frame-spin 6s linear infinite; }
+@keyframes avatar-frame-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 @keyframes fadeInUp {

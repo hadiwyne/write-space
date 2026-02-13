@@ -101,6 +101,14 @@
                 <option value="fire">Fire</option>
               </select>
             </template>
+            <label class="avatar-shape-label">Badge</label>
+            <select v-model="badge" class="frame-select">
+              <option v-for="(label, key) in BADGE_LABELS" :key="key" :value="key">{{ label }}</option>
+            </select>
+            <label class="avatar-shape-label">Extra animation</label>
+            <select v-model="frameAnimation" class="frame-select">
+              <option v-for="(label, key) in ANIMATION_LABELS" :key="key" :value="key">{{ label }}</option>
+            </select>
           </div>
         </div>
       </div>
@@ -131,7 +139,8 @@ import { api, avatarSrc } from '@/api/client'
 import AvatarUploadCrop from '@/components/AvatarUploadCrop.vue'
 import AvatarFrame from '@/components/AvatarFrame.vue'
 import { avatarShapeClass } from '@/utils/avatar'
-import type { AvatarFrame as AvatarFrameType } from '@/types/avatarFrame'
+import type { AvatarFrame as AvatarFrameType, AvatarBadge, AvatarFrameAnimation } from '@/types/avatarFrame'
+import { BADGE_LABELS, ANIMATION_LABELS } from '@/types/avatarFrame'
 
 const auth = useAuthStore()
 const displayName = ref('')
@@ -154,33 +163,38 @@ const glowColor = ref('#ff00cc')
 const glowIntensity = ref(0.5)
 const glowPulse = ref(false)
 const presetName = ref<'gamer' | 'soft' | 'premium' | 'fire'>('gamer')
+const badge = ref<AvatarBadge>('none')
+const frameAnimation = ref<AvatarFrameAnimation>('none')
 
 const avatarFrame = computed<AvatarFrameType>(() => {
-  if (frameBorderType.value === 'none') return null
+  const hasBorder = frameBorderType.value !== 'none'
+  const hasBadge = badge.value !== 'none'
+  if (!hasBorder && !hasBadge) return null
+
+  let base: NonNullable<AvatarFrameType> = {
+    borderType: hasBorder ? frameBorderType.value : 'none',
+    ...(hasBadge && { badge: badge.value }),
+    ...(frameAnimation.value !== 'none' && { animation: frameAnimation.value }),
+  }
+
   if (frameBorderType.value === 'gradient') {
     const colors = gradientColors.value.filter((c) => c)
-    if (colors.length < 2) return null
-    return {
-      borderType: 'gradient',
-      gradient: {
+    if (colors.length >= 2) {
+      base.gradient = {
         colors,
         angle: gradientAngle.value,
         conic: gradientConic.value,
         animated: gradientAnimated.value,
         speed: gradientSpeed.value,
-      },
+      }
     }
+  } else if (frameBorderType.value === 'glow') {
+    base.glow = { enabled: true, color: glowColor.value, intensity: glowIntensity.value, pulse: glowPulse.value }
+  } else if (frameBorderType.value === 'preset') {
+    base.preset = presetName.value
   }
-  if (frameBorderType.value === 'glow') {
-    return {
-      borderType: 'glow',
-      glow: { enabled: true, color: glowColor.value, intensity: glowIntensity.value, pulse: glowPulse.value },
-    }
-  }
-  if (frameBorderType.value === 'preset') {
-    return { borderType: 'preset', preset: presetName.value }
-  }
-  return null
+
+  return base
 })
 
 function loadAvatarFrame(f: AvatarFrameType | null | undefined) {
@@ -203,6 +217,10 @@ function loadAvatarFrame(f: AvatarFrameType | null | undefined) {
     glowPulse.value = !!f.glow.pulse
   }
   if (f.preset) presetName.value = f.preset
+  if (f.badge && f.badge !== 'none') badge.value = f.badge as AvatarBadge
+  else badge.value = 'none'
+  if (f.animation && f.animation !== 'none') frameAnimation.value = f.animation as AvatarFrameAnimation
+  else frameAnimation.value = 'none'
 }
 
 onMounted(() => {
@@ -253,7 +271,7 @@ async function saveProfile() {
       bio: bio.value || undefined,
       profileHTML: profileHTML.value || undefined,
       avatarShape: avatarShape.value,
-      avatarFrame: frameBorderType.value === 'none' ? null : avatarFrame.value,
+      avatarFrame: avatarFrame.value,
     })
     await auth.fetchUser()
     success.value = 'Profile saved.'
