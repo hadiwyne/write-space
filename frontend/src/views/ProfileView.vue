@@ -4,10 +4,12 @@
     <template v-else-if="profile">
       <div class="profile-header">
         <div class="profile-avatar-wrap">
-          <div v-if="profile.avatarUrl" class="avatar-clip" :class="avatarShapeClass(profile?.avatarShape)">
-            <img :src="avatarSrc(profile.avatarUrl, isOwnProfile ? auth.avatarVersion : undefined)" alt="" class="avatar-img" />
-          </div>
-          <span v-else class="avatar-placeholder" :class="avatarShapeClass(profile?.avatarShape)">{{ (profile.displayName || profile.username || '?')[0] }}</span>
+          <AvatarFrame :frame="profileFrame(profile)" :shape-class="avatarShapeClass(profile?.avatarShape)" :badge-url="profileBadgeUrl(profile)">
+            <div v-if="profile.avatarUrl" class="avatar-clip" :class="avatarShapeClass(profile?.avatarShape)">
+              <img :src="avatarSrc(profile.avatarUrl, isOwnProfile ? auth.avatarVersion : undefined)" alt="" class="avatar-img" />
+            </div>
+            <span v-else class="avatar-placeholder" :class="avatarShapeClass(profile?.avatarShape)">{{ (profile.displayName || profile.username || '?')[0] }}</span>
+          </AvatarFrame>
         </div>
         <h1>{{ profile.displayName || profile.username }}</h1>
         <p v-if="profile.bio" class="bio">{{ profile.bio }}</p>
@@ -125,8 +127,10 @@
             <ul v-else class="modal-list">
               <li v-for="u in modalList" :key="u.id" class="modal-list-item">
                 <router-link :to="`/u/${u.username}`" class="modal-user" @click="modalOpen = false">
-                  <img v-if="u.avatarUrl" :src="avatarSrc(u.avatarUrl, u.id === auth.user?.id ? auth.avatarVersion : undefined)" alt="" class="modal-avatar" :class="avatarShapeClass(u?.avatarShape)" />
-                  <span v-else class="modal-avatar-placeholder" :class="avatarShapeClass(u?.avatarShape)">{{ (u.displayName || u.username || '?')[0] }}</span>
+                  <AvatarFrame :frame="userFrame(u)" :shape-class="avatarShapeClass(u?.avatarShape)" :badge-url="userBadgeUrl(u)">
+                    <img v-if="u.avatarUrl" :src="avatarSrc(u.avatarUrl, u.id === auth.user?.id ? auth.avatarVersion : undefined)" alt="" class="modal-avatar" :class="avatarShapeClass(u?.avatarShape)" />
+                    <span v-else class="modal-avatar-placeholder" :class="avatarShapeClass(u?.avatarShape)">{{ (u.displayName || u.username || '?')[0] }}</span>
+                  </AvatarFrame>
                   <span class="modal-user-name">{{ u.displayName || u.username }}</span>
                   <span class="modal-user-handle">@{{ u.username }}</span>
                 </router-link>
@@ -175,6 +179,8 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { api, avatarSrc } from '@/api/client'
 import { avatarShapeClass } from '@/utils/avatar'
+import AvatarFrame from '@/components/AvatarFrame.vue'
+import type { AvatarFrame as AvatarFrameType } from '@/types/avatarFrame'
 import { useAuthStore } from '@/stores/auth'
 import PostCard from '@/components/PostCard.vue'
 import RepostCard from '@/components/RepostCard.vue'
@@ -198,6 +204,22 @@ const likedLoading = ref(false)
 const profileTab = ref<'posts' | 'liked'>('posts')
 const profileTabsRef = ref<HTMLElement | null>(null)
 const tabIndicatorStyle = ref<{ left: string; width: string }>({ left: '0px', width: '0px' })
+
+function profileFrame(p: typeof profile.value): AvatarFrameType | null {
+  return ((p as { avatarFrame?: AvatarFrameType } | null)?.avatarFrame ?? null) as AvatarFrameType | null
+}
+
+function profileBadgeUrl(p: typeof profile.value): string | null {
+  return (p as { badgeUrl?: string } | null)?.badgeUrl ?? null
+}
+
+function userFrame(u: { avatarFrame?: unknown } | Record<string, unknown> | undefined): AvatarFrameType | null {
+  return ((u as { avatarFrame?: AvatarFrameType } | undefined)?.avatarFrame ?? null) as AvatarFrameType | null
+}
+
+function userBadgeUrl(u: { badgeUrl?: string } | Record<string, unknown> | undefined): string | null {
+  return (u as { badgeUrl?: string } | undefined)?.badgeUrl ?? null
+}
 
 function updateProfileTabIndicator() {
   const measure = () => {

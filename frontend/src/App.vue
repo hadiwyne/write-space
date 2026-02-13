@@ -147,6 +147,102 @@ a:hover { text-decoration: underline; color: var(--accent-burgundy); }
   vertical-align: top !important;
 }
 
+/* Avatar frame: gradient/glow/preset border around avatar. Use !important so shape wins over component scoped styles. */
+.avatar-frame {
+  overflow: hidden;
+}
+.avatar-frame.avatar-shape-circle { border-radius: 50% !important; }
+.avatar-frame.avatar-shape-rounded { border-radius: 12% !important; }
+.avatar-frame.avatar-shape-square { border-radius: 0 !important; }
+.avatar-frame.avatar-shape-squircle { border-radius: 25% !important; }
+.avatar-frame--gradient.avatar-frame--animated {
+  background-size: 200% 200% !important;
+  animation: avatar-frame-linear var(--frame-speed, 3s) linear infinite;
+}
+.avatar-frame--gradient.avatar-frame--conic-animated {
+  animation: avatar-frame-rotate var(--frame-speed, 3s) linear infinite;
+}
+@keyframes avatar-frame-linear {
+  to { background-position: 200% 200%; }
+}
+@keyframes avatar-frame-rotate {
+  to { transform: rotate(360deg); }
+}
+.avatar-frame--glow {
+  box-shadow: 0 0 var(--frame-glow-blur, 20px) var(--frame-glow-spread, 4px) var(--frame-glow-color, rgba(255,0,204,0.6));
+}
+.avatar-frame--glow.avatar-frame--pulse {
+  animation: avatar-frame-pulse 2s ease-in-out infinite;
+}
+@keyframes avatar-frame-pulse {
+  0%, 100% { box-shadow: 0 0 10px 2px var(--frame-glow-color); }
+  50% { box-shadow: 0 0 25px 8px var(--frame-glow-color); }
+}
+.avatar-frame--preset-gamer {
+  padding: 3px;
+  background: linear-gradient(90deg, #ff0080, #7928ca, #0070f3, #00dfd8, #ff0080) !important;
+  background-size: 300% 100% !important;
+  animation: avatar-frame-gamer 2s linear infinite;
+}
+@keyframes avatar-frame-gamer {
+  to { background-position: 300% 0; }
+}
+.avatar-frame--preset-soft {
+  padding: 4px;
+  background: linear-gradient(135deg, #ffd6e7, #e7d6ff, #d6e7ff) !important;
+  box-shadow: 0 0 20px rgba(255,182,193,0.5);
+}
+.avatar-frame--preset-premium {
+  padding: 4px;
+  background: linear-gradient(135deg, #d4af37, #f4e4bc, #d4af37) !important;
+  box-shadow: 0 0 15px rgba(212,175,55,0.5);
+}
+.avatar-frame--preset-fire {
+  padding: 4px;
+  background: linear-gradient(180deg, #ff6b00, #ff0000, #ff6b00) !important;
+  box-shadow: 0 0 20px rgba(255,100,0,0.6);
+}
+
+.avatar-frame--none { background: transparent !important; }
+
+/* Extra frame animations */
+.avatar-frame--anim-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.avatar-frame--anim-shimmer > * {
+  position: relative;
+  z-index: 0;
+}
+.avatar-frame--anim-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  z-index: 1;
+  background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.4) 50%, transparent 65%);
+  animation: avatar-frame-shimmer 3s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes avatar-frame-shimmer {
+  0% { transform: translateX(-100%) rotate(25deg); }
+  100% { transform: translateX(100%) rotate(25deg); }
+}
+
+.avatar-frame--anim-dashed {
+  border: 2px dashed var(--frame-dash-color, rgba(255,255,255,0.7));
+  animation: avatar-frame-rotate 8s linear infinite;
+}
+
+.avatar-frame--anim-spin {
+  animation: avatar-frame-spin 6s linear infinite;
+}
+.avatar-frame--anim-spin.avatar-frame--conic-animated,
+.avatar-frame--anim-spin.avatar-frame--animated { animation: avatar-frame-spin 6s linear infinite; }
+@keyframes avatar-frame-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(30px); }
   to { opacity: 1; transform: translateY(0); }

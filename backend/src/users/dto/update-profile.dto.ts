@@ -1,4 +1,4 @@
-import { IsString, IsOptional, MaxLength } from 'class-validator';
+import { IsString, IsOptional, MaxLength, IsObject } from 'class-validator';
 
 export class UpdateProfileDto {
   @IsOptional()
@@ -19,6 +19,10 @@ export class UpdateProfileDto {
   @IsString()
   @MaxLength(20)
   avatarShape?: string;
+
+  @IsOptional()
+  @IsObject()
+  avatarFrame?: Record<string, unknown>;
 
   @IsOptional()
   @IsString()

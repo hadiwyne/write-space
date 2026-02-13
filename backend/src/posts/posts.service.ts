@@ -61,7 +61,7 @@ export class PostsService {
         publishedAt: dto.isPublished ? new Date() : null,
         visibility: dto.visibility ?? 'PUBLIC',
       },
-      include: { author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true } } },
+      include: { author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true } } },
     });
     this.refreshLinkPreview(post.id, dto.content).catch(() => {});
     return post;
@@ -85,7 +85,7 @@ export class PostsService {
       take: limit,
       skip: offset,
       include: {
-        author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true } },
+        author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true } },
         _count: { select: { likes: true, comments: true, reposts: true } },
         ...(userId ? { likes: { where: { userId }, take: 1, select: { id: true } } } : {}),
       },
@@ -96,7 +96,7 @@ export class PostsService {
     const post = await this.prisma.post.findUnique({
       where: { id },
       include: {
-        author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true } },
+        author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true } },
         _count: { select: { likes: true, comments: true, reposts: true } },
       },
     });
@@ -151,7 +151,7 @@ export class PostsService {
         }),
         ...(dto.visibility != null && { visibility: dto.visibility }),
       },
-      include: { author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true } } },
+      include: { author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true } } },
     });
     if (dto.content != null) this.refreshLinkPreview(updated.id, dto.content).catch(() => {});
     return updated;
@@ -220,7 +220,7 @@ export class PostsService {
       take: limit,
       skip: offset,
       include: {
-        author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true } },
+        author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true } },
         _count: { select: { likes: true, comments: true, reposts: true } },
         ...(viewerUserId ? { likes: { where: { userId: viewerUserId }, take: 1, select: { id: true } } } : {}),
       },
@@ -234,7 +234,7 @@ export class PostsService {
       take: limit,
       skip: offset,
       include: {
-        author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true } },
+        author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true } },
         _count: { select: { likes: true, comments: true, reposts: true } },
       },
     });

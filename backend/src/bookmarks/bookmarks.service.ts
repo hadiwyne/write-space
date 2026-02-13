@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 const postInclude = {
-  author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true } },
+  author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true } },
   _count: { select: { likes: true, comments: true } },
 };
 

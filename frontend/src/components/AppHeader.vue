@@ -49,8 +49,10 @@
                   @click="onNotifClick(n)"
                 >
                   <span class="notif-dot" :class="{ unread: !n.readAt }" aria-hidden="true"></span>
-                  <img v-if="n.actor?.avatarUrl" :src="avatarSrc(n.actor.avatarUrl, n.actor?.id === auth.user?.id ? auth.avatarVersion : undefined)" alt="" class="notif-avatar" :class="avatarShapeClass(n.actor?.avatarShape)" />
-                  <span v-else class="notif-avatar-placeholder" :class="avatarShapeClass(n.actor?.avatarShape)">{{ (n.actor?.displayName || n.actor?.username || '?')[0] }}</span>
+                  <AvatarFrame :frame="actorFrame(n.actor)" :shape-class="avatarShapeClass(n.actor?.avatarShape)" :badge-url="actorBadgeUrl(n.actor)">
+                    <img v-if="n.actor?.avatarUrl" :src="avatarSrc(n.actor.avatarUrl, n.actor?.id === auth.user?.id ? auth.avatarVersion : undefined)" alt="" class="notif-avatar" :class="avatarShapeClass(n.actor?.avatarShape)" />
+                    <span v-else class="notif-avatar-placeholder" :class="avatarShapeClass(n.actor?.avatarShape)">{{ (n.actor?.displayName || n.actor?.username || '?')[0] }}</span>
+                  </AvatarFrame>
                   <div class="notif-body">
                     <span class="notif-text">{{ notifText(n) }}</span>
                     <span class="notif-time">{{ notifTime(n.createdAt) }}</span>
@@ -66,8 +68,10 @@
         </router-link>
         <div class="avatar-wrap" ref="avatarWrapRef">
           <button type="button" class="avatar-btn" :class="avatarShapeClass(auth.user?.avatarShape)" aria-label="Account menu" aria-haspopup="true" :aria-expanded="dropdownOpen" @click="dropdownOpen = !dropdownOpen">
-            <img v-if="auth.user?.avatarUrl" :src="avatarSrc(auth.user.avatarUrl, auth.avatarVersion)" alt="" class="avatar-img" />
-            <span v-else class="avatar-initial">{{ (auth.user?.displayName || auth.user?.username || '?')[0] }}</span>
+            <AvatarFrame :frame="auth.user?.avatarFrame ?? null" :shape-class="avatarShapeClass(auth.user?.avatarShape)" :badge-url="authUserBadgeUrl()" :badge-cache-bust="auth.avatarVersion">
+              <img v-if="auth.user?.avatarUrl" :src="avatarSrc(auth.user.avatarUrl, auth.avatarVersion)" alt="" class="avatar-img" />
+              <span v-else class="avatar-initial">{{ (auth.user?.displayName || auth.user?.username || '?')[0] }}</span>
+            </AvatarFrame>
           </button>
           <Transition name="dropdown">
             <div v-if="dropdownOpen" class="dropdown" role="menu">
@@ -120,6 +124,8 @@ import { useThemeStore } from '@/stores/theme'
 import { useNotificationsStore } from '@/stores/notifications'
 import { avatarSrc } from '@/api/client'
 import { avatarShapeClass } from '@/utils/avatar'
+import AvatarFrame from '@/components/AvatarFrame.vue'
+import type { AvatarFrame as AvatarFrameType } from '@/types/avatarFrame'
 import type { NotificationItem } from '@/stores/notifications'
 
 const auth = useAuthStore()
@@ -187,6 +193,18 @@ function onDocumentClick(e: MouseEvent) {
   const target = e.target as Node
   if (avatarWrapRef.value && !avatarWrapRef.value.contains(target)) dropdownOpen.value = false
   if (notifWrapRef.value && !notifWrapRef.value.contains(target)) notifOpen.value = false
+}
+
+function actorFrame(actor: NotificationItem['actor']): AvatarFrameType | null {
+  return ((actor as { avatarFrame?: AvatarFrameType } | null)?.avatarFrame ?? null) as AvatarFrameType | null
+}
+
+function actorBadgeUrl(actor: NotificationItem['actor']): string | null {
+  return (actor as { badgeUrl?: string } | null)?.badgeUrl ?? null
+}
+
+function authUserBadgeUrl(): string | null {
+  return (auth.user as { badgeUrl?: string } | null)?.badgeUrl ?? null
 }
 
 function notifText(n: NotificationItem) {

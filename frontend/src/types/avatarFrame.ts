@@ -1,0 +1,76 @@
+/** Badge shown as corner overlay on avatar. 'custom' = user-uploaded image. */
+export type AvatarBadge = 'none' | 'star' | 'crown' | 'flame' | 'heart' | 'sparkle' | 'bolt' | 'custom'
+
+/** Where the badge sits on the frame. */
+export type AvatarBadgePosition = 'bottom-right' | 'top-right' | 'top-left' | 'bottom-left'
+
+/** Extra animation applied to the frame. */
+export type AvatarFrameAnimation = 'none' | 'shimmer' | 'dashed' | 'spin'
+
+/** User avatar border/frame customization (stored as JSON). */
+export type AvatarFrame = {
+  borderType?: 'none' | 'gradient' | 'glow' | 'preset'
+  gradient?: {
+    colors: string[]
+    angle?: number
+    conic?: boolean
+    animated?: boolean
+    speed?: number
+  }
+  glow?: {
+    enabled?: boolean
+    color?: string
+    intensity?: number
+    pulse?: boolean
+  }
+  preset?: 'gamer' | 'soft' | 'premium' | 'fire' | null
+  /** Corner badge (e.g. star, crown). Can be used with or without a border. */
+  badge?: AvatarBadge | null
+  /** Where the badge appears on the frame. */
+  badgePosition?: AvatarBadgePosition | null
+  /** Extra animation on the frame (shimmer, dashed ring, spin). */
+  animation?: AvatarFrameAnimation | null
+} | null
+
+export const DEFAULT_AVATAR_FRAME: AvatarFrame = null
+
+export const PRESET_LABELS: Record<string, string> = {
+  gamer: 'Gamer (RGB ring)',
+  soft: 'Soft (pastel halo)',
+  premium: 'Premium (gold)',
+  fire: 'Fire',
+}
+
+export const BADGE_LABELS: Record<AvatarBadge, string> = {
+  none: 'None',
+  star: 'Star',
+  crown: 'Crown',
+  flame: 'Flame',
+  heart: 'Heart',
+  sparkle: 'Sparkle',
+  bolt: 'Bolt',
+  custom: 'Custom (upload)',
+}
+
+export const BADGE_EMOJI: Record<Exclude<AvatarBadge, 'none' | 'custom'>, string> = {
+  star: '⭐',
+  crown: '👑',
+  flame: '🔥',
+  heart: '❤️',
+  sparkle: '✨',
+  bolt: '⚡',
+}
+
+export const ANIMATION_LABELS: Record<AvatarFrameAnimation, string> = {
+  none: 'None',
+  shimmer: 'Shimmer',
+  dashed: 'Dashed ring',
+  spin: 'Spin',
+}
+
+export const BADGE_POSITION_LABELS: Record<AvatarBadgePosition, string> = {
+  'bottom-right': 'Bottom right',
+  'top-right': 'Top right',
+  'top-left': 'Top left',
+  'bottom-left': 'Bottom left',
+}
