@@ -7,7 +7,10 @@
       :style="frameStyle"
     >
       <slot />
-      <span v-if="badgeEmoji" class="avatar-frame-badge" :class="['avatar-frame-badge--' + badgeKey, 'avatar-frame-badge--' + badgePosition]" aria-hidden="true">{{ badgeEmoji }}</span>
+      <span v-if="showBadge" class="avatar-frame-badge" :class="['avatar-frame-badge--' + badgePosition]" aria-hidden="true">
+        <img v-if="badgeKey === 'custom' && badgeUrl" :src="badgeSrc" alt="" class="avatar-frame-badge-img" />
+        <template v-else>{{ badgeEmoji }}</template>
+      </span>
     </div>
     <slot v-else />
   </div>
@@ -17,21 +20,26 @@
 import { computed } from 'vue'
 import type { AvatarFrame as AvatarFrameType } from '@/types/avatarFrame'
 import { BADGE_EMOJI } from '@/types/avatarFrame'
+import { avatarSrc } from '@/api/client'
 
 const props = withDefaults(
   defineProps<{
     frame?: AvatarFrameType | null
     /** Shape class so frame border-radius matches avatar (e.g. avatar-shape-circle) */
     shapeClass?: string
+    /** URL for custom badge image when frame.badge === 'custom'. Use avatarSrc(badgeUrl) for full URL. */
+    badgeUrl?: string | null
+    /** Optional cache-bust (e.g. auth.avatarVersion) so badge image refetches after upload. */
+    badgeCacheBust?: string | number
   }>(),
-  { frame: null, shapeClass: 'avatar-shape-circle' }
+  { frame: null, shapeClass: 'avatar-shape-circle', badgeUrl: null, badgeCacheBust: undefined }
 )
 
 const hasFrame = computed(() => {
   const f = props.frame
   if (!f || typeof f !== 'object') return false
   const hasBorder =
-    (f.borderType === 'gradient' && f.gradient?.colors?.length >= 2) ||
+    (f.borderType === 'gradient' && (f.gradient?.colors?.length ?? 0) >= 2) ||
     (f.borderType === 'glow' && f.glow?.enabled) ||
     (f.borderType === 'preset' && f.preset)
   const hasBadge = f.badge && f.badge !== 'none'
@@ -43,10 +51,19 @@ const badgeKey = computed(() => {
   return b && b !== 'none' ? b : null
 })
 
+const showBadge = computed(() => {
+  const key = badgeKey.value
+  if (!key) return false
+  if (key === 'custom') return !!props.badgeUrl
+  return !!(BADGE_EMOJI as Record<string, string>)[key]
+})
+
 const badgeEmoji = computed(() => {
   const key = badgeKey.value
-  return key ? (BADGE_EMOJI as Record<string, string>)[key] ?? null : null
+  return key && key !== 'custom' ? (BADGE_EMOJI as Record<string, string>)[key] ?? null : null
 })
+
+const badgeSrc = computed(() => avatarSrc(props.badgeUrl, props.badgeCacheBust))
 
 const badgePosition = computed(() => {
   const pos = props.frame?.badgePosition
@@ -58,9 +75,10 @@ const frameClasses = computed(() => {
   const f = props.frame
   if (!f || !hasFrame.value) return []
   const t = f.borderType ?? 'none'
+  const g = f.gradient
   const classes: string[] = ['avatar-frame--' + t]
-  if (t === 'gradient' && f.gradient?.animated) {
-    classes.push(f.gradient.conic ? 'avatar-frame--conic-animated' : 'avatar-frame--animated')
+  if (t === 'gradient' && g?.animated) {
+    classes.push(g.conic ? 'avatar-frame--conic-animated' : 'avatar-frame--animated')
   }
   if (t === 'glow' && f.glow?.pulse) classes.push('avatar-frame--pulse')
   if (t === 'preset' && f.preset) classes.push('avatar-frame--preset-' + f.preset)
@@ -74,12 +92,13 @@ const frameStyle = computed(() => {
   const t = f.borderType ?? 'none'
   const style: Record<string, string> = {}
 
-  if (t === 'gradient' && f.gradient?.colors?.length >= 2) {
-    const colors = f.gradient.colors
-    const angle = f.gradient.conic ? undefined : `${f.gradient.angle ?? 90}deg`
-    const speed = f.gradient.animated ? `${f.gradient.speed ?? 1}s` : undefined
-    if (f.gradient.conic) {
-      style.background = `conic-gradient(from ${(f.gradient.angle ?? 0) * 0.1}deg, ${colors.join(', ')})`
+  const g = f.gradient
+  if (t === 'gradient' && g?.colors && g.colors.length >= 2) {
+    const colors = g.colors
+    const angle = g.conic ? undefined : `${g.angle ?? 90}deg`
+    const speed = g.animated ? `${g.speed ?? 1}s` : undefined
+    if (g.conic) {
+      style.background = `conic-gradient(from ${(g.angle ?? 0) * 0.1}deg, ${colors.join(', ')})`
     } else {
       style.background = `linear-gradient(${angle}, ${colors.join(', ')})`
     }
@@ -136,6 +155,17 @@ const frameStyle = computed(() => {
 .avatar-frame-badge--top-right { top: -4px; right: -4px; }
 .avatar-frame-badge--top-left { top: -4px; left: -4px; }
 .avatar-frame-badge--bottom-left { bottom: -4px; left: -4px; }
+.avatar-frame-badge-img {
+  object-fit: contain;
+  background: transparent;
+}
+.avatar-frame-badge-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  display: block;
+}
 @keyframes avatar-badge-float {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.1); }

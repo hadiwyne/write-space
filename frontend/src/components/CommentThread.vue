@@ -2,7 +2,7 @@
   <div class="comment-thread" :class="{ 'comment-reply': depth > 0 }">
     <div class="comment">
       <router-link :to="`/u/${comment.author?.username}`" class="comment-avatar-link">
-        <AvatarFrame :frame="comment.author?.avatarFrame ?? null" :shape-class="avatarShapeClass(comment.author?.avatarShape)">
+        <AvatarFrame :frame="comment.author?.avatarFrame ?? null" :shape-class="avatarShapeClass(comment.author?.avatarShape)" :badge-url="comment.author?.badgeUrl ?? null">
           <img v-if="comment.author?.avatarUrl" :src="avatarSrc(comment.author.avatarUrl, comment.author?.id)" alt="" class="comment-avatar" :class="avatarShapeClass(comment.author?.avatarShape)" />
           <span v-else class="comment-avatar-placeholder" :class="avatarShapeClass(comment.author?.avatarShape)">{{ (comment.author?.displayName || comment.author?.username || '?')[0] }}</span>
         </AvatarFrame>
@@ -65,7 +65,7 @@ export type CommentNode = {
   id: string
   content: string
   createdAt?: string
-  author?: { id?: string; username?: string; displayName?: string | null; avatarUrl?: string | null; avatarShape?: string | null; avatarFrame?: unknown }
+  author?: { id?: string; username?: string; displayName?: string | null; avatarUrl?: string | null; avatarShape?: string | null; avatarFrame?: unknown; badgeUrl?: string | null }
   replies?: CommentNode[]
 }
 
