@@ -17,14 +17,16 @@ function sanitizeAvatarFrame(
   if (raw === null || raw === undefined) return raw;
   if (typeof raw !== 'object' || Array.isArray(raw)) return undefined;
   const out: Record<string, unknown> = {};
-  const allowed = ['borderType', 'gradient', 'glow', 'preset', 'badge', 'animation'];
+  const allowed = ['borderType', 'gradient', 'glow', 'preset', 'badge', 'badgePosition', 'animation'];
   const allowedBadges = ['none', 'star', 'crown', 'flame', 'heart', 'sparkle', 'bolt'];
+  const allowedBadgePositions = ['bottom-right', 'top-right', 'top-left', 'bottom-left'];
   const allowedAnimations = ['none', 'shimmer', 'dashed', 'spin'];
   for (const key of Object.keys(raw)) {
     if (!allowed.includes(key)) continue;
     const v = raw[key];
     if (key === 'borderType' && (v === 'none' || v === 'gradient' || v === 'glow' || v === 'preset')) out[key] = v;
     else if (key === 'badge' && typeof v === 'string' && allowedBadges.includes(v)) out[key] = v;
+    else if (key === 'badgePosition' && typeof v === 'string' && allowedBadgePositions.includes(v)) out[key] = v;
     else if (key === 'animation' && typeof v === 'string' && allowedAnimations.includes(v)) out[key] = v;
     else if (key === 'gradient' && typeof v === 'object' && v !== null && !Array.isArray(v)) {
       const g = v as Record<string, unknown>;

@@ -7,7 +7,7 @@
       :style="frameStyle"
     >
       <slot />
-      <span v-if="badgeEmoji" class="avatar-frame-badge" :class="['avatar-frame-badge--' + badgeKey]" aria-hidden="true">{{ badgeEmoji }}</span>
+      <span v-if="badgeEmoji" class="avatar-frame-badge" :class="['avatar-frame-badge--' + badgeKey, 'avatar-frame-badge--' + badgePosition]" aria-hidden="true">{{ badgeEmoji }}</span>
     </div>
     <slot v-else />
   </div>
@@ -46,6 +46,12 @@ const badgeKey = computed(() => {
 const badgeEmoji = computed(() => {
   const key = badgeKey.value
   return key ? (BADGE_EMOJI as Record<string, string>)[key] ?? null : null
+})
+
+const badgePosition = computed(() => {
+  const pos = props.frame?.badgePosition
+  if (pos === 'top-right' || pos === 'top-left' || pos === 'bottom-left') return pos
+  return 'bottom-right'
 })
 
 const frameClasses = computed(() => {
@@ -114,20 +120,22 @@ const frameStyle = computed(() => {
 }
 .avatar-frame-badge {
   position: absolute;
-  bottom: -3px;
-  right: -3px;
-  width: clamp(14px, 35%, 22px);
-  height: clamp(14px, 35%, 22px);
+  width: clamp(20px, 42%, 30px);
+  height: clamp(20px, 42%, 30px);
   font-size: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   line-height: 1;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.35));
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.4));
   pointer-events: none;
   animation: avatar-badge-float 2.5s ease-in-out infinite;
   z-index: 2;
 }
+.avatar-frame-badge--bottom-right { bottom: -4px; right: -4px; }
+.avatar-frame-badge--top-right { top: -4px; right: -4px; }
+.avatar-frame-badge--top-left { top: -4px; left: -4px; }
+.avatar-frame-badge--bottom-left { bottom: -4px; left: -4px; }
 @keyframes avatar-badge-float {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.1); }

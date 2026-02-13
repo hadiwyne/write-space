@@ -1,6 +1,9 @@
 /** Badge shown as corner overlay on avatar. */
 export type AvatarBadge = 'none' | 'star' | 'crown' | 'flame' | 'heart' | 'sparkle' | 'bolt'
 
+/** Where the badge sits on the frame. */
+export type AvatarBadgePosition = 'bottom-right' | 'top-right' | 'top-left' | 'bottom-left'
+
 /** Extra animation applied to the frame. */
 export type AvatarFrameAnimation = 'none' | 'shimmer' | 'dashed' | 'spin'
 
@@ -23,6 +26,8 @@ export type AvatarFrame = {
   preset?: 'gamer' | 'soft' | 'premium' | 'fire' | null
   /** Corner badge (e.g. star, crown). Can be used with or without a border. */
   badge?: AvatarBadge | null
+  /** Where the badge appears on the frame. */
+  badgePosition?: AvatarBadgePosition | null
   /** Extra animation on the frame (shimmer, dashed ring, spin). */
   animation?: AvatarFrameAnimation | null
 } | null
@@ -60,4 +65,11 @@ export const ANIMATION_LABELS: Record<AvatarFrameAnimation, string> = {
   shimmer: 'Shimmer',
   dashed: 'Dashed ring',
   spin: 'Spin',
+}
+
+export const BADGE_POSITION_LABELS: Record<AvatarBadgePosition, string> = {
+  'bottom-right': 'Bottom right',
+  'top-right': 'Top right',
+  'top-left': 'Top left',
+  'bottom-left': 'Bottom left',
 }

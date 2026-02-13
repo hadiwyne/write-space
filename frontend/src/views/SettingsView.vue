@@ -105,6 +105,10 @@
             <select v-model="badge" class="frame-select">
               <option v-for="(label, key) in BADGE_LABELS" :key="key" :value="key">{{ label }}</option>
             </select>
+            <label v-if="badge !== 'none'" class="avatar-shape-label">Badge position</label>
+            <select v-if="badge !== 'none'" v-model="badgePosition" class="frame-select">
+              <option v-for="(label, key) in BADGE_POSITION_LABELS" :key="key" :value="key">{{ label }}</option>
+            </select>
             <label class="avatar-shape-label">Extra animation</label>
             <select v-model="frameAnimation" class="frame-select">
               <option v-for="(label, key) in ANIMATION_LABELS" :key="key" :value="key">{{ label }}</option>
@@ -139,8 +143,8 @@ import { api, avatarSrc } from '@/api/client'
 import AvatarUploadCrop from '@/components/AvatarUploadCrop.vue'
 import AvatarFrame from '@/components/AvatarFrame.vue'
 import { avatarShapeClass } from '@/utils/avatar'
-import type { AvatarFrame as AvatarFrameType, AvatarBadge, AvatarFrameAnimation } from '@/types/avatarFrame'
-import { BADGE_LABELS, ANIMATION_LABELS } from '@/types/avatarFrame'
+import type { AvatarFrame as AvatarFrameType, AvatarBadge, AvatarBadgePosition, AvatarFrameAnimation } from '@/types/avatarFrame'
+import { BADGE_LABELS, BADGE_POSITION_LABELS, ANIMATION_LABELS } from '@/types/avatarFrame'
 
 const auth = useAuthStore()
 const displayName = ref('')
@@ -164,6 +168,7 @@ const glowIntensity = ref(0.5)
 const glowPulse = ref(false)
 const presetName = ref<'gamer' | 'soft' | 'premium' | 'fire'>('gamer')
 const badge = ref<AvatarBadge>('none')
+const badgePosition = ref<AvatarBadgePosition>('bottom-right')
 const frameAnimation = ref<AvatarFrameAnimation>('none')
 
 const avatarFrame = computed<AvatarFrameType>(() => {
@@ -173,7 +178,7 @@ const avatarFrame = computed<AvatarFrameType>(() => {
 
   let base: NonNullable<AvatarFrameType> = {
     borderType: hasBorder ? frameBorderType.value : 'none',
-    ...(hasBadge && { badge: badge.value }),
+    ...(hasBadge && { badge: badge.value, badgePosition: badgePosition.value }),
     ...(frameAnimation.value !== 'none' && { animation: frameAnimation.value }),
   }
 
@@ -219,6 +224,8 @@ function loadAvatarFrame(f: AvatarFrameType | null | undefined) {
   if (f.preset) presetName.value = f.preset
   if (f.badge && f.badge !== 'none') badge.value = f.badge as AvatarBadge
   else badge.value = 'none'
+  if (f.badgePosition && ['top-right', 'top-left', 'bottom-left', 'bottom-right'].includes(f.badgePosition)) badgePosition.value = f.badgePosition as AvatarBadgePosition
+  else badgePosition.value = 'bottom-right'
   if (f.animation && f.animation !== 'none') frameAnimation.value = f.animation as AvatarFrameAnimation
   else frameAnimation.value = 'none'
 }
