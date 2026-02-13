@@ -71,7 +71,66 @@
       <h2 class="section-title">Page background image</h2>
       <p class="section-hint">Use your own image as the page background instead of a solid colour. Upload a file or paste an image URL.</p>
       <div v-if="theme.bgImageUrl" class="bg-image-preview-wrap">
-        <div class="bg-image-preview" :style="{ backgroundImage: `url(${theme.bgImageUrl})` }"></div>
+        <div
+          class="bg-image-preview"
+          :style="bgPreviewStyle()"
+        ></div>
+        <div class="bg-image-arrange">
+          <p class="bg-arrange-label">Arrange position</p>
+          <div class="bg-position-grid" role="group" aria-label="Background position">
+            <button
+              v-for="pos in bgPositionOptions"
+              :key="pos"
+              type="button"
+              class="bg-position-btn"
+              :class="{ active: theme.bgImageOptions.position === pos }"
+              :title="pos"
+              :aria-label="`Position: ${pos}`"
+              :aria-pressed="theme.bgImageOptions.position === pos"
+              @click="theme.setBgImageOptions({ position: pos })"
+            >
+              <span class="bg-position-dot" :class="pos.replace(/\s/g, '-')"></span>
+            </button>
+          </div>
+          <p class="bg-arrange-label">Size & fit</p>
+          <div class="bg-size-options" role="group" aria-label="Background size">
+            <label class="bg-size-option">
+              <input type="radio" :checked="theme.bgImageOptions.size === 'cover'" @change="theme.setBgImageOptions({ size: 'cover' })" />
+              <span>Cover</span>
+            </label>
+            <label class="bg-size-option">
+              <input type="radio" :checked="theme.bgImageOptions.size === 'contain'" @change="theme.setBgImageOptions({ size: 'contain' })" />
+              <span>Contain</span>
+            </label>
+            <label class="bg-size-option">
+              <input type="radio" :checked="theme.bgImageOptions.size === 'zoom'" @change="theme.setBgImageOptions({ size: 'zoom' })" />
+              <span>Zoom</span>
+            </label>
+          </div>
+          <div v-if="theme.bgImageOptions.size === 'zoom'" class="bg-zoom-row">
+            <label :for="'bg-zoom-slider'" class="bg-zoom-label">{{ theme.bgImageOptions.sizeZoom }}%</label>
+            <input
+              :id="'bg-zoom-slider'"
+              type="range"
+              min="80"
+              max="250"
+              :value="theme.bgImageOptions.sizeZoom"
+              class="bg-zoom-slider"
+              @input="onBgZoomInput"
+            />
+          </div>
+          <p class="bg-arrange-label">Repeat</p>
+          <div class="bg-repeat-options" role="group" aria-label="Background repeat">
+            <label class="bg-size-option">
+              <input type="radio" :checked="theme.bgImageOptions.repeat === 'no-repeat'" @change="theme.setBgImageOptions({ repeat: 'no-repeat' })" />
+              <span>No repeat</span>
+            </label>
+            <label class="bg-size-option">
+              <input type="radio" :checked="theme.bgImageOptions.repeat === 'repeat'" @change="theme.setBgImageOptions({ repeat: 'repeat' })" />
+              <span>Tile</span>
+            </label>
+          </div>
+        </div>
         <div class="bg-image-actions">
           <button type="button" class="btn btn-outline" @click="theme.clearBgImage()">Remove background image</button>
         </div>
@@ -271,7 +330,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useThemeStore } from '@/stores/theme'
-import type { ThemeKey, ThemeTemplate } from '@/stores/theme'
+import type { ThemeKey, ThemeTemplate, BgImagePosition } from '@/stores/theme'
 
 const theme = useThemeStore()
 const userHasEdited = ref(false)
@@ -285,6 +344,36 @@ const editingHsl = ref({ h: 0, s: 0, l: 0 })
 
 const bgFileInputRef = ref<HTMLInputElement | null>(null)
 const bgImageUrlInput = ref('')
+
+const bgPositionOptions: BgImagePosition[] = [
+  'top left',
+  'top',
+  'top right',
+  'left',
+  'center',
+  'right',
+  'bottom left',
+  'bottom',
+  'bottom right',
+]
+
+function bgPreviewStyle() {
+  const url = theme.bgImageUrl
+  const opts = theme.bgImageOptions
+  if (!url) return {}
+  const size = opts.size === 'zoom' ? `${opts.sizeZoom}%` : opts.size
+  return {
+    backgroundImage: `url(${url})`,
+    backgroundPosition: opts.position,
+    backgroundSize: size,
+    backgroundRepeat: opts.repeat,
+  }
+}
+
+function onBgZoomInput(e: Event) {
+  const val = parseInt((e.target as HTMLInputElement).value, 10)
+  if (!Number.isNaN(val)) theme.setBgImageOptions({ sizeZoom: val })
+}
 
 const allKeys: ThemeKey[] = (
   Object.values(theme.THEME_KEYS) as readonly (readonly ThemeKey[])[]
@@ -560,12 +649,102 @@ function previewStyle(palette: ThemeTemplate) {
   height: 12rem;
   border-radius: var(--radius-md);
   border: 2px solid var(--border-medium);
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
   background-color: var(--bg-secondary);
 }
-.bg-image-actions { margin-top: 0.75rem; }
+.bg-image-arrange { margin-top: 1rem; }
+.bg-arrange-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0 0 0.5rem;
+}
+.bg-position-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 2rem);
+  grid-template-rows: repeat(3, 2rem);
+  gap: 2px;
+  margin-bottom: 1rem;
+}
+.bg-position-btn {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr 1fr;
+  place-items: stretch;
+  padding: 0;
+  border: 2px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.bg-position-btn:hover { border-color: var(--accent-primary); background: var(--bg-secondary); }
+.bg-position-btn.active { border-color: var(--accent-primary); background: rgba(139, 69, 19, 0.1); }
+.bg-position-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  margin: auto;
+}
+.bg-position-dot.top-left { grid-column: 1; grid-row: 1; }
+.bg-position-dot.top { grid-column: 2; grid-row: 1; }
+.bg-position-dot.top-right { grid-column: 3; grid-row: 1; }
+.bg-position-dot.left { grid-column: 1; grid-row: 2; }
+.bg-position-dot.center { grid-column: 2; grid-row: 2; }
+.bg-position-dot.right { grid-column: 3; grid-row: 2; }
+.bg-position-dot.bottom-left { grid-column: 1; grid-row: 3; }
+.bg-position-dot.bottom { grid-column: 2; grid-row: 3; }
+.bg-position-dot.bottom-right { grid-column: 3; grid-row: 3; }
+.bg-size-options, .bg-repeat-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  margin-bottom: 0.75rem;
+}
+.bg-size-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.bg-size-option input { cursor: pointer; }
+.bg-zoom-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.bg-zoom-label { font-size: 0.875rem; font-variant-numeric: tabular-nums; min-width: 3rem; color: var(--text-secondary); }
+.bg-zoom-slider {
+  flex: 1;
+  min-width: 100px;
+  max-width: 200px;
+  height: 0.5rem;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--border-light);
+  border-radius: 999px;
+}
+.bg-zoom-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  border: 2px solid var(--bg-card);
+  cursor: pointer;
+}
+.bg-zoom-slider::-moz-range-thumb {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  border: 2px solid var(--bg-card);
+  cursor: pointer;
+}
+.bg-image-actions { margin-top: 1rem; }
 .bg-image-upload {
   display: flex;
   flex-wrap: wrap;
