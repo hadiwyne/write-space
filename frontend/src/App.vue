@@ -9,15 +9,21 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import AppHeader from '@/components/AppHeader.vue'
 import FloatingActionButton from '@/components/FloatingActionButton.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useThemeStore } from '@/stores/theme'
 
 const route = useRoute()
 const auth = useAuthStore()
+const theme = useThemeStore()
 const hideLayout = computed(() => route.meta.hideLayout === true)
+
+onMounted(() => {
+  if (theme.bgImageUrl) theme.setBgImage(theme.bgImageUrl)
+})
 </script>
 
 <style>
@@ -28,7 +34,12 @@ html { overflow-x: hidden; scroll-behavior: smooth; }
 body {
   margin: 0;
   font-family: 'Manrope', system-ui, -apple-system, sans-serif;
-  background: var(--bg-primary);
+  background-color: var(--bg-primary);
+  background-image: var(--bg-image, none);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   color: var(--text-primary);
   line-height: 1.6;
   letter-spacing: -0.02em;

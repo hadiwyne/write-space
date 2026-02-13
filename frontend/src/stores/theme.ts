@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue'
 import { api } from '@/api/client'
 
 const STORAGE_KEY = 'writespace-theme'
+const STORAGE_BG_IMAGE = 'writespace-theme-bg-image'
 
 export const THEME_KEYS = {
   backgrounds: ['bg-primary', 'bg-secondary', 'bg-card'] as const,
@@ -358,10 +359,53 @@ function applyToDocument(overrides: Partial<Record<ThemeKey, string>>) {
   }
 }
 
+function loadBgImageFromStorage(): string | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_BG_IMAGE)
+    if (!raw || typeof raw !== 'string') return null
+    if (raw.startsWith('data:') || raw.startsWith('http://') || raw.startsWith('https://')) return raw
+    return null
+  } catch {
+    return null
+  }
+}
+
+function saveBgImageToStorage(url: string | null) {
+  try {
+    if (url == null || url === '') localStorage.removeItem(STORAGE_BG_IMAGE)
+    else localStorage.setItem(STORAGE_BG_IMAGE, url)
+  } catch {
+    // ignore
+  }
+}
+
+function applyBgImageToDocument(url: string | null) {
+  const root = document.documentElement
+  const body = document.body
+  if (!body) return
+  if (url) {
+    const escaped = url.replace(/"/g, '%22').replace(/'/g, "%27")
+    root.style.setProperty('--bg-image', `url("${escaped}")`)
+    body.style.backgroundImage = `url("${escaped}")`
+    body.style.backgroundSize = 'cover'
+    body.style.backgroundPosition = 'center'
+    body.style.backgroundRepeat = 'no-repeat'
+    body.style.backgroundAttachment = 'fixed'
+  } else {
+    root.style.removeProperty('--bg-image')
+    body.style.backgroundImage = ''
+    body.style.backgroundSize = ''
+    body.style.backgroundPosition = ''
+    body.style.backgroundRepeat = ''
+    body.style.backgroundAttachment = ''
+  }
+}
+
 const allKeys = Object.keys(THEME_DEFAULTS) as ThemeKey[]
 
 export const useThemeStore = defineStore('theme', () => {
   const overrides = ref<Partial<Record<ThemeKey, string>>>(loadFromStorage())
+  const bgImageUrl = ref<string | null>(loadBgImageFromStorage())
   const userTemplates = ref<UserSavedTheme[]>([])
 
   const templatesList = computed(() => {
@@ -394,6 +438,17 @@ export const useThemeStore = defineStore('theme', () => {
 
   function init() {
     applyToDocument(overrides.value)
+    applyBgImageToDocument(bgImageUrl.value)
+  }
+
+  function setBgImage(url: string | null) {
+    bgImageUrl.value = url
+    applyBgImageToDocument(url)
+    saveBgImageToStorage(url)
+  }
+
+  function clearBgImage() {
+    setBgImage(null)
   }
 
   function set(key: ThemeKey, value: string) {
@@ -406,6 +461,7 @@ export const useThemeStore = defineStore('theme', () => {
     overrides.value = {}
     applyToDocument({})
     saveToStorage({})
+    setBgImage(null)
   }
 
   function getCurrentPalette(): ThemeTemplate {
@@ -486,6 +542,7 @@ export const useThemeStore = defineStore('theme', () => {
 
   return {
     overrides,
+    bgImageUrl,
     defaults: THEME_DEFAULTS,
     THEME_KEYS,
     THEME_TEMPLATES,
@@ -496,6 +553,8 @@ export const useThemeStore = defineStore('theme', () => {
     init,
     set,
     reset,
+    setBgImage,
+    clearBgImage,
     applyTemplate,
     fetchUserThemes,
     clearUserThemes,

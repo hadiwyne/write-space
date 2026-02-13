@@ -67,6 +67,40 @@
       </template>
     </section>
 
+    <section class="theme-section bg-image-section">
+      <h2 class="section-title">Page background image</h2>
+      <p class="section-hint">Use your own image as the page background instead of a solid colour. Upload a file or paste an image URL.</p>
+      <div v-if="theme.bgImageUrl" class="bg-image-preview-wrap">
+        <div class="bg-image-preview" :style="{ backgroundImage: `url(${theme.bgImageUrl})` }"></div>
+        <div class="bg-image-actions">
+          <button type="button" class="btn btn-outline" @click="theme.clearBgImage()">Remove background image</button>
+        </div>
+      </div>
+      <div v-else class="bg-image-upload">
+        <input
+          ref="bgFileInputRef"
+          type="file"
+          accept="image/*"
+          class="bg-image-file-input"
+          aria-label="Choose image file"
+          @change="onBgImageFileChange"
+        />
+        <button type="button" class="btn btn-outline" @click="triggerBgImageFileInput">Upload image</button>
+        <span class="bg-image-or">or</span>
+        <div class="bg-image-url-wrap">
+          <input
+            v-model="bgImageUrlInput"
+            type="url"
+            class="bg-image-url-input"
+            placeholder="https://example.com/image.jpg"
+            aria-label="Image URL"
+            @keydown.enter.prevent="applyBgImageUrl"
+          />
+          <button type="button" class="btn btn-outline" :disabled="!bgImageUrlInput.trim()" @click="applyBgImageUrl">Use URL</button>
+        </div>
+      </div>
+    </section>
+
     <section v-for="(keys, group) in theme.THEME_KEYS" :key="group" class="theme-section">
       <h2 class="section-title">{{ sectionTitles[group] }}</h2>
       <div class="color-grid">
@@ -249,6 +283,9 @@ const editingColorKey = ref<ThemeKey | null>(null)
 const editingHex = ref('#000000')
 const editingHsl = ref({ h: 0, s: 0, l: 0 })
 
+const bgFileInputRef = ref<HTMLInputElement | null>(null)
+const bgImageUrlInput = ref('')
+
 const allKeys: ThemeKey[] = (
   Object.values(theme.THEME_KEYS) as readonly (readonly ThemeKey[])[]
 ).flat()
@@ -269,6 +306,77 @@ async function onDeleteUserTheme(id: string) {
 function resetAndClearDirty() {
   theme.reset()
   userHasEdited.value = false
+}
+
+function triggerBgImageFileInput() {
+  bgFileInputRef.value?.click()
+}
+
+const MAX_BG_IMAGE_WIDTH = 1200
+const BG_IMAGE_JPEG_QUALITY = 0.82
+
+function compressImageForBg(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const objectUrl = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl)
+      const w = img.naturalWidth
+      const h = img.naturalHeight
+      const scale = w > MAX_BG_IMAGE_WIDTH ? MAX_BG_IMAGE_WIDTH / w : 1
+      const cw = Math.round(w * scale)
+      const ch = Math.round(h * scale)
+      const canvas = document.createElement('canvas')
+      canvas.width = cw
+      canvas.height = ch
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        reject(new Error('Canvas not supported'))
+        return
+      }
+      ctx.drawImage(img, 0, 0, cw, ch)
+      try {
+        const dataUrl = canvas.toDataURL('image/jpeg', BG_IMAGE_JPEG_QUALITY)
+        resolve(dataUrl)
+      } catch {
+        reject(new Error('Failed to compress image'))
+      }
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl)
+      reject(new Error('Failed to load image'))
+    }
+    img.src = objectUrl
+  })
+}
+
+async function onBgImageFileChange(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file || !file.type.startsWith('image/')) return
+  input.value = ''
+  try {
+    const dataUrl = await compressImageForBg(file)
+    theme.setBgImage(dataUrl)
+  } catch {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const dataUrl = reader.result as string
+      if (dataUrl) theme.setBgImage(dataUrl)
+    }
+    reader.readAsDataURL(file)
+  }
+}
+
+function applyBgImageUrl() {
+  const url = bgImageUrlInput.value.trim()
+  if (!url) return
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    bgImageUrlInput.value = 'https://' + url
+    theme.setBgImage(bgImageUrlInput.value)
+  } else {
+    theme.setBgImage(url)
+  }
 }
 
 onMounted(() => {
@@ -441,7 +549,59 @@ function previewStyle(palette: ThemeTemplate) {
 .customization-page h1 { font-size: clamp(1.5rem, 4vw, 2rem); margin: 0 0 0.5rem; color: var(--text-primary); }
 .intro { color: var(--text-secondary); font-size: 0.9375rem; margin: 0 0 2rem; }
 .theme-section { margin-bottom: 2rem; }
+.section-hint { font-size: 0.9375rem; color: var(--text-secondary); margin: 0 0 1rem; }
 .templates-section .section-title { margin-bottom: 0.75rem; }
+
+.bg-image-section .section-title { margin-bottom: 0.5rem; }
+.bg-image-preview-wrap { margin-top: 0.5rem; }
+.bg-image-preview {
+  width: 100%;
+  max-width: 320px;
+  height: 12rem;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--border-medium);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: var(--bg-secondary);
+}
+.bg-image-actions { margin-top: 0.75rem; }
+.bg-image-upload {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin-top: 0.5rem;
+}
+.bg-image-file-input {
+  position: absolute;
+  width: 0.1px;
+  height: 0.1px;
+  opacity: 0;
+  overflow: hidden;
+  z-index: -1;
+}
+.bg-image-or { font-size: 0.9375rem; color: var(--text-tertiary); }
+.bg-image-url-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+.bg-image-url-input {
+  min-width: 12rem;
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9375rem;
+  border: 2px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+.bg-image-url-input:focus { outline: none; border-color: var(--accent-primary); }
+.bg-image-url-input::placeholder { color: var(--text-tertiary); }
 .subsection-title {
   font-size: 1rem;
   font-weight: 600;
