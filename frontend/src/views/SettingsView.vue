@@ -66,8 +66,37 @@
             <template v-if="frameBorderType === 'gradient'">
               <div class="frame-colors">
                 <label class="frame-label">Colors (2–4)</label>
-                <div class="color-row">
-                  <input v-for="(_, i) in gradientColors" :key="i" v-model="gradientColors[i]" type="color" class="color-input" />
+                <div v-for="(_, i) in gradientColors" :key="i" class="frame-color-row">
+                  <span class="frame-color-label">Color {{ i + 1 }}</span>
+                  <div class="color-input-wrap">
+                    <input
+                      :id="`frame-gradient-${i}`"
+                      type="color"
+                      :value="gradientColors[i]"
+                      class="color-picker color-picker-desktop"
+                      :aria-label="`Gradient color ${i + 1}`"
+                      @input="onFrameGradientColorInput(i, $event)"
+                    />
+                    <button
+                      type="button"
+                      class="color-adjust-btn"
+                      :aria-label="`Adjust color ${i + 1} with sliders`"
+                      :style="{ backgroundColor: gradientColors[i] }"
+                      @click="openFrameColorEditor('gradient-' + i)"
+                    >
+                      <span class="color-adjust-btn-label">Adjust</span>
+                    </button>
+                    <input
+                      type="text"
+                      :value="gradientColors[i]"
+                      class="color-hex"
+                      spellcheck="false"
+                      autocapitalize="off"
+                      maxlength="7"
+                      :placeholder="gradientColors[i]"
+                      @input="onFrameGradientHexInput(i, $event)"
+                    />
+                  </div>
                 </div>
               </div>
               <div class="frame-row">
@@ -83,9 +112,37 @@
               </div>
             </template>
             <template v-if="frameBorderType === 'glow'">
-              <div class="frame-row">
+              <div class="frame-glow-color-row">
                 <label class="frame-label">Color</label>
-                <input v-model="glowColor" type="color" class="color-input-inline" />
+                <div class="color-input-wrap">
+                  <input
+                    id="frame-glow-color"
+                    type="color"
+                    :value="glowColor"
+                    class="color-picker color-picker-desktop"
+                    aria-label="Glow color"
+                    @input="onFrameGlowColorInput($event)"
+                  />
+                  <button
+                    type="button"
+                    class="color-adjust-btn"
+                    aria-label="Adjust glow color with sliders"
+                    :style="{ backgroundColor: glowColor }"
+                    @click="openFrameColorEditor('glow')"
+                  >
+                    <span class="color-adjust-btn-label">Adjust</span>
+                  </button>
+                  <input
+                    type="text"
+                    :value="glowColor"
+                    class="color-hex"
+                    spellcheck="false"
+                    autocapitalize="off"
+                    maxlength="7"
+                    :placeholder="glowColor"
+                    @input="onFrameGlowHexInput($event)"
+                  />
+                </div>
               </div>
               <div class="frame-row">
                 <label class="frame-label">Intensity</label>
@@ -133,6 +190,84 @@
       <p v-if="success" class="success">{{ success }}</p>
       <button type="submit" class="btn btn-primary" :disabled="saving">Save profile</button>
     </form>
+
+    <Teleport to="body">
+      <div
+        v-if="editingFrameColorKey !== null"
+        class="modal-backdrop color-editor-backdrop"
+        role="dialog"
+        aria-modal="true"
+        :aria-labelledby="`frame-color-editor-title-${editingFrameColorKey}`"
+        @click.self="closeFrameColorEditor"
+      >
+        <div class="modal color-editor-modal">
+          <h2 :id="`frame-color-editor-title-${editingFrameColorKey}`" class="modal-heading">
+            {{ editingFrameColorKey === 'glow' ? 'Glow color' : 'Gradient color' }}
+          </h2>
+          <p class="modal-hint">Use sliders or enter a hex code.</p>
+          <div class="color-editor-preview" :style="{ backgroundColor: editingHex }"></div>
+          <div class="color-editor-hex-wrap">
+            <label :for="`frame-color-editor-hex-${editingFrameColorKey}`" class="sr-only">Hex code</label>
+            <input
+              :id="`frame-color-editor-hex-${editingFrameColorKey}`"
+              v-model="editingHex"
+              type="text"
+              class="color-editor-hex"
+              spellcheck="false"
+              autocapitalize="off"
+              inputmode="text"
+              maxlength="7"
+              placeholder="#000000"
+              @input="onFrameEditorHexInput"
+            />
+          </div>
+          <div class="color-editor-sliders">
+            <div class="color-editor-slider-row">
+              <label :for="`frame-color-editor-h-${editingFrameColorKey}`" class="color-editor-slider-label">Hue</label>
+              <input
+                :id="`frame-color-editor-h-${editingFrameColorKey}`"
+                v-model.number="editingHsl.h"
+                type="range"
+                min="0"
+                max="360"
+                class="color-editor-range color-editor-range-hue"
+                @input="syncFrameHexFromHsl"
+              />
+              <span class="color-editor-value">{{ Math.round(editingHsl.h) }}°</span>
+            </div>
+            <div class="color-editor-slider-row">
+              <label :for="`frame-color-editor-s-${editingFrameColorKey}`" class="color-editor-slider-label">Saturation</label>
+              <input
+                :id="`frame-color-editor-s-${editingFrameColorKey}`"
+                v-model.number="editingHsl.s"
+                type="range"
+                min="0"
+                max="100"
+                class="color-editor-range"
+                @input="syncFrameHexFromHsl"
+              />
+              <span class="color-editor-value">{{ Math.round(editingHsl.s) }}%</span>
+            </div>
+            <div class="color-editor-slider-row">
+              <label :for="`frame-color-editor-l-${editingFrameColorKey}`" class="color-editor-slider-label">Lightness</label>
+              <input
+                :id="`frame-color-editor-l-${editingFrameColorKey}`"
+                v-model.number="editingHsl.l"
+                type="range"
+                min="0"
+                max="100"
+                class="color-editor-range"
+                @input="syncFrameHexFromHsl"
+              />
+              <span class="color-editor-value">{{ Math.round(editingHsl.l) }}%</span>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-primary" @click="closeFrameColorEditor">Done</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -170,6 +305,120 @@ const presetName = ref<'gamer' | 'soft' | 'premium' | 'fire'>('gamer')
 const badge = ref<AvatarBadge>('none')
 const badgePosition = ref<AvatarBadgePosition>('bottom-right')
 const frameAnimation = ref<AvatarFrameAnimation>('none')
+
+const editingFrameColorKey = ref<string | null>(null)
+const editingHex = ref('#000000')
+const editingHsl = ref({ h: 0, s: 0, l: 0 })
+
+function hexToHsl(hex: string): { h: number; s: number; l: number } {
+  const n = parseInt(hex.slice(1), 16)
+  if (Number.isNaN(n)) return { h: 0, s: 0, l: 0 }
+  const r = (n >> 16) / 255
+  const g = ((n >> 8) & 0xff) / 255
+  const b = (n & 0xff) / 255
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  let h = 0
+  let s = 0
+  const l = (max + min) / 2
+  if (max !== min) {
+    const d = max - min
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6
+    else if (max === g) h = ((b - r) / d + 2) / 6
+    else h = ((r - g) / d + 4) / 6
+  }
+  return { h: h * 360, s: s * 100, l: l * 100 }
+}
+
+function hslToHex(h: number, s: number, l: number): string {
+  s /= 100
+  l /= 100
+  const a = s * Math.min(l, 1 - l)
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12
+    return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))
+  }
+  const r = Math.round(f(0) * 255)
+  const g = Math.round(f(8) * 255)
+  const b = Math.round(f(4) * 255)
+  return '#' + [r, g, b].map((x) => x.toString(16).padStart(2, '0')).join('')
+}
+
+function openFrameColorEditor(key: string) {
+  editingFrameColorKey.value = key
+  const hex = key === 'glow' ? glowColor.value : gradientColors.value[parseInt(key.replace('gradient-', ''), 10)] ?? '#888'
+  editingHex.value = hex
+  editingHsl.value = hexToHsl(hex)
+}
+
+function closeFrameColorEditor() {
+  editingFrameColorKey.value = null
+}
+
+function syncFrameHexFromHsl() {
+  const { h, s, l } = editingHsl.value
+  const hex = hslToHex(h, s, l)
+  editingHex.value = hex
+  const key = editingFrameColorKey.value
+  if (!key) return
+  if (key === 'glow') glowColor.value = hex
+  else {
+    const i = parseInt(key.replace('gradient-', ''), 10)
+    if (!Number.isNaN(i) && gradientColors.value[i] !== undefined) {
+      const next = [...gradientColors.value]
+      next[i] = hex
+      gradientColors.value = next
+    }
+  }
+}
+
+function onFrameEditorHexInput(e: Event) {
+  const raw = (e.target as HTMLInputElement).value?.trim().replace(/^#/, '') ?? ''
+  if (/^[0-9A-Fa-f]{6}$/.test(raw)) {
+    const hex = '#' + raw
+    editingHex.value = hex
+    editingHsl.value = hexToHsl(hex)
+    const key = editingFrameColorKey.value
+    if (key === 'glow') glowColor.value = hex
+    else {
+      const i = parseInt(key.replace('gradient-', ''), 10)
+      if (!Number.isNaN(i) && gradientColors.value[i] !== undefined) {
+        const next = [...gradientColors.value]
+        next[i] = hex
+        gradientColors.value = next
+      }
+    }
+  }
+}
+
+function onFrameGradientColorInput(i: number, e: Event) {
+  const value = (e.target as HTMLInputElement).value
+  if (value && gradientColors.value[i] !== undefined) {
+    const next = [...gradientColors.value]
+    next[i] = value
+    gradientColors.value = next
+  }
+}
+
+function onFrameGradientHexInput(i: number, e: Event) {
+  const value = (e.target as HTMLInputElement).value?.trim().replace(/^#/, '') ?? ''
+  if (/^[0-9A-Fa-f]{6}$/.test(value) && gradientColors.value[i] !== undefined) {
+    const next = [...gradientColors.value]
+    next[i] = '#' + value
+    gradientColors.value = next
+  }
+}
+
+function onFrameGlowColorInput(e: Event) {
+  const value = (e.target as HTMLInputElement).value
+  if (value) glowColor.value = value
+}
+
+function onFrameGlowHexInput(e: Event) {
+  const value = (e.target as HTMLInputElement).value?.trim().replace(/^#/, '') ?? ''
+  if (/^[0-9A-Fa-f]{6}$/.test(value)) glowColor.value = '#' + value
+}
 
 const avatarFrame = computed<AvatarFrameType>(() => {
   const hasBorder = frameBorderType.value !== 'none'
@@ -332,8 +581,219 @@ async function saveProfile() {
 .frame-type-options { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; margin-top: 0.35rem; }
 .frame-colors { margin-top: 0.5rem; }
 .frame-colors .frame-label { margin-bottom: 0.25rem; }
-.color-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
-.color-input { width: 36px; height: 28px; padding: 2px; border: 1px solid var(--gray-300); border-radius: 4px; cursor: pointer; }
+.frame-color-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.5rem; }
+.frame-color-label { font-size: 0.8125rem; color: var(--gray-600); min-width: 4.5rem; }
+.frame-glow-color-row { margin-top: 0.5rem; }
+.frame-glow-color-row .frame-label { margin-bottom: 0.25rem; }
+.color-input-wrap { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; flex-wrap: wrap; }
+.color-picker {
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: 2px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  cursor: pointer;
+}
+.color-picker-desktop { display: none; }
+@media (min-width: 769px) {
+  .color-picker-desktop { display: block; }
+}
+.color-adjust-btn {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0 0.5rem;
+  border: 2px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+.color-adjust-btn:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
+@media (min-width: 769px) {
+  .color-adjust-btn { min-width: 2.5rem; min-height: 2.5rem; padding: 0; }
+  .color-adjust-btn-label { display: none; }
+}
+.color-adjust-btn-label { display: inline; }
+.color-picker::-webkit-color-swatch-wrapper { padding: 2px; }
+.color-picker::-webkit-color-swatch { border: none; border-radius: 4px; }
+.color-hex {
+  width: 6.5rem;
+  min-height: 2.75rem;
+  padding: 0.5rem;
+  font-size: 0.875rem;
+  font-family: ui-monospace, monospace;
+  border: 2px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  -webkit-tap-highlight-color: transparent;
+}
+@media (min-width: 769px) {
+  .color-hex { min-height: auto; padding: 0.375rem 0.5rem; }
+}
+.color-hex:focus { outline: none; border-color: var(--accent-primary); }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.color-editor-backdrop { align-items: flex-end; padding: 0; }
+@media (min-width: 480px) {
+  .color-editor-backdrop { align-items: center; padding: 1rem; }
+}
+.color-editor-modal {
+  width: 100%;
+  max-width: 360px;
+  max-height: 90vh;
+  overflow-y: auto;
+  margin: 0;
+  background: #ffffff;
+  color: #1a1a1a;
+  border: 2px solid #e0e0e0;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  padding: 1.5rem;
+}
+.color-editor-modal .modal-heading { color: #1a1a1a; font-size: 1.25rem; margin: 0 0 0.5rem; }
+.color-editor-modal .modal-hint { color: #555; font-size: 0.875rem; margin: 0 0 1rem; }
+.color-editor-modal .color-editor-slider-label { color: #1a1a1a; }
+.color-editor-modal .color-editor-value { color: #555; }
+.color-editor-modal .color-editor-hex {
+  background: #f5f5f5;
+  border-color: #ccc;
+  color: #1a1a1a;
+}
+.color-editor-modal .color-editor-hex::placeholder { color: #888; }
+.color-editor-modal .color-editor-hex:focus { border-color: #8B4513; }
+.color-editor-modal .btn-primary {
+  background: #8B4513;
+  color: #fff;
+  border-color: #8B4513;
+}
+.color-editor-modal .btn-primary:hover { filter: brightness(1.08); }
+.color-editor-modal .color-editor-range:focus-visible { outline-color: #8B4513; }
+.color-editor-modal .color-editor-range::-webkit-slider-runnable-track { background: #e0e0e0; }
+.color-editor-modal .color-editor-range::-webkit-slider-thumb {
+  background: #8B4513;
+  border-color: #fff;
+}
+.color-editor-modal .color-editor-range::-moz-range-track { background: #e0e0e0; }
+.color-editor-modal .color-editor-range::-moz-range-thumb {
+  background: #8B4513;
+  border-color: #fff;
+}
+.color-editor-preview {
+  height: 4rem;
+  border-radius: var(--radius-md);
+  border: 2px solid #ccc;
+  margin-bottom: 1rem;
+}
+.color-editor-hex-wrap { margin-bottom: 1rem; }
+.color-editor-modal .color-editor-hex {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
+  font-family: ui-monospace, monospace;
+  border: 2px solid #ccc;
+  border-radius: var(--radius-sm);
+}
+.color-editor-sliders { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.25rem; }
+.color-editor-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.color-editor-slider-label {
+  flex: 0 0 4.5rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.color-editor-range {
+  flex: 1;
+  min-width: 120px;
+  min-height: 44px;
+  height: 2.75rem;
+  margin: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+.color-editor-range:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
+.color-editor-range::-webkit-slider-runnable-track {
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--border-light);
+}
+.color-editor-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  border: 2px solid var(--bg-card);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  margin-top: -0.5rem;
+  cursor: pointer;
+}
+.color-editor-range::-moz-range-track {
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--border-light);
+}
+.color-editor-range::-moz-range-thumb {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  border: 2px solid var(--bg-card);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  cursor: pointer;
+}
+.color-editor-range-hue {
+  background: transparent;
+}
+.color-editor-range-hue::-webkit-slider-runnable-track {
+  background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+}
+.color-editor-range-hue::-moz-range-track {
+  background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+}
+.color-editor-value {
+  flex: 0 0 3rem;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(44, 24, 16, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal-actions { margin-top: 1rem; display: flex; justify-content: flex-end; gap: 0.5rem; }
+
 .frame-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap; }
 .frame-label { font-size: 0.8125rem; font-weight: 500; color: var(--gray-600); min-width: 4rem; }
 .frame-slider { flex: 1; min-width: 80px; max-width: 160px; }
@@ -366,7 +826,6 @@ async function saveProfile() {
   border-color: var(--accent-primary);
   box-shadow: 0 0 0 4px rgba(139, 69, 19, 0.1);
 }
-.color-input-inline { width: 36px; height: 28px; padding: 2px; border: 1px solid var(--gray-300); border-radius: 4px; cursor: pointer; }
 .avatar-actions { }
 .btn-sm { padding: 0.375rem 0.75rem; font-size: 0.875rem; }
 .btn-outline { background: transparent; border: 1px solid var(--gray-300); color: var(--gray-700); }
