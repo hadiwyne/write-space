@@ -17,7 +17,21 @@
     </template>
 
     <template v-else>
-      <div class="crop-stage">
+      <!-- GIF: no crop (would lose animation), just preview and confirm -->
+      <div v-if="cropState.isGif" class="crop-stage">
+        <p class="crop-instructions">GIFs are used as-is so the animation is preserved.</p>
+        <div class="crop-container crop-container--preview">
+          <img :src="cropState.imageUrl" alt="Preview" class="crop-image crop-image--preview" />
+        </div>
+        <div class="crop-actions">
+          <button type="button" class="btn btn-ghost" @click="cancelCrop">Cancel</button>
+          <button type="button" class="btn btn-primary" @click="useGif" :disabled="applying">
+            {{ applying ? 'Applying…' : 'Use this GIF' }}
+          </button>
+        </div>
+      </div>
+      <!-- Non-GIF: crop/zoom then export as JPEG -->
+      <div v-else class="crop-stage">
         <p class="crop-instructions">Drag to position, use the slider to zoom. The square shows the area that will be used (your avatar shape is applied when displayed).</p>
         <div
           class="crop-container"
@@ -95,6 +109,9 @@ interface CropState {
   dragStartY: number
   dragStartPanX: number
   dragStartPanY: number
+  /** When true, file is a GIF and we use it as-is (no crop) so animation is preserved */
+  isGif: boolean
+  originalFile: File | null
 }
 
 const cropState = reactive<CropState>({
@@ -109,6 +126,8 @@ const cropState = reactive<CropState>({
   dragStartY: 0,
   dragStartPanX: 0,
   dragStartPanY: 0,
+  isGif: false,
+  originalFile: null,
 })
 
 const imageStyle = computed(() => {
@@ -145,6 +164,8 @@ function onFileSelect(e: Event) {
   cropState.panY = 0
   cropState.naturalWidth = 0
   cropState.naturalHeight = 0
+  cropState.isGif = file.type === 'image/gif'
+  cropState.originalFile = cropState.isGif ? file : null
   input.value = ''
 }
 
@@ -207,6 +228,16 @@ function cancelCrop() {
     URL.revokeObjectURL(cropState.imageUrl)
     cropState.imageUrl = ''
   }
+  cropState.isGif = false
+  cropState.originalFile = null
+}
+
+function useGif() {
+  if (!cropState.originalFile) return
+  applying.value = true
+  emit('crop', cropState.originalFile)
+  cancelCrop()
+  applying.value = false
 }
 
 function getCroppedBlob(): Promise<Blob> {
@@ -306,6 +337,13 @@ onUnmounted(() => {
   left: 0;
   pointer-events: none;
   user-select: none;
+}
+.crop-container--preview { cursor: default; }
+.crop-image--preview {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 .zoom-row { display: flex; align-items: center; gap: 0.75rem; margin-top: 1rem; }
 .zoom-label { font-size: 0.875rem; color: var(--gray-700); min-width: 2.5rem; }

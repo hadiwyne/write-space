@@ -123,7 +123,7 @@ export class UsersService {
             ALLOWED_ATTR: ['href', 'src', 'alt', 'class'],
           })
         : undefined;
-    const allowed = ['circle', 'square', 'rounded', 'hexagon', 'squircle']
+    const allowed = ['circle', 'square', 'rounded', 'squircle']
     const avatarShape =
       typeof dto.avatarShape === 'string' && allowed.includes(dto.avatarShape)
         ? dto.avatarShape
