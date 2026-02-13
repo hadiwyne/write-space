@@ -22,8 +22,8 @@
         <ul v-else class="user-list">
           <li v-for="u in users" :key="userKey(u)" class="user-item">
             <router-link :to="`/u/${userUsername(u)}`" class="user-link">
-              <img v-if="userAvatarUrl(u)" :src="avatarSrc(userAvatarUrl(u), (u as { id?: string }).id === auth.user?.id ? auth.avatarVersion : undefined)" alt="" class="user-avatar" :class="avatarShapeClass((u as { avatarShape?: string })?.avatarShape)" />
-              <span v-else class="user-avatar-placeholder" :class="avatarShapeClass((u as { avatarShape?: string })?.avatarShape)">{{ (userDisplayName(u) || userUsername(u) || '?')[0] }}</span>
+              <img v-if="userAvatarUrl(u)" :src="avatarSrc(userAvatarUrl(u), u?.id === auth.user?.id ? auth.avatarVersion : undefined)" alt="" class="user-avatar" :class="avatarShapeClass(userAvatarShape(u))" />
+              <span v-else class="user-avatar-placeholder" :class="avatarShapeClass(userAvatarShape(u))">{{ (userDisplayName(u) || userUsername(u) || '?')[0] }}</span>
               <div class="user-info">
                 <span class="user-name">{{ userDisplayName(u) || userUsername(u) }}</span>
                 <span class="user-handle">@{{ userUsername(u) }}</span>
@@ -73,6 +73,10 @@ function userDisplayName(u: Record<string, unknown>) {
 
 function userAvatarUrl(u: Record<string, unknown>) {
   return (u as { avatarUrl?: string | null }).avatarUrl
+}
+
+function userAvatarShape(u: Record<string, unknown>): string | null | undefined {
+  return (u as { avatarShape?: string | null }).avatarShape
 }
 
 async function search() {

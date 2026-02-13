@@ -2,8 +2,8 @@
   <div class="comment-thread" :class="{ 'comment-reply': depth > 0 }">
     <div class="comment">
       <router-link :to="`/u/${comment.author?.username}`" class="comment-avatar-link">
-        <img v-if="comment.author?.avatarUrl" :src="avatarSrc(comment.author.avatarUrl, comment.author?.id)" alt="" class="comment-avatar" :class="avatarShapeClass((comment.author as { avatarShape?: string })?.avatarShape)" />
-        <span v-else class="comment-avatar-placeholder" :class="avatarShapeClass((comment.author as { avatarShape?: string })?.avatarShape)">{{ (comment.author?.displayName || comment.author?.username || '?')[0] }}</span>
+        <img v-if="comment.author?.avatarUrl" :src="avatarSrc(comment.author.avatarUrl, comment.author?.id)" alt="" class="comment-avatar" :class="avatarShapeClass(comment.author?.avatarShape)" />
+        <span v-else class="comment-avatar-placeholder" :class="avatarShapeClass(comment.author?.avatarShape)">{{ (comment.author?.displayName || comment.author?.username || '?')[0] }}</span>
       </router-link>
       <div class="comment-content">
         <span class="comment-meta">
@@ -62,7 +62,7 @@ export type CommentNode = {
   id: string
   content: string
   createdAt?: string
-  author?: { id?: string; username?: string; displayName?: string | null; avatarUrl?: string | null }
+  author?: { id?: string; username?: string; displayName?: string | null; avatarUrl?: string | null; avatarShape?: string | null }
   replies?: CommentNode[]
 }
 

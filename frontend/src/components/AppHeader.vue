@@ -49,8 +49,8 @@
                   @click="onNotifClick(n)"
                 >
                   <span class="notif-dot" :class="{ unread: !n.readAt }" aria-hidden="true"></span>
-                  <img v-if="n.actor?.avatarUrl" :src="avatarSrc(n.actor.avatarUrl, n.actor?.id === auth.user?.id ? auth.avatarVersion : undefined)" alt="" class="notif-avatar" :class="avatarShapeClass((n.actor as { avatarShape?: string })?.avatarShape)" />
-                  <span v-else class="notif-avatar-placeholder" :class="avatarShapeClass((n.actor as { avatarShape?: string })?.avatarShape)">{{ (n.actor?.displayName || n.actor?.username || '?')[0] }}</span>
+                  <img v-if="n.actor?.avatarUrl" :src="avatarSrc(n.actor.avatarUrl, n.actor?.id === auth.user?.id ? auth.avatarVersion : undefined)" alt="" class="notif-avatar" :class="avatarShapeClass(n.actor?.avatarShape)" />
+                  <span v-else class="notif-avatar-placeholder" :class="avatarShapeClass(n.actor?.avatarShape)">{{ (n.actor?.displayName || n.actor?.username || '?')[0] }}</span>
                   <div class="notif-body">
                     <span class="notif-text">{{ notifText(n) }}</span>
                     <span class="notif-time">{{ notifTime(n.createdAt) }}</span>

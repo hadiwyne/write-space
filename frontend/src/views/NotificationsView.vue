@@ -6,8 +6,8 @@
     <ul v-else class="notification-list">
       <li v-for="n in notifications" :key="notifId(n)" class="notification-item" :class="{ unread: !n.readAt }">
         <router-link :to="notificationLink(n)" class="notification-link" @click="markRead(notifId(n))">
-          <img v-if="n.actor?.avatarUrl" :src="actorAvatarSrc(n.actor)" alt="" class="notif-avatar" :class="avatarShapeClass((n.actor as { avatarShape?: string })?.avatarShape)" />
-          <span v-else class="notif-avatar-placeholder" :class="avatarShapeClass((n.actor as { avatarShape?: string })?.avatarShape)">{{ (n.actor?.displayName || n.actor?.username || '?')[0] }}</span>
+          <img v-if="n.actor?.avatarUrl" :src="actorAvatarSrc(n.actor)" alt="" class="notif-avatar" :class="avatarShapeClass(n.actor?.avatarShape)" />
+          <span v-else class="notif-avatar-placeholder" :class="avatarShapeClass(n.actor?.avatarShape)">{{ (n.actor?.displayName || n.actor?.username || '?')[0] }}</span>
           <div class="notif-body">
             <span class="notif-text">{{ notificationText(n) }}</span>
             <span class="notif-date">{{ formatDate(n.createdAt) }}</span>
@@ -33,7 +33,7 @@ type NotifRecord = Record<string, unknown> & {
   type?: string
   readAt?: string | null
   createdAt?: string
-  actor?: { id?: string; displayName?: string; username?: string; avatarUrl?: string | null }
+  actor?: { id?: string; displayName?: string; username?: string; avatarUrl?: string | null; avatarShape?: string | null }
   postId?: string
 }
 

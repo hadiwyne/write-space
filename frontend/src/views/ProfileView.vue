@@ -4,10 +4,10 @@
     <template v-else-if="profile">
       <div class="profile-header">
         <div class="profile-avatar-wrap">
-          <div v-if="profile.avatarUrl" class="avatar-clip" :class="avatarShapeClass((profile as { avatarShape?: string })?.avatarShape)">
+          <div v-if="profile.avatarUrl" class="avatar-clip" :class="avatarShapeClass(profile?.avatarShape)">
             <img :src="avatarSrc(profile.avatarUrl, isOwnProfile ? auth.avatarVersion : undefined)" alt="" class="avatar-img" />
           </div>
-          <span v-else class="avatar-placeholder" :class="avatarShapeClass((profile as { avatarShape?: string })?.avatarShape)">{{ (profile.displayName || profile.username || '?')[0] }}</span>
+          <span v-else class="avatar-placeholder" :class="avatarShapeClass(profile?.avatarShape)">{{ (profile.displayName || profile.username || '?')[0] }}</span>
         </div>
         <h1>{{ profile.displayName || profile.username }}</h1>
         <p v-if="profile.bio" class="bio">{{ profile.bio }}</p>
@@ -125,8 +125,8 @@
             <ul v-else class="modal-list">
               <li v-for="u in modalList" :key="u.id" class="modal-list-item">
                 <router-link :to="`/u/${u.username}`" class="modal-user" @click="modalOpen = false">
-                  <img v-if="u.avatarUrl" :src="avatarSrc(u.avatarUrl, u.id === auth.user?.id ? auth.avatarVersion : undefined)" alt="" class="modal-avatar" :class="avatarShapeClass((u as { avatarShape?: string })?.avatarShape)" />
-                  <span v-else class="modal-avatar-placeholder" :class="avatarShapeClass((u as { avatarShape?: string })?.avatarShape)">{{ (u.displayName || u.username || '?')[0] }}</span>
+                  <img v-if="u.avatarUrl" :src="avatarSrc(u.avatarUrl, u.id === auth.user?.id ? auth.avatarVersion : undefined)" alt="" class="modal-avatar" :class="avatarShapeClass(u?.avatarShape)" />
+                  <span v-else class="modal-avatar-placeholder" :class="avatarShapeClass(u?.avatarShape)">{{ (u.displayName || u.username || '?')[0] }}</span>
                   <span class="modal-user-name">{{ u.displayName || u.username }}</span>
                   <span class="modal-user-handle">@{{ u.username }}</span>
                 </router-link>
@@ -187,6 +187,7 @@ const profile = ref<{
   displayName: string | null
   bio: string | null
   avatarUrl: string | null
+  avatarShape?: string | null
   profileHTML?: string | null
   _count?: { posts: number; followers: number; following: number; reposts?: number; likes?: number }
 } | null>(null)
@@ -241,7 +242,7 @@ const isFollowing = ref(false)
 const followLoading = ref(false)
 const modalOpen = ref(false)
 const modalMode = ref<'followers' | 'following'>('followers')
-const modalList = ref<{ id: string; username: string; displayName: string | null; avatarUrl: string | null }[]>([])
+const modalList = ref<{ id: string; username: string; displayName: string | null; avatarUrl: string | null; avatarShape?: string | null }[]>([])
 const modalLoading = ref(false)
 const modalActionLoading = ref<string | null>(null)
 const confirmOpen = ref(false)
