@@ -340,7 +340,32 @@ async function saveProfile() {
 .frame-value { font-size: 0.8125rem; color: var(--gray-600); }
 .frame-check { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.875rem; margin-top: 0.5rem; margin-right: 1rem; cursor: pointer; }
 .frame-check input { cursor: pointer; }
-.frame-select { padding: 0.35rem 0.5rem; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 0.9375rem; margin-top: 0.35rem; }
+.frame-select {
+  display: block;
+  width: 100%;
+  max-width: 20rem;
+  padding: 0.5rem 0.75rem;
+  border: 2px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+  font-family: inherit;
+  cursor: pointer;
+  margin-top: 0.35rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%236b635b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5 L6 7.5 L9 4.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  padding-right: 2.25rem;
+}
+.frame-select:hover { border-color: var(--border-medium); }
+.frame-select:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 4px rgba(139, 69, 19, 0.1);
+}
 .color-input-inline { width: 36px; height: 28px; padding: 2px; border: 1px solid var(--gray-300); border-radius: 4px; cursor: pointer; }
 .avatar-actions { }
 .btn-sm { padding: 0.375rem 0.75rem; font-size: 0.875rem; }
