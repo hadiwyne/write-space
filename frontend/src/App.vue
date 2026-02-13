@@ -118,8 +118,7 @@ a:hover { text-decoration: underline; color: var(--accent-burgundy); }
 .avatar-shape-circle,
 .avatar-shape-rounded,
 .avatar-shape-square,
-.avatar-shape-squircle,
-.avatar-shape-hexagon {
+.avatar-shape-squircle {
   overflow: hidden;
   background: none;
 }
@@ -127,7 +126,6 @@ a:hover { text-decoration: underline; color: var(--accent-burgundy); }
 .avatar-shape-rounded { border-radius: 12%; }
 .avatar-shape-square { border-radius: 0; }
 .avatar-shape-squircle { border-radius: 25%; }
-.avatar-shape-hexagon { border-radius: 0; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); }
 /* Inner image: no shape, no crop – full image fills container, container clips to shape */
 .avatar-shape-circle img,
 .avatar-shape-circle .avatar-img,
@@ -136,9 +134,7 @@ a:hover { text-decoration: underline; color: var(--accent-burgundy); }
 .avatar-shape-square img,
 .avatar-shape-square .avatar-img,
 .avatar-shape-squircle img,
-.avatar-shape-squircle .avatar-img,
-.avatar-shape-hexagon img,
-.avatar-shape-hexagon .avatar-img {
+.avatar-shape-squircle .avatar-img {
   border-radius: 0 !important;
   clip-path: none !important;
   width: 100% !important;

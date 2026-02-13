@@ -395,7 +395,6 @@ onUnmounted(() => {
 .avatar-btn.avatar-shape-rounded { border-radius: 12%; }
 .avatar-btn.avatar-shape-square { border-radius: 0; }
 .avatar-btn.avatar-shape-squircle { border-radius: 25%; }
-.avatar-btn.avatar-shape-hexagon { border-radius: 0; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); }
 .avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .avatar-initial {
   font-size: 1.125rem;
@@ -485,7 +484,6 @@ onUnmounted(() => {
 .notif-avatar.avatar-shape-rounded, .notif-avatar-placeholder.avatar-shape-rounded { border-radius: 12%; }
 .notif-avatar.avatar-shape-square, .notif-avatar-placeholder.avatar-shape-square { border-radius: 0; }
 .notif-avatar.avatar-shape-squircle, .notif-avatar-placeholder.avatar-shape-squircle { border-radius: 25%; }
-.notif-avatar.avatar-shape-hexagon, .notif-avatar-placeholder.avatar-shape-hexagon { border-radius: 0; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); }
 .notif-body { min-width: 0; flex: 1; }
 .notif-text { font-size: 0.875rem; display: block; }
 .notif-time { font-size: 0.75rem; color: var(--text-tertiary); }

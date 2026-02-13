@@ -125,7 +125,6 @@ async function markAllRead() {
 .notif-avatar.avatar-shape-rounded, .notif-avatar-placeholder.avatar-shape-rounded { border-radius: 12%; }
 .notif-avatar.avatar-shape-square, .notif-avatar-placeholder.avatar-shape-square { border-radius: 0; }
 .notif-avatar.avatar-shape-squircle, .notif-avatar-placeholder.avatar-shape-squircle { border-radius: 25%; }
-.notif-avatar.avatar-shape-hexagon, .notif-avatar-placeholder.avatar-shape-hexagon { border-radius: 0; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); }
 .notif-body { display: flex; flex-direction: column; min-width: 0; }
 .notif-text { font-size: 0.9375rem; }
 .notif-date { font-size: 0.8125rem; color: var(--gray-600); margin-top: 0.25rem; }

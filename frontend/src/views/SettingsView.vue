@@ -41,10 +41,6 @@
                 <input type="radio" value="squircle" :checked="avatarShape === 'squircle'" @change="avatarShape = 'squircle'" />
                 <span>Squircle</span>
               </label>
-              <label class="avatar-shape-option">
-                <input type="radio" value="hexagon" :checked="avatarShape === 'hexagon'" @change="avatarShape = 'hexagon'" />
-                <span>Hexagon</span>
-              </label>
             </div>
           </div>
         </div>
@@ -80,7 +76,7 @@ const auth = useAuthStore()
 const displayName = ref('')
 const bio = ref('')
 const profileHTML = ref('')
-const avatarShape = ref<'circle' | 'rounded' | 'square' | 'squircle' | 'hexagon'>('circle')
+const avatarShape = ref<'circle' | 'rounded' | 'square' | 'squircle'>('circle')
 const avatarPreview = ref<string | null>(null)
 const selectedFile = ref<File | null>(null)
 const error = ref('')
@@ -92,14 +88,14 @@ onMounted(() => {
     displayName.value = auth.user.displayName || ''
     bio.value = (auth.user as { bio?: string }).bio || ''
     const s = (auth.user as { avatarShape?: string | null }).avatarShape
-    avatarShape.value = ['square', 'rounded', 'squircle', 'hexagon'].includes(s || '') ? (s as typeof avatarShape.value) : 'circle'
+    avatarShape.value = ['square', 'rounded', 'squircle'].includes(s || '') ? (s as typeof avatarShape.value) : 'circle'
   }
   auth.fetchUser().then(() => {
     if (auth.user) {
       displayName.value = auth.user.displayName || ''
       bio.value = (auth.user as { bio?: string }).bio || ''
       const s = (auth.user as { avatarShape?: string | null }).avatarShape
-      avatarShape.value = ['square', 'rounded', 'squircle', 'hexagon'].includes(s || '') ? (s as typeof avatarShape.value) : 'circle'
+      avatarShape.value = ['square', 'rounded', 'squircle'].includes(s || '') ? (s as typeof avatarShape.value) : 'circle'
     }
   })
 })
@@ -179,7 +175,6 @@ async function saveProfile() {
 .avatar-shape-rounded.avatar-placeholder { border-radius: 12%; }
 .avatar-shape-square.avatar-placeholder { border-radius: 0; }
 .avatar-shape-squircle.avatar-placeholder { border-radius: 25%; }
-.avatar-shape-hexagon.avatar-placeholder { border-radius: 0; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); }
 .avatar-shape-label { display: block; font-size: 0.8125rem; font-weight: 500; color: var(--gray-600); margin: 0.75rem 0 0.35rem; }
 .avatar-shape-options { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; }
 .avatar-shape-option { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.9375rem; cursor: pointer; }

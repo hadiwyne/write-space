@@ -320,7 +320,6 @@ function formatDate(s: string | undefined) {
 .author-avatar.avatar-shape-rounded { border-radius: 12%; }
 .author-avatar.avatar-shape-square { border-radius: 0; }
 .author-avatar.avatar-shape-squircle { border-radius: 25%; }
-.author-avatar.avatar-shape-hexagon { border-radius: 0; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); }
 .avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .avatar-initial { line-height: 1; }
 .author-info { min-width: 0; }

@@ -496,11 +496,9 @@ onUnmounted(() => {
 .avatar.avatar-shape-rounded, .avatar-placeholder.avatar-shape-rounded { border-radius: 12%; }
 .avatar.avatar-shape-square, .avatar-placeholder.avatar-shape-square { border-radius: 0; }
 .avatar.avatar-shape-squircle, .avatar-placeholder.avatar-shape-squircle { border-radius: 25%; }
-.avatar.avatar-shape-hexagon, .avatar-placeholder.avatar-shape-hexagon { border-radius: 0; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); }
 .modal-avatar.avatar-shape-rounded, .modal-avatar-placeholder.avatar-shape-rounded { border-radius: 12%; }
 .modal-avatar.avatar-shape-square, .modal-avatar-placeholder.avatar-shape-square { border-radius: 0; }
 .modal-avatar.avatar-shape-squircle, .modal-avatar-placeholder.avatar-shape-squircle { border-radius: 25%; }
-.modal-avatar.avatar-shape-hexagon, .modal-avatar-placeholder.avatar-shape-hexagon { border-radius: 0; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); }
 .avatar-placeholder {
   width: clamp(72px, 20vw, 96px);
   height: clamp(72px, 20vw, 96px);

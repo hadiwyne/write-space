@@ -154,7 +154,6 @@ function onReplyContentInput(e: Event) {
 .comment-avatar.avatar-shape-rounded, .comment-avatar-placeholder.avatar-shape-rounded { border-radius: 12%; }
 .comment-avatar.avatar-shape-square, .comment-avatar-placeholder.avatar-shape-square { border-radius: 0; }
 .comment-avatar.avatar-shape-squircle, .comment-avatar-placeholder.avatar-shape-squircle { border-radius: 25%; }
-.comment-avatar.avatar-shape-hexagon, .comment-avatar-placeholder.avatar-shape-hexagon { border-radius: 0; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); }
 .comment-avatar-placeholder {
   display: block;
   line-height: 36px;
