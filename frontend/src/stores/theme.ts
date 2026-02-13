@@ -3,6 +3,46 @@ import { ref, computed, watch } from 'vue'
 import { api } from '@/api/client'
 
 const STORAGE_KEY = 'writespace-theme'
+const STORAGE_BG_IMAGE = 'writespace-theme-bg-image'
+const STORAGE_BG_OPTIONS = 'writespace-theme-bg-options'
+
+export type BgImagePosition =
+  | 'center'
+  | 'top'
+  | 'bottom'
+  | 'left'
+  | 'right'
+  | 'top left'
+  | 'top right'
+  | 'bottom left'
+  | 'bottom right'
+
+export type BgImageSize = 'cover' | 'contain' | 'zoom'
+
+/** Normalized 0–1: the region of the image to show (x,y = top-left, width/height = size). When set, only this region is displayed, scaled to cover. */
+export interface BgImageCrop {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+export interface BgImageOptions {
+  position: BgImagePosition
+  size: BgImageSize
+  sizeZoom: number
+  repeat: 'no-repeat' | 'repeat'
+  /** When set, only this cropped region of the image is shown (scaled to cover the viewport). */
+  crop: BgImageCrop | null
+}
+
+const DEFAULT_BG_OPTIONS: BgImageOptions = {
+  position: 'center',
+  size: 'cover',
+  sizeZoom: 100,
+  repeat: 'no-repeat',
+  crop: null,
+}
 
 export const THEME_KEYS = {
   backgrounds: ['bg-primary', 'bg-secondary', 'bg-card'] as const,
@@ -358,10 +398,118 @@ function applyToDocument(overrides: Partial<Record<ThemeKey, string>>) {
   }
 }
 
+function loadBgImageFromStorage(): string | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_BG_IMAGE)
+    if (!raw || typeof raw !== 'string') return null
+    if (raw.startsWith('data:') || raw.startsWith('http://') || raw.startsWith('https://')) return raw
+    return null
+  } catch {
+    return null
+  }
+}
+
+function saveBgImageToStorage(url: string | null) {
+  try {
+    if (url == null || url === '') localStorage.removeItem(STORAGE_BG_IMAGE)
+    else localStorage.setItem(STORAGE_BG_IMAGE, url)
+  } catch {
+    // ignore
+  }
+}
+
+function loadBgOptionsFromStorage(): BgImageOptions {
+  try {
+    const raw = localStorage.getItem(STORAGE_BG_OPTIONS)
+    if (!raw) return { ...DEFAULT_BG_OPTIONS }
+    const parsed = JSON.parse(raw) as Partial<BgImageOptions>
+    const crop = parsed.crop
+    const validCrop: BgImageCrop | null =
+      crop && typeof crop.x === 'number' && typeof crop.y === 'number' && typeof crop.width === 'number' && typeof crop.height === 'number'
+      && crop.width > 0.05 && crop.height > 0.05 && crop.x >= 0 && crop.y >= 0 && crop.x + crop.width <= 1.01 && crop.y + crop.height <= 1.01
+        ? { x: crop.x, y: crop.y, width: crop.width, height: crop.height }
+        : null
+    return {
+      position: validPosition(parsed.position) ? parsed.position! : DEFAULT_BG_OPTIONS.position,
+      size: validSize(parsed.size) ? parsed.size! : DEFAULT_BG_OPTIONS.size,
+      sizeZoom: typeof parsed.sizeZoom === 'number' && parsed.sizeZoom >= 80 && parsed.sizeZoom <= 250
+        ? Math.round(parsed.sizeZoom)
+        : DEFAULT_BG_OPTIONS.sizeZoom,
+      repeat: parsed.repeat === 'repeat' ? 'repeat' : 'no-repeat',
+      crop: validCrop,
+    }
+  } catch {
+    return { ...DEFAULT_BG_OPTIONS }
+  }
+}
+
+const POSITIONS: BgImagePosition[] = [
+  'top left',
+  'top',
+  'top right',
+  'left',
+  'center',
+  'right',
+  'bottom left',
+  'bottom',
+  'bottom right',
+]
+
+function validPosition(p: unknown): p is BgImagePosition {
+  return typeof p === 'string' && (POSITIONS as string[]).includes(p)
+}
+
+function validSize(s: unknown): s is BgImageSize {
+  return s === 'cover' || s === 'contain' || s === 'zoom'
+}
+
+function saveBgOptionsToStorage(opts: BgImageOptions) {
+  try {
+    localStorage.setItem(STORAGE_BG_OPTIONS, JSON.stringify(opts))
+  } catch {
+    // ignore
+  }
+}
+
+function applyBgImageToDocument(url: string | null, options?: BgImageOptions) {
+  const root = document.documentElement
+  const body = document.body
+  if (!body) return
+  const opts = options ?? DEFAULT_BG_OPTIONS
+  if (url) {
+    const escaped = url.replace(/"/g, '%22').replace(/'/g, "%27")
+    root.style.setProperty('--bg-image', `url("${escaped}")`)
+    body.style.backgroundImage = `url("${escaped}")`
+    body.style.backgroundRepeat = opts.repeat
+    body.style.backgroundAttachment = 'fixed'
+    if (opts.crop) {
+      const c = opts.crop
+      body.style.backgroundSize = `${100 / c.width}% ${100 / c.height}%`
+      body.style.backgroundPosition = `${(-c.x * 100) / c.width}% ${(-c.y * 100) / c.height}%`
+    } else {
+      body.style.backgroundPosition = opts.position
+      if (opts.size === 'zoom') {
+        body.style.backgroundSize = `${opts.sizeZoom}%`
+      } else {
+        body.style.backgroundSize = opts.size
+      }
+    }
+  } else {
+    root.style.removeProperty('--bg-image')
+    body.style.backgroundImage = ''
+    body.style.backgroundSize = ''
+    body.style.backgroundPosition = ''
+    body.style.backgroundRepeat = ''
+    body.style.backgroundAttachment = ''
+  }
+}
+
 const allKeys = Object.keys(THEME_DEFAULTS) as ThemeKey[]
 
 export const useThemeStore = defineStore('theme', () => {
   const overrides = ref<Partial<Record<ThemeKey, string>>>(loadFromStorage())
+  const bgImageUrl = ref<string | null>(loadBgImageFromStorage())
+  const bgImageOptions = ref<BgImageOptions>(loadBgOptionsFromStorage())
   const userTemplates = ref<UserSavedTheme[]>([])
 
   const templatesList = computed(() => {
@@ -394,6 +542,30 @@ export const useThemeStore = defineStore('theme', () => {
 
   function init() {
     applyToDocument(overrides.value)
+    applyBgImageToDocument(bgImageUrl.value, bgImageOptions.value)
+  }
+
+  function setBgImage(url: string | null) {
+    bgImageUrl.value = url
+    applyBgImageToDocument(url, bgImageOptions.value)
+    saveBgImageToStorage(url)
+  }
+
+  function setBgImageOptions(options: Partial<BgImageOptions>) {
+    const next = { ...bgImageOptions.value, ...options }
+    if (next.sizeZoom < 80) next.sizeZoom = 80
+    if (next.sizeZoom > 250) next.sizeZoom = 250
+    bgImageOptions.value = next
+    saveBgOptionsToStorage(next)
+    if (bgImageUrl.value) applyBgImageToDocument(bgImageUrl.value, next)
+  }
+
+  function clearBgImage() {
+    bgImageUrl.value = null
+    bgImageOptions.value = { ...DEFAULT_BG_OPTIONS }
+    saveBgImageToStorage(null)
+    saveBgOptionsToStorage(DEFAULT_BG_OPTIONS)
+    applyBgImageToDocument(null)
   }
 
   function set(key: ThemeKey, value: string) {
@@ -406,6 +578,7 @@ export const useThemeStore = defineStore('theme', () => {
     overrides.value = {}
     applyToDocument({})
     saveToStorage({})
+    clearBgImage()
   }
 
   function getCurrentPalette(): ThemeTemplate {
@@ -486,6 +659,9 @@ export const useThemeStore = defineStore('theme', () => {
 
   return {
     overrides,
+    bgImageUrl,
+    bgImageOptions,
+    setBgImageOptions,
     defaults: THEME_DEFAULTS,
     THEME_KEYS,
     THEME_TEMPLATES,
@@ -496,6 +672,8 @@ export const useThemeStore = defineStore('theme', () => {
     init,
     set,
     reset,
+    setBgImage,
+    clearBgImage,
     applyTemplate,
     fetchUserThemes,
     clearUserThemes,
