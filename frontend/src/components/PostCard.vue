@@ -2,7 +2,7 @@
   <article class="card" :style="{ animationDelay }">
     <header class="card-header">
       <router-link :to="'/u/' + (post.author && post.author.username)" class="card-author">
-        <AvatarFrame :frame="(post.author as { avatarFrame?: unknown })?.avatarFrame ?? null" :shape-class="avatarShapeClass(post.author?.avatarShape)">
+        <AvatarFrame :frame="authorFrame(post.author)" :shape-class="avatarShapeClass(post.author?.avatarShape)" :badge-url="authorBadgeUrl(post.author)">
           <div class="author-avatar" :class="avatarShapeClass(post.author?.avatarShape)">
             <img v-if="post.author && post.author.avatarUrl" :src="avatarSrc(post.author.avatarUrl, post.author.id === auth.user?.id ? auth.avatarVersion : undefined)" alt="" class="avatar-img" />
             <span v-else class="avatar-initial">{{ (post.author && (post.author.displayName || post.author.username)) ? (post.author.displayName || post.author.username)[0] : '?' }}</span>
@@ -131,11 +131,21 @@ import { ref, computed, watch } from 'vue'
 import { api, avatarSrc } from '@/api/client'
 import { avatarShapeClass } from '@/utils/avatar'
 import AvatarFrame from '@/components/AvatarFrame.vue'
+import type { AvatarFrame as AvatarFrameType } from '@/types/avatarFrame'
 import { useAuthStore } from '@/stores/auth'
 import { useLikedPostsStore } from '@/stores/likedPosts'
 
 const auth = useAuthStore()
 const likedStore = useLikedPostsStore()
+
+function authorFrame(author: unknown): AvatarFrameType | null {
+  return ((author as { avatarFrame?: AvatarFrameType } | null)?.avatarFrame ?? null) as AvatarFrameType | null
+}
+
+function authorBadgeUrl(author: unknown): string | null {
+  return (author as { badgeUrl?: string } | null)?.badgeUrl ?? null
+}
+
 const props = defineProps({
   post: { type: Object, required: true },
   showActions: { type: Boolean, default: false },
