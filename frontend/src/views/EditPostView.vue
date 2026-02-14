@@ -108,11 +108,11 @@ async function save() {
 </script>
 
 <style scoped>
-.edit-page { padding: 0; }
-.edit-page h1 { font-size: clamp(1.25rem, 4vw, 1.5rem); margin: 0 0 1rem; }
-.form { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
-.title-input { width: 100%; min-width: 0; font-size: clamp(1.125rem, 4vw, 1.25rem); padding: 0.5rem 0; border: none; border-bottom: 1px solid var(--gray-200); }
-.editor { width: 100%; min-width: 0; padding: 0.75rem; border: 1px solid var(--gray-300); border-radius: var(--radius); font-family: inherit; resize: vertical; box-sizing: border-box; }
+.edit-page { padding: 0; max-width: 720px; margin: 0 auto; width: 100%; }
+.edit-page h1 { font-size: clamp(1.25rem, 4vw, 1.5rem); margin: 0 0 1.25rem; font-weight: 700; }
+.form { display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
+.title-input { width: 100%; min-width: 0; font-size: clamp(1.125rem, 4vw, 1.25rem); padding: 0.5rem 0; border: none; border-bottom: 1px solid var(--gray-200); background: transparent; }
+.editor { width: 100%; min-width: 0; min-height: 320px; padding: 1rem; border: 1px solid var(--gray-300); border-radius: var(--radius); font-family: inherit; resize: vertical; box-sizing: border-box; font-size: 0.9375rem; line-height: 1.6; }
 .tags-input { width: 100%; min-width: 0; padding: 0.5rem 0.75rem; border: 1px solid var(--gray-300); border-radius: var(--radius); }
 .visibility-row { display: flex; align-items: center; gap: 0.75rem; }
 .dropdown-wrap { position: relative; }
@@ -176,7 +176,7 @@ async function save() {
 .dropdown-enter-from,
 .dropdown-leave-to { opacity: 0; transform: translateY(-4px); }
 .error { color: #dc2626; font-size: 0.875rem; margin: 0; }
-.actions { margin-top: 0.5rem; }
-.btn { padding: 0.5rem 1rem; border-radius: var(--radius); border: none; cursor: pointer; font-size: 0.9375rem; }
+.actions { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-light, #e5e7eb); }
+.btn { padding: 0.5rem 1rem; border-radius: var(--radius); border: none; cursor: pointer; font-size: 0.9375rem; font-weight: 600; }
 .btn-primary { background: var(--primary); color: #fff; }
 </style>

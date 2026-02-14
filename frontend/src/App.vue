@@ -1443,6 +1443,248 @@ html.ui-theme-dark-void .save-theme-modal .btn-outline {
   font-family: 'Space Grotesk', sans-serif;
 }
 
+/* Dark Void: write post & edit post – focused writing experience, sharp corners, dark cards */
+html.ui-theme-dark-void .dark-void-main .write-page,
+html.ui-theme-dark-void .dark-void-main .edit-page {
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
+}
+html.ui-theme-dark-void .dark-void-main .write-page h1,
+html.ui-theme-dark-void .dark-void-main .edit-page h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .form,
+html.ui-theme-dark-void .dark-void-main .edit-page .form {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0 !important;
+  padding: clamp(1.25rem, 4vw, 2rem);
+  box-shadow: none;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .title-input,
+html.ui-theme-dark-void .dark-void-main .edit-page .title-input {
+  color: var(--dark-void-text);
+  border-bottom-color: var(--dark-void-border);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .title-input::placeholder,
+html.ui-theme-dark-void .dark-void-main .edit-page .title-input::placeholder {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .title-warning {
+  color: #fca5a5;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .dropdown-trigger,
+html.ui-theme-dark-void .dark-void-main .edit-page .dropdown-trigger {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .dropdown-trigger:hover,
+html.ui-theme-dark-void .dark-void-main .edit-page .dropdown-trigger:hover {
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .dropdown-trigger:focus,
+html.ui-theme-dark-void .dark-void-main .edit-page .dropdown-trigger:focus {
+  border-color: var(--dark-void-text-muted);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .dropdown-chevron,
+html.ui-theme-dark-void .dark-void-main .edit-page .dropdown-chevron {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .dropdown-panel,
+html.ui-theme-dark-void .dark-void-main .edit-page .dropdown-panel {
+  background: var(--dark-void-card);
+  border-color: var(--dark-void-border);
+  border-radius: 0 !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .dropdown-option,
+html.ui-theme-dark-void .dark-void-main .edit-page .dropdown-option {
+  color: var(--dark-void-text);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .dropdown-option:hover,
+html.ui-theme-dark-void .dark-void-main .edit-page .dropdown-option:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .dropdown-option.active,
+html.ui-theme-dark-void .dark-void-main .edit-page .dropdown-option.active {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--dark-void-text);
+  font-weight: 600;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .btn-outline,
+html.ui-theme-dark-void .dark-void-main .edit-page .btn-outline {
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text-muted);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .btn-outline:hover:not(:disabled),
+html.ui-theme-dark-void .dark-void-main .edit-page .btn-outline:hover:not(:disabled) {
+  border-color: var(--dark-void-text-muted);
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .saved-hint,
+html.ui-theme-dark-void .dark-void-main .write-page .upload-hint {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .editor {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .editor::placeholder {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .edit-page .editor {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .edit-page .editor::placeholder {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .preview-pane {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .preview-label {
+  color: var(--dark-void-text-muted);
+  border-bottom-color: var(--dark-void-border);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .preview-content {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .tags-input,
+html.ui-theme-dark-void .dark-void-main .edit-page .tags-input {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .tags-input::placeholder,
+html.ui-theme-dark-void .dark-void-main .edit-page .tags-input::placeholder {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .actions,
+html.ui-theme-dark-void .dark-void-main .edit-page .actions {
+  border-top-color: var(--dark-void-border);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .btn-primary,
+html.ui-theme-dark-void .dark-void-main .edit-page .btn-primary {
+  background: var(--dark-void-text);
+  border-color: var(--dark-void-text);
+  color: var(--dark-void-bg);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .btn-primary:hover:not(:disabled),
+html.ui-theme-dark-void .dark-void-main .edit-page .btn-primary:hover:not(:disabled) {
+  background: var(--dark-void-text-muted);
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .error {
+  color: #f87171;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .edit-page .error {
+  color: #f87171;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .conflict-banner {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.5);
+  border-radius: 0 !important;
+  color: var(--dark-void-text);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .versions-panel {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .versions-title,
+html.ui-theme-dark-void .dark-void-main .write-page .versions-item {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .btn-ghost {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .btn-ghost:hover {
+  color: var(--dark-void-text);
+}
+/* Rich text editor (Write view) – Dark Void */
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor {
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .editor-toolbar {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-btn,
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-select {
+  background: var(--dark-void-card);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-btn:hover,
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-btn.active {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--dark-void-text-muted);
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-select {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-divider {
+  background: var(--dark-void-border);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-loading {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .ProseMirror {
+  background: var(--dark-void-bg);
+  color: var(--dark-void-text);
+  border-color: var(--dark-void-border);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .ProseMirror p.is-editor-empty:first-child::before {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .edit-page > div {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+
 /* Dark Void: single collection page */
 html.ui-theme-dark-void .dark-void-main .collection-page {
   max-width: 640px;

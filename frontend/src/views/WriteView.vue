@@ -425,9 +425,10 @@ async function onRichEditorImageUpload(file: File) {
 </script>
 
 <style scoped>
-.write-page { padding: 0; }
-.write-page h1 { font-size: clamp(1.25rem, 4vw, 1.5rem); margin: 0 0 1rem; }
-.form { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+.write-page { padding: 0; max-width: 720px; margin: 0 auto; width: 100%; }
+.write-page h1 { font-size: clamp(1.25rem, 4vw, 1.5rem); margin: 0 0 1.25rem; font-weight: 700; }
+.form { display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
+.form-group:first-of-type { margin-bottom: 0.25rem; }
 .title-input { width: 100%; min-width: 0; font-size: clamp(1.125rem, 4vw, 1.5rem); padding: 0.5rem 0; border: none; border-bottom: 1px solid var(--gray-200); background: transparent; }
 .title-warning { font-size: 0.8125rem; color: var(--accent-burgundy, #6b2c3e); margin: 0.25rem 0 0; }
 .editor-toolbar { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
@@ -498,10 +499,10 @@ async function onRichEditorImageUpload(file: File) {
 .hidden { display: none; }
 .btn-sm { padding: 0.375rem 0.75rem; font-size: 0.875rem; }
 .saved-hint { font-size: 0.75rem; color: var(--gray-700); }
-.editor-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; min-height: 400px; }
-@media (max-width: 768px) { .editor-row { grid-template-columns: 1fr; min-height: 320px; } }
+.editor-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; min-height: 420px; }
+@media (max-width: 768px) { .editor-row { grid-template-columns: 1fr; min-height: 340px; } }
 .editor-pane { min-height: 0; min-width: 0; }
-.editor { width: 100%; height: 100%; min-height: 360px; padding: 0.75rem; border: 1px solid var(--gray-300); border-radius: var(--radius); font-family: inherit; resize: vertical; box-sizing: border-box; }
+.editor { width: 100%; height: 100%; min-height: 380px; padding: 1rem; border: 1px solid var(--gray-300); border-radius: var(--radius); font-family: inherit; resize: vertical; box-sizing: border-box; font-size: 0.9375rem; line-height: 1.6; }
 @media (max-width: 480px) {
   .editor-toolbar { gap: 0.5rem; }
   .editor { min-height: 280px; padding: 0.5rem; }
@@ -521,8 +522,8 @@ async function onRichEditorImageUpload(file: File) {
 .versions-item { display: flex; align-items: center; justify-content: space-between; padding: 0.35rem 0; font-size: 0.875rem; }
 .btn-ghost { background: transparent; border: none; color: var(--gray-700); cursor: pointer; }
 .upload-hint { font-size: 0.8125rem; color: var(--gray-600); margin: -0.5rem 0 0; }
-.actions { display: flex; gap: 0.75rem; margin-top: 0.5rem; }
-.btn { padding: 0.5rem 1rem; border-radius: var(--radius); border: none; cursor: pointer; font-size: 0.9375rem; }
+.actions { display: flex; gap: 0.75rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-light, #e5e7eb); align-items: center; flex-wrap: wrap; }
+.btn { padding: 0.5rem 1rem; border-radius: var(--radius); border: none; cursor: pointer; font-size: 0.9375rem; font-weight: 600; }
 .btn-primary { background: var(--primary); color: #fff; }
 .btn-publish { display: inline-flex; align-items: center; gap: 0.5rem; }
 .btn-publish:disabled { opacity: 0.8; cursor: not-allowed; }
