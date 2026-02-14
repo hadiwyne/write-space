@@ -333,7 +333,7 @@ onUnmounted(() => {
   overflow-y: auto;
   padding: 1.5rem clamp(1rem, 4vw, 2rem);
   padding-top: 1rem;
-  padding-bottom: 3rem;
+  padding-bottom: 4.5rem; /* space above fixed status bar so last items don’t sit under it */
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -627,6 +627,7 @@ onUnmounted(() => {
   .dark-void-main {
     margin-left: 3.5rem;
     padding: 1rem;
+    padding-bottom: 4.5rem; /* keep space above fixed status bar on mobile */
   }
   .dark-void-tagline {
     font-size: 0.65rem;
