@@ -226,7 +226,7 @@ const posts = ref<Record<string, unknown>[]>([])
 const reposts = ref<Record<string, unknown>[]>([])
 const likedPosts = ref<{ id: string; [key: string]: unknown }[]>([])
 const likedLoading = ref(false)
-const anonymousPosts = ref<Record<string, unknown>[]>([])
+const anonymousPosts = ref<{ id: string; [key: string]: unknown }[]>([])
 const anonymousLoading = ref(false)
 const profileTab = ref<'posts' | 'liked' | 'anonymous'>('posts')
 const profileTabsRef = ref<HTMLElement | null>(null)
@@ -475,7 +475,7 @@ async function onConfirmConfirm() {
     }
     const wasFromAnonymous = profileTab.value === 'anonymous'
     if (wasFromAnonymous) {
-      anonymousPosts.value = (anonymousPosts.value as { id: string }[]).filter((p) => p.id !== postId)
+      anonymousPosts.value = anonymousPosts.value.filter((p) => p.id !== postId)
       if (profile.value?._count?.anonymousPosts != null)
         profile.value._count = { ...profile.value._count, anonymousPosts: Math.max(0, profile.value._count.anonymousPosts - 1) }
     } else {

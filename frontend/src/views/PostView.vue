@@ -155,6 +155,8 @@ const post = ref<{
   tags?: string[]
   publishedAt: string | null
   author?: { id?: string; username?: string; displayName?: string | null }
+  isAnonymous?: boolean
+  anonymousAlias?: string | null
   _count?: { likes: number; comments: number }
 } | null>(null)
 
