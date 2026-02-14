@@ -1,7 +1,11 @@
 <template>
   <article class="card" :style="{ animationDelay }">
     <header class="card-header">
-      <router-link :to="'/u/' + (post.author && post.author.username)" class="card-author">
+      <router-link
+        v-if="!post.isAnonymous && post.author?.username"
+        :to="'/u/' + post.author.username"
+        class="card-author"
+      >
         <AvatarFrame :frame="authorFrame(post.author)" :shape-class="avatarShapeClass(post.author?.avatarShape)" :badge-url="authorBadgeUrl(post.author)">
           <div class="author-avatar" :class="avatarShapeClass(post.author?.avatarShape)">
             <img v-if="post.author && post.author.avatarUrl" :src="avatarSrc(post.author.avatarUrl, post.author.id === auth.user?.id ? auth.avatarVersion : undefined)" alt="" class="avatar-img" />
@@ -17,6 +21,20 @@
           </div>
         </div>
       </router-link>
+      <div v-else class="card-author card-author-anonymous">
+        <div class="author-avatar author-avatar-anonymous">
+          <img v-if="anonAvatarUrl" :src="anonAvatarUrl" alt="" class="avatar-img" />
+          <span v-else class="avatar-initial">{{ (post.anonymousAlias || '?')[0] }}</span>
+        </div>
+        <div class="author-info">
+          <span class="author-name">{{ post.anonymousAlias || 'Anonymous' }}</span>
+          <div class="author-meta">
+            <span class="meta-date">{{ formatDate(post.publishedAt || post.createdAt) }}</span>
+            <span class="meta-dot">·</span>
+            <span class="meta-read">{{ readTime }} min read</span>
+          </div>
+        </div>
+      </div>
       <button type="button" class="card-menu" aria-label="Post menu" @click.stop>
         <span aria-hidden="true">⋯</span>
       </button>
@@ -138,6 +156,17 @@ import { useLikedPostsStore } from '@/stores/likedPosts'
 const auth = useAuthStore()
 const likedStore = useLikedPostsStore()
 
+const anonAvatarModules = import.meta.glob<{ default: string }>('@/assets/anonavatars/*', { eager: true })
+const anonAvatarUrls = Object.values(anonAvatarModules).map((m) => m.default).filter(Boolean)
+
+function getAnonAvatarUrl(postId: string): string {
+  if (anonAvatarUrls.length === 0) return ''
+  let hash = 0
+  for (let i = 0; i < postId.length; i++) hash = (hash << 5) - hash + postId.charCodeAt(i)
+  const index = Math.abs(hash) % anonAvatarUrls.length
+  return anonAvatarUrls[index]
+}
+
 function authorFrame(author: unknown): AvatarFrameType | null {
   return ((author as { avatarFrame?: AvatarFrameType } | null)?.avatarFrame ?? null) as AvatarFrameType | null
 }
@@ -156,6 +185,11 @@ const props = defineProps({
   animationDelay: { type: String, default: '0s' },
 })
 const canLike = computed(() => props.showLike && !!auth.token)
+
+const anonAvatarUrl = computed(() => {
+  if (!props.post?.isAnonymous || !props.post?.id) return ''
+  return getAnonAvatarUrl(props.post.id)
+})
 
 const likedFromApi = computed(() =>
   !!(props.post.likes && Array.isArray(props.post.likes) && props.post.likes.length > 0)
@@ -312,6 +346,8 @@ function formatDate(s: string | undefined) {
   color: inherit;
 }
 .card-author:hover { text-decoration: none; color: inherit; }
+.card-author.card-author-anonymous { cursor: default; pointer-events: none; }
+.card-author.card-author-anonymous .card-body { pointer-events: auto; }
 .author-avatar {
   width: 52px;
   height: 52px;

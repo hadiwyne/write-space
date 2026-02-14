@@ -160,13 +160,26 @@ export class UsersService {
         authorId: user.id,
         isPublished: true,
         archivedAt: null,
+        isAnonymous: false,
       },
     });
+    const isOwnProfile = viewerId === user.id;
+    const anonymousPostsCount = isOwnProfile
+      ? await this.prisma.post.count({
+          where: {
+            authorId: user.id,
+            isPublished: true,
+            archivedAt: null,
+            isAnonymous: true,
+          },
+        })
+      : 0;
     return {
       ...user,
       _count: {
         ...user._count,
         posts: postsCount,
+        ...(isOwnProfile ? { anonymousPosts: anonymousPostsCount } : {}),
       },
     };
   }

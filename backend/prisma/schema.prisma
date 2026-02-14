@@ -76,6 +76,8 @@ model Post {
   linkPreview   Json?     @map("link_preview")
   isPublished   Boolean   @default(false) @map("is_published")
   visibility    PostVisibility @default(PUBLIC) @map("visibility")
+  isAnonymous   Boolean   @default(false) @map("is_anonymous")
+  anonymousAlias String?  @map("anonymous_alias")
 
   likes         Like[]
   comments      Comment[]

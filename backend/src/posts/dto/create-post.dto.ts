@@ -30,4 +30,8 @@ export class CreatePostDto {
   @IsOptional()
   @IsEnum(PostVisibility)
   visibility?: PostVisibility;
+
+  @IsOptional()
+  @IsBoolean()
+  isAnonymous?: boolean;
 }

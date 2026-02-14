@@ -118,9 +118,13 @@
       </div>
       <div class="actions">
         <button type="button" class="btn btn-outline" @click="() => saveDraft()" :disabled="savingDraft">Save draft</button>
-        <button type="submit" class="btn btn-primary btn-publish" :disabled="loading">
-          <i v-if="loading" class="pi pi-spin pi-spinner publish-spinner" aria-hidden="true"></i>
-          <span>{{ loading ? 'Publishing' : 'Publish' }}</span>
+        <button type="submit" class="btn btn-primary btn-publish" :disabled="publishLoading || publishAnonymousLoading">
+          <i v-if="publishLoading" class="pi pi-spin pi-spinner publish-spinner" aria-hidden="true"></i>
+          <span>{{ publishLoading ? 'Publishing' : 'Publish' }}</span>
+        </button>
+        <button type="button" class="btn btn-outline btn-publish-anonymous" :disabled="publishLoading || publishAnonymousLoading" @click="publishAnonymously">
+          <i v-if="publishAnonymousLoading" class="pi pi-spin pi-spinner publish-spinner" aria-hidden="true"></i>
+          <span>{{ publishAnonymousLoading ? 'Publishing' : 'Publish anonymously' }}</span>
         </button>
       </div>
     </form>
@@ -205,7 +209,8 @@ function onWritePageDocumentClick(e: MouseEvent) {
   if (visibilityDropdownRef.value && !visibilityDropdownRef.value.contains(target)) visibilityDropdownOpen.value = false
 }
 const error = ref('')
-const loading = ref(false)
+const publishLoading = ref(false)
+const publishAnonymousLoading = ref(false)
 const savingDraft = ref(false)
 const lastSavedAt = ref('')
 const conflictDraft = ref<{ id: string; version: number; content: string; title: string | null; contentType: string } | null>(null)
@@ -291,9 +296,10 @@ function useServer() {
   conflictDraft.value = null
 }
 
-async function publish() {
+async function doPublish(anonymous: boolean) {
   error.value = ''
-  loading.value = true
+  if (anonymous) publishAnonymousLoading.value = true
+  else publishLoading.value = true
   try {
     const { data } = await api.post('/posts', {
       title: title.value,
@@ -302,13 +308,23 @@ async function publish() {
       tags: tags(),
       isPublished: true,
       visibility: visibility.value,
+      isAnonymous: anonymous,
     })
     router.push(`/posts/${data.id}`)
   } catch (e: unknown) {
     error.value = (e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to publish'
   } finally {
-    loading.value = false
+    publishLoading.value = false
+    publishAnonymousLoading.value = false
   }
+}
+
+function publish() {
+  doPublish(false)
+}
+
+function publishAnonymously() {
+  doPublish(true)
 }
 
 async function onWordUpload(e: Event) {
@@ -525,8 +541,10 @@ async function onRichEditorImageUpload(file: File) {
 .actions { display: flex; gap: 0.75rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-light, #e5e7eb); align-items: center; flex-wrap: wrap; }
 .btn { padding: 0.5rem 1rem; border-radius: var(--radius); border: none; cursor: pointer; font-size: 0.9375rem; font-weight: 600; }
 .btn-primary { background: var(--primary); color: #fff; }
-.btn-publish { display: inline-flex; align-items: center; gap: 0.5rem; }
-.btn-publish:disabled { opacity: 0.8; cursor: not-allowed; }
-.publish-spinner { font-size: 1.125rem; }
+.btn-publish,
+.btn-publish-anonymous { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; }
+.btn-publish:disabled,
+.btn-publish-anonymous:disabled { opacity: 0.8; cursor: not-allowed; }
+.publish-spinner { font-size: 1.125rem; flex-shrink: 0; }
 .btn-outline { background: transparent; border: 1px solid var(--gray-300); color: var(--gray-700); }
 </style>

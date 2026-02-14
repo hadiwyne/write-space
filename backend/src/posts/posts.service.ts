@@ -11,6 +11,30 @@ import { extractFirstUrl, fetchLinkPreview } from './link-preview.service';
 
 export const MAX_IMAGES_PER_POST = 5;
 
+const ANONYMOUS_ALIASES = [
+  'Ganja Grin',
+  'Giggly Ghost Pepper',
+  'Noodle Ninja',
+  'Bubblegum Bandit',
+  'Whimsical Walrus',
+  'Pickle Pirate',
+  'Sassy Sock Puppet',
+  'Pickle Rick',
+  'Fizzy Flamingo',
+  'Mischief Mushroom',
+  'Sherlock Shroom',
+  'Quixote Quesadilla',
+  'Trimalchio Taco',
+  'Lucius Lollipop',
+  'Hannah Montana',
+  'I\'m Anonymous For Some Reason',
+  'Erotic Neurotic',
+] as const;
+
+function pickAnonymousAlias(): string {
+  return ANONYMOUS_ALIASES[Math.floor(Math.random() * ANONYMOUS_ALIASES.length)];
+}
+
 /** Count image references in post content (markdown ![alt](url) or HTML <img). */
 function countImagesInContent(content: string, contentType: ContentType): number {
   if (!content) return 0;
@@ -48,6 +72,8 @@ export class PostsService {
       throw new BadRequestException(`A post can have at most ${MAX_IMAGES_PER_POST} images. This post has ${count}.`);
     }
     const renderedHTML = this.renderContent(dto.content, dto.contentType);
+    const isAnonymous = !!dto.isAnonymous;
+    const anonymousAlias = isAnonymous ? pickAnonymousAlias() : null;
     const post = await this.prisma.post.create({
       data: {
         authorId,
@@ -60,6 +86,8 @@ export class PostsService {
         isPublished: dto.isPublished ?? false,
         publishedAt: dto.isPublished ? new Date() : null,
         visibility: dto.visibility ?? 'PUBLIC',
+        isAnonymous,
+        anonymousAlias,
       },
       include: { author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } } },
     });
@@ -201,7 +229,13 @@ export class PostsService {
     return { archived: false };
   }
 
-  async findByAuthor(username: string, limit = 20, offset = 0, viewerUserId?: string | null) {
+  async findByAuthor(
+    username: string,
+    limit = 20,
+    offset = 0,
+    viewerUserId?: string | null,
+    tab?: 'posts' | 'anonymous',
+  ) {
     const user = await this.prisma.user.findUnique({ where: { username } });
     if (!user) throw new NotFoundException('User not found');
     const isOwnProfile = viewerUserId === user.id;
@@ -214,8 +248,14 @@ export class PostsService {
       isOwnProfile || isFollower
         ? {}
         : { visibility: 'PUBLIC' as const };
+    const anonymousFilter =
+      tab === 'anonymous'
+        ? isOwnProfile
+          ? { isAnonymous: true as const }
+          : { isAnonymous: false as const }
+        : { isAnonymous: false as const };
     return this.prisma.post.findMany({
-      where: { authorId: user.id, isPublished: true, archivedAt: null, ...visibilityFilter },
+      where: { authorId: user.id, isPublished: true, archivedAt: null, ...visibilityFilter, ...anonymousFilter },
       orderBy: { publishedAt: 'desc' },
       take: limit,
       skip: offset,
@@ -257,8 +297,8 @@ export class PostsService {
     return { format: 'html', filename, buffer };
   }
 
-  private exportHtml(post: { title: string; renderedHTML: string; author?: { displayName?: string | null; username?: string } }): string {
-    const author = post.author?.displayName || post.author?.username || 'Unknown';
+  private exportHtml(post: { title: string; renderedHTML: string; author?: { displayName?: string | null; username?: string }; anonymousAlias?: string | null }): string {
+    const author = (post as { anonymousAlias?: string | null }).anonymousAlias ?? post.author?.displayName ?? post.author?.username ?? 'Unknown';
     return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${this.escapeHtml(post.title)}</title></head><body><article><h1>${this.escapeHtml(post.title)}</h1><p><small>By ${this.escapeHtml(author)}</small></p><div>${post.renderedHTML}</div></article></body></html>`;
   }
 
