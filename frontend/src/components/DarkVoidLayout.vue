@@ -261,12 +261,16 @@ onUnmounted(() => {
   justify-content: center;
   color: var(--dark-void-text);
   text-decoration: none;
-  border-radius: 50%;
+  border-radius: 0;
   transition: background 0.2s;
 }
 .dark-void-nav-btn:hover,
 .dark-void-nav-btn.router-link-active {
   background: rgba(255, 255, 255, 0.1);
+}
+.dark-void-nav-btn:focus-visible {
+  outline: 2px solid var(--dark-void-text-muted);
+  outline-offset: 2px;
 }
 .dark-void-main {
   grid-area: main;
