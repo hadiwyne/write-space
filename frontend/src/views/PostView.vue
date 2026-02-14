@@ -5,9 +5,10 @@
       <article class="post">
         <h1 class="post-title">{{ post.title }}</h1>
         <div class="post-meta">
-          <router-link :to="`/u/${post.author?.username}`" class="author">
+          <router-link v-if="!post.isAnonymous && post.author?.username" :to="`/u/${post.author.username}`" class="author">
             {{ post.author?.displayName || post.author?.username }}
           </router-link>
+          <span v-else class="author author-anonymous">{{ post.anonymousAlias || 'Anonymous' }}</span>
           <span class="date">{{ formatDate(post.publishedAt) }}</span>
         </div>
         <div class="post-content" v-html="post.renderedHTML"></div>
@@ -419,6 +420,8 @@ watch(() => route.params.id, load)
 .post-meta { display: flex; gap: 1rem; margin-bottom: 1.5rem; font-size: 0.875rem; color: var(--text-tertiary); }
 .post-meta .author { color: var(--accent-primary); font-weight: 600; text-decoration: none; }
 .post-meta .author:hover { color: var(--accent-burgundy); text-decoration: underline; }
+.post-meta .author.author-anonymous { cursor: default; color: var(--text-secondary); }
+.post-meta .author.author-anonymous:hover { text-decoration: none; color: var(--text-secondary); }
 .post-content { line-height: 1.75; color: var(--text-secondary); }
 .post-content :deep(img) { max-width: 100%; height: auto; display: block; }
 .post-tags { margin-top: 1.25rem; display: flex; gap: 0.625rem; flex-wrap: wrap; }

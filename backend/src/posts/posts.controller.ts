@@ -91,11 +91,13 @@ export class PostsController {
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
     @Query('author') author?: string,
+    @Query('tab') tab?: string,
   ) {
     const userId = user?.id ?? null;
     const isSuperadmin = !!user?.isSuperadmin;
     if (author) {
-      return this.postsService.findByAuthor(author, Number(limit) || 20, Number(offset) || 0, userId);
+      const tabMode = tab === 'anonymous' ? ('anonymous' as const) : undefined;
+      return this.postsService.findByAuthor(author, Number(limit) || 20, Number(offset) || 0, userId, tabMode);
     }
     return this.postsService.findAll(Number(limit) || 20, Number(offset) || 0, userId, isSuperadmin);
   }

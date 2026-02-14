@@ -1,7 +1,11 @@
 <template>
   <article class="card" :style="{ animationDelay }">
     <header class="card-header">
-      <router-link :to="'/u/' + (post.author && post.author.username)" class="card-author">
+      <router-link
+        v-if="!post.isAnonymous && post.author?.username"
+        :to="'/u/' + post.author.username"
+        class="card-author"
+      >
         <AvatarFrame :frame="authorFrame(post.author)" :shape-class="avatarShapeClass(post.author?.avatarShape)" :badge-url="authorBadgeUrl(post.author)">
           <div class="author-avatar" :class="avatarShapeClass(post.author?.avatarShape)">
             <img v-if="post.author && post.author.avatarUrl" :src="avatarSrc(post.author.avatarUrl, post.author.id === auth.user?.id ? auth.avatarVersion : undefined)" alt="" class="avatar-img" />
@@ -17,6 +21,19 @@
           </div>
         </div>
       </router-link>
+      <div v-else class="card-author card-author-anonymous">
+        <div class="author-avatar author-avatar-anonymous">
+          <span class="avatar-initial">{{ (post.anonymousAlias || '?')[0] }}</span>
+        </div>
+        <div class="author-info">
+          <span class="author-name">{{ post.anonymousAlias || 'Anonymous' }}</span>
+          <div class="author-meta">
+            <span class="meta-date">{{ formatDate(post.publishedAt || post.createdAt) }}</span>
+            <span class="meta-dot">·</span>
+            <span class="meta-read">{{ readTime }} min read</span>
+          </div>
+        </div>
+      </div>
       <button type="button" class="card-menu" aria-label="Post menu" @click.stop>
         <span aria-hidden="true">⋯</span>
       </button>
@@ -312,6 +329,8 @@ function formatDate(s: string | undefined) {
   color: inherit;
 }
 .card-author:hover { text-decoration: none; color: inherit; }
+.card-author.card-author-anonymous { cursor: default; pointer-events: none; }
+.card-author.card-author-anonymous .card-body { pointer-events: auto; }
 .author-avatar {
   width: 52px;
   height: 52px;

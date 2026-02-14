@@ -122,6 +122,9 @@
           <i v-if="loading" class="pi pi-spin pi-spinner publish-spinner" aria-hidden="true"></i>
           <span>{{ loading ? 'Publishing' : 'Publish' }}</span>
         </button>
+        <button type="button" class="btn btn-outline btn-publish-anonymous" :disabled="loading" @click="publishAnonymously">
+          <span>{{ loading && publishAnonymous ? 'Publishing' : 'Publish anonymously' }}</span>
+        </button>
       </div>
     </form>
   </div>
@@ -291,9 +294,12 @@ function useServer() {
   conflictDraft.value = null
 }
 
-async function publish() {
+const publishAnonymous = ref(false)
+
+async function doPublish(anonymous: boolean) {
   error.value = ''
   loading.value = true
+  publishAnonymous.value = anonymous
   try {
     const { data } = await api.post('/posts', {
       title: title.value,
@@ -302,13 +308,23 @@ async function publish() {
       tags: tags(),
       isPublished: true,
       visibility: visibility.value,
+      isAnonymous: anonymous,
     })
     router.push(`/posts/${data.id}`)
   } catch (e: unknown) {
     error.value = (e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to publish'
   } finally {
     loading.value = false
+    publishAnonymous.value = false
   }
+}
+
+function publish() {
+  doPublish(false)
+}
+
+function publishAnonymously() {
+  doPublish(true)
 }
 
 async function onWordUpload(e: Event) {

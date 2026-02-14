@@ -65,6 +65,15 @@
           >
             Liked {{ profile._count?.likes ?? 0 }}
           </button>
+          <button
+            v-if="isOwnProfile"
+            type="button"
+            class="profile-tab"
+            :class="{ active: profileTab === 'anonymous' }"
+            @click="switchToAnonymous"
+          >
+            Anonymous {{ profile._count?.anonymousPosts ?? 0 }}
+          </button>
         </div>
         <div v-if="profileTab === 'posts'">
           <div v-if="combinedFeed.length === 0" class="empty">No posts yet.</div>
@@ -93,6 +102,22 @@
                 @like="handleLike"
               />
             </div>
+          </div>
+        </div>
+        <div v-else-if="profileTab === 'anonymous'">
+          <div v-if="anonymousLoading" class="empty">Loading…</div>
+          <div v-else-if="anonymousPosts.length === 0" class="empty">No anonymous posts yet.</div>
+          <div v-else class="post-list">
+            <PostCard
+              v-for="(p, i) in anonymousPosts"
+              :key="p.id"
+              :post="p"
+              :show-actions="!!isOwnProfile || !!auth.user?.isSuperadmin"
+              :style="{ animationDelay: `${0.05 * i}s` }"
+              @archive="archivePostFromList"
+              @delete="deletePostFromList"
+              @like="handleLike"
+            />
           </div>
         </div>
         <div v-else>
@@ -195,13 +220,15 @@ const profile = ref<{
   avatarUrl: string | null
   avatarShape?: string | null
   profileHTML?: string | null
-  _count?: { posts: number; followers: number; following: number; reposts?: number; likes?: number }
+  _count?: { posts: number; followers: number; following: number; reposts?: number; likes?: number; anonymousPosts?: number }
 } | null>(null)
 const posts = ref<Record<string, unknown>[]>([])
 const reposts = ref<Record<string, unknown>[]>([])
 const likedPosts = ref<{ id: string; [key: string]: unknown }[]>([])
 const likedLoading = ref(false)
-const profileTab = ref<'posts' | 'liked'>('posts')
+const anonymousPosts = ref<Record<string, unknown>[]>([])
+const anonymousLoading = ref(false)
+const profileTab = ref<'posts' | 'liked' | 'anonymous'>('posts')
 const profileTabsRef = ref<HTMLElement | null>(null)
 const tabIndicatorStyle = ref<{ left: string; width: string }>({ left: '0px', width: '0px' })
 
@@ -226,7 +253,7 @@ function updateProfileTabIndicator() {
     const container = profileTabsRef.value
     if (!container) return
     const tabs = container.querySelectorAll<HTMLButtonElement>('.profile-tab')
-    const index = profileTab.value === 'posts' ? 0 : 1
+    const index = profileTab.value === 'posts' ? 0 : profileTab.value === 'liked' ? 1 : 2
     const active = tabs[index]
     if (!active) return
     tabIndicatorStyle.value = {
@@ -293,6 +320,7 @@ async function load() {
   isFollowing.value = false
   reposts.value = []
   likedPosts.value = []
+  anonymousPosts.value = []
   try {
     const [profileRes, postsRes, repostsRes] = await Promise.all([
       api.get(`/users/${username}`),
@@ -363,6 +391,21 @@ async function switchToLiked() {
   }
 }
 
+async function switchToAnonymous() {
+  profileTab.value = 'anonymous'
+  const username = profile.value?.username
+  if (!username || anonymousPosts.value.length > 0) return
+  anonymousLoading.value = true
+  try {
+    const { data } = await api.get(`/posts?author=${encodeURIComponent(username)}&tab=anonymous`)
+    anonymousPosts.value = Array.isArray(data) ? data : []
+  } catch {
+    anonymousPosts.value = []
+  } finally {
+    anonymousLoading.value = false
+  }
+}
+
 async function openModal(mode: 'followers' | 'following') {
   const username = profile.value?.username
   if (!username) return
@@ -430,9 +473,16 @@ async function onConfirmConfirm() {
     } else {
       await api.delete(`/posts/${postId}`)
     }
-    posts.value = (posts.value as { id: string }[]).filter((p) => p.id !== postId)
-    if (profile.value?._count?.posts != null)
-      profile.value._count = { ...profile.value._count, posts: Math.max(0, profile.value._count.posts - 1) }
+    const wasFromAnonymous = profileTab.value === 'anonymous'
+    if (wasFromAnonymous) {
+      anonymousPosts.value = (anonymousPosts.value as { id: string }[]).filter((p) => p.id !== postId)
+      if (profile.value?._count?.anonymousPosts != null)
+        profile.value._count = { ...profile.value._count, anonymousPosts: Math.max(0, profile.value._count.anonymousPosts - 1) }
+    } else {
+      posts.value = (posts.value as { id: string }[]).filter((p) => p.id !== postId)
+      if (profile.value?._count?.posts != null)
+        profile.value._count = { ...profile.value._count, posts: Math.max(0, profile.value._count.posts - 1) }
+    }
   } catch {
     // ignore
   }
