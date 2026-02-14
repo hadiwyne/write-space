@@ -49,7 +49,7 @@
       </nav>
     </aside>
 
-    <main class="dark-void-main">
+    <main ref="mainRef" class="dark-void-main" @scroll="onMainScroll">
       <p v-if="auth.isLoggedIn" class="dark-void-tagline">WHERE THOUGHTS GO TO BECOME DIGITAL GHOSTS.</p>
       <RouterView />
     </main>
@@ -145,7 +145,7 @@
       </div>
     </aside>
 
-    <footer class="dark-void-status-bar" aria-live="polite">
+    <footer class="dark-void-status-bar" :class="{ 'status-bar-hidden': statusBarHidden }" aria-live="polite">
       <span class="dark-void-status-left">{{ statusLeft }}</span>
       <span class="dark-void-status-online">ONLINE NOW: {{ onlineCount.toLocaleString() }} SOULS</span>
       <span class="dark-void-status-right">{{ statusRight }}</span>
@@ -170,6 +170,10 @@ const onlineCount = ref(0)
 const dropdownOpen = ref(false)
 const sidebarOpen = ref(false)
 const leftNavOpen = ref(false)
+const mainRef = ref<HTMLElement | null>(null)
+const statusBarHidden = ref(false)
+const lastScrollTop = ref(0)
+const SCROLL_THRESHOLD = 10
 const avatarWrapRef = ref<HTMLElement | null>(null)
 const trendingTags = ref<{ tag: string; count: number }[]>([])
 
@@ -214,6 +218,21 @@ function logout() {
 function onDocumentClick(e: MouseEvent) {
   const target = e.target as Node
   if (avatarWrapRef.value && !avatarWrapRef.value.contains(target)) dropdownOpen.value = false
+}
+
+function onMainScroll() {
+  const el = mainRef.value
+  if (!el || window.innerWidth > 1024) return
+  const st = el.scrollTop
+  if (st <= 0) {
+    statusBarHidden.value = false
+    lastScrollTop.value = st
+    return
+  }
+  const delta = st - lastScrollTop.value
+  if (Math.abs(delta) < SCROLL_THRESHOLD) return
+  statusBarHidden.value = delta > 0
+  lastScrollTop.value = st
 }
 
 function onSidebarSearch() {
@@ -600,6 +619,7 @@ onUnmounted(() => {
   gap: 1rem;
   flex-wrap: wrap;
   min-height: 2.5rem;
+  transition: transform 0.25s ease-out;
 }
 .dark-void-status-left {
   flex: 0 1 auto;
@@ -667,6 +687,9 @@ onUnmounted(() => {
 }
 
 @media (max-width: 1024px) {
+  .dark-void-status-bar.status-bar-hidden {
+    transform: translateY(100%);
+  }
   .dark-void-nav-trigger {
     display: flex;
   }
