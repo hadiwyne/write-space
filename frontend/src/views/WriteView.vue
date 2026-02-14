@@ -541,8 +541,10 @@ async function onRichEditorImageUpload(file: File) {
 .actions { display: flex; gap: 0.75rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-light, #e5e7eb); align-items: center; flex-wrap: wrap; }
 .btn { padding: 0.5rem 1rem; border-radius: var(--radius); border: none; cursor: pointer; font-size: 0.9375rem; font-weight: 600; }
 .btn-primary { background: var(--primary); color: #fff; }
-.btn-publish { display: inline-flex; align-items: center; gap: 0.5rem; }
-.btn-publish:disabled { opacity: 0.8; cursor: not-allowed; }
-.publish-spinner { font-size: 1.125rem; }
+.btn-publish,
+.btn-publish-anonymous { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; }
+.btn-publish:disabled,
+.btn-publish-anonymous:disabled { opacity: 0.8; cursor: not-allowed; }
+.publish-spinner { font-size: 1.125rem; flex-shrink: 0; }
 .btn-outline { background: transparent; border: 1px solid var(--gray-300); color: var(--gray-700); }
 </style>
