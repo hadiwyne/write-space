@@ -73,8 +73,9 @@
       </div>
     </section>
 
-    <div v-if="loading" class="feed-loading">Loading…</div>
-    <div v-else-if="posts.length === 0" class="feed-empty">
+    <div class="feed-content">
+      <div v-if="loading" class="feed-loading">Loading…</div>
+      <div v-else-if="posts.length === 0" class="feed-empty">
       <template v-if="sort === 'friends' && !auth.token">
         <router-link to="/login">Log in</router-link> to see posts from people you follow.
       </template>
@@ -85,7 +86,7 @@
         No posts yet. <router-link to="/write">Write</router-link> one.
       </template>
     </div>
-    <div v-else class="post-list" :class="{ 'post-list--grid': viewMode === 'grid' }">
+      <div v-else class="post-list" :class="{ 'post-list--grid': viewMode === 'grid' }">
       <PostCard
         v-for="(p, i) in posts"
         :key="p.id"
@@ -99,6 +100,7 @@
         @archive="handleArchive"
         @delete="handleDelete"
       />
+      </div>
     </div>
   </div>
 </template>

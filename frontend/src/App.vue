@@ -419,6 +419,108 @@ html.ui-theme-dark-void .card-link-preview-body .card-link-preview-site {
   color: var(--dark-void-text-muted);
 }
 
+/* Dark Void: feed – only post list centered; filter bar full width with theme typography */
+html.ui-theme-dark-void .dark-void-main .feed .feed-content {
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+}
+html.ui-theme-dark-void .dark-void-main .feed .feed-hero h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: var(--dark-void-text);
+}
+/* Dark Void: filter bar – slightly wider than post card, sharp corners everywhere */
+html.ui-theme-dark-void .dark-void-main .feed .feed-filters {
+  font-family: 'Space Grotesk', sans-serif;
+  max-width: 672px;
+  width: 100%;
+  margin: 0 auto 0.75rem;
+  padding: 0.25rem;
+  border-radius: 0 !important;
+  border: 1px solid var(--dark-void-border);
+  background: var(--dark-void-card);
+  box-shadow: none;
+}
+html.ui-theme-dark-void .dark-void-main .feed .filter-tabs {
+  background: transparent;
+  border: none;
+  padding: 0.2rem;
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .feed .filter-tab {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--dark-void-text-muted);
+  padding: 0.4rem 0.875rem;
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .feed .filter-tab:hover:not(.active) {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .feed .filter-tab.active {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .feed .filter-tab .pi {
+  font-size: 0.875rem;
+}
+html.ui-theme-dark-void .dark-void-main .feed .filter-tabs-indicator {
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: none;
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .feed .filter-tag-and-view {
+  border-radius: 0;
+}
+html.ui-theme-dark-void .dark-void-main .feed .filter-tag .tag-input {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.8125rem;
+  background: var(--dark-void-bg);
+  border: 1px solid var(--dark-void-border);
+  color: var(--dark-void-text);
+  padding: 0.4rem 0.6rem;
+  min-width: 8rem;
+  max-width: 14rem;
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .feed .filter-tag .tag-input::placeholder {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .feed .tag-btn {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  padding: 0.4rem 0.75rem;
+  background: var(--dark-void-text);
+  border: 1px solid var(--dark-void-text);
+  color: var(--dark-void-bg);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .feed .tag-btn:hover {
+  background: var(--dark-void-text-muted);
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .feed .view-btn {
+  font-family: 'Space Grotesk', sans-serif;
+  border: 1px solid var(--dark-void-border);
+  background: var(--dark-void-card);
+  color: var(--dark-void-text-muted);
+  width: 36px;
+  height: 36px;
+  border-radius: 0 !important;
+  font-size: 1rem;
+}
+html.ui-theme-dark-void .dark-void-main .feed .view-btn:hover:not(.active) {
+  border-color: var(--dark-void-text-muted);
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .feed .view-btn.active {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--dark-void-text-muted);
+  color: var(--dark-void-text);
+}
+
 /* Dark Void: FAB – right edge of feed (left of sidebar), above status bar */
 html.ui-theme-dark-void .fab--dark-void.fab,
 html.ui-theme-dark-void .fab.fab--dark-void {
