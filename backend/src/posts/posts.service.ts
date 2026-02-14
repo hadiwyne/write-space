@@ -55,13 +55,13 @@ export class PostsService {
         content: dto.content,
         contentType: dto.contentType,
         renderedHTML,
-        tags: dto.tags ?? [],
+        tags: (dto.tags ?? []).map((t) => t.trim().toLowerCase()).filter(Boolean),
         imageUrls: dto.imageUrls ?? [],
         isPublished: dto.isPublished ?? false,
         publishedAt: dto.isPublished ? new Date() : null,
         visibility: dto.visibility ?? 'PUBLIC',
       },
-      include: { author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true } } },
+      include: { author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } } },
     });
     this.refreshLinkPreview(post.id, dto.content).catch(() => {});
     return post;
@@ -85,7 +85,7 @@ export class PostsService {
       take: limit,
       skip: offset,
       include: {
-        author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true } },
+        author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
         _count: { select: { likes: true, comments: true, reposts: true } },
         ...(userId ? { likes: { where: { userId }, take: 1, select: { id: true } } } : {}),
       },
@@ -96,7 +96,7 @@ export class PostsService {
     const post = await this.prisma.post.findUnique({
       where: { id },
       include: {
-        author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true } },
+        author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
         _count: { select: { likes: true, comments: true, reposts: true } },
       },
     });
@@ -144,14 +144,14 @@ export class PostsService {
         ...(dto.content != null && { content: dto.content }),
         ...(dto.contentType != null && { contentType: dto.contentType }),
         ...(renderedHTML != null && { renderedHTML }),
-        ...(dto.tags != null && { tags: dto.tags }),
+        ...(dto.tags != null && { tags: dto.tags.map((t) => t.trim().toLowerCase()).filter(Boolean) }),
         ...(dto.isPublished != null && {
           isPublished: dto.isPublished,
           publishedAt: dto.isPublished ? new Date() : post.publishedAt,
         }),
         ...(dto.visibility != null && { visibility: dto.visibility }),
       },
-      include: { author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true } } },
+      include: { author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } } },
     });
     if (dto.content != null) this.refreshLinkPreview(updated.id, dto.content).catch(() => {});
     return updated;
@@ -220,7 +220,7 @@ export class PostsService {
       take: limit,
       skip: offset,
       include: {
-        author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true } },
+        author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
         _count: { select: { likes: true, comments: true, reposts: true } },
         ...(viewerUserId ? { likes: { where: { userId: viewerUserId }, take: 1, select: { id: true } } } : {}),
       },
@@ -234,7 +234,7 @@ export class PostsService {
       take: limit,
       skip: offset,
       include: {
-        author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true } },
+        author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
         _count: { select: { likes: true, comments: true, reposts: true } },
       },
     });

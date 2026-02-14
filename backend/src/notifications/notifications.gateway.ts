@@ -8,6 +8,7 @@ import {
 import { Server } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { PresenceService } from '../presence/presence.service';
 
 interface SocketClient {
   id: string;
@@ -26,6 +27,7 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
   constructor(
     private jwt: JwtService,
     private config: ConfigService,
+    private presence: PresenceService,
   ) {}
 
   async handleConnection(client: SocketClient) {
@@ -44,6 +46,7 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
       const userId = payload?.sub;
       if (userId) {
         this.userIdBySocketId.set(client.id, userId);
+        this.presence.add(client.id, userId);
         client.join(`user:${userId}`);
       } else {
         client.disconnect();
@@ -54,6 +57,7 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
   }
 
   handleDisconnect(client: SocketClient) {
+    this.presence.remove(client.id);
     this.userIdBySocketId.delete(client.id);
   }
 

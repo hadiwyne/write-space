@@ -22,7 +22,7 @@
         <ul v-else class="user-list">
           <li v-for="u in users" :key="userKey(u)" class="user-item">
             <router-link :to="`/u/${userUsername(u)}`" class="user-link">
-              <AvatarFrame :frame="userAvatarFrame(u) ?? null" :shape-class="avatarShapeClass(userAvatarShape(u))">
+              <AvatarFrame :frame="userAvatarFrame(u) ?? null" :shape-class="avatarShapeClass(userAvatarShape(u))" :badge-url="userBadgeUrl(u)">
                 <img v-if="userAvatarUrl(u)" :src="avatarSrc(userAvatarUrl(u), u?.id === auth.user?.id ? auth.avatarVersion : undefined)" alt="" class="user-avatar" :class="avatarShapeClass(userAvatarShape(u))" />
                 <span v-else class="user-avatar-placeholder" :class="avatarShapeClass(userAvatarShape(u))">{{ (userDisplayName(u) || userUsername(u) || '?')[0] }}</span>
               </AvatarFrame>
@@ -84,6 +84,10 @@ function userAvatarShape(u: Record<string, unknown>): string | null | undefined 
 
 function userAvatarFrame(u: Record<string, unknown>) {
   return (u as { avatarFrame?: unknown }).avatarFrame
+}
+
+function userBadgeUrl(u: Record<string, unknown>): string | null {
+  return (u as { badgeUrl?: string }).badgeUrl ?? null
 }
 
 async function search() {

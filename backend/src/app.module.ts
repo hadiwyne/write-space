@@ -17,11 +17,13 @@ import { BookmarksModule } from './bookmarks/bookmarks.module';
 import { CollectionsModule } from './collections/collections.module';
 import { RepostsModule } from './reposts/reposts.module';
 import { ThemesModule } from './themes/themes.module';
+import { PresenceModule } from './presence/presence.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
+    PresenceModule,
     AuthModule,
     UsersModule,
     PostsModule,

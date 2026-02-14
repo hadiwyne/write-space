@@ -28,7 +28,7 @@ export class NotificationsService {
         commentId: data.commentId,
       },
       include: {
-        actor: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true } },
+        actor: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
         post: { select: { id: true, title: true } },
       },
     });
@@ -46,7 +46,7 @@ export class NotificationsService {
       take: limit,
       skip: offset,
       include: {
-        actor: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true } },
+        actor: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
         post: { select: { id: true, title: true } },
       },
     });

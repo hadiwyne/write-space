@@ -1,28 +1,80 @@
 <template>
   <div class="app">
-    <AppHeader v-if="!hideLayout" />
-    <main class="main" :class="{ 'main--full': hideLayout, 'main--with-header': !hideLayout }">
+    <template v-if="theme.isDarkVoid && !hideLayout">
+      <DarkVoidLayout />
+      <FloatingActionButton v-if="auth.isLoggedIn" class="fab--dark-void" />
+    </template>
+    <main v-else-if="theme.isDarkVoid && hideLayout" class="main main--full dark-void-standalone">
       <RouterView />
     </main>
-    <FloatingActionButton v-if="!hideLayout && auth.isLoggedIn" />
+    <template v-else>
+      <AppHeader v-if="!hideLayout" />
+      <main class="main" :class="{ 'main--full': hideLayout, 'main--with-header': !hideLayout }">
+        <RouterView />
+      </main>
+      <FloatingActionButton v-if="!hideLayout && auth.isLoggedIn" />
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppHeader from '@/components/AppHeader.vue'
 import FloatingActionButton from '@/components/FloatingActionButton.vue'
+import DarkVoidLayout from '@/components/DarkVoidLayout.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
+import knightCursorUrl from '@/assets/knight.png'
 
 const route = useRoute()
 const auth = useAuthStore()
 const theme = useThemeStore()
 const hideLayout = computed(() => route.meta.hideLayout === true)
 
+let cursorStyleEl: HTMLStyleElement | null = null
+function applyDarkVoidCursor(active: boolean) {
+  if (active) {
+    if (!cursorStyleEl) {
+      cursorStyleEl = document.createElement('style')
+      cursorStyleEl.setAttribute('data-dark-void-cursor', '')
+      cursorStyleEl.textContent = `html.ui-theme-dark-void, html.ui-theme-dark-void * { cursor: url("${knightCursorUrl}") 0 0, auto !important; }`
+      document.head.appendChild(cursorStyleEl)
+    }
+  } else {
+    if (cursorStyleEl?.parentNode) cursorStyleEl.remove()
+    cursorStyleEl = null
+  }
+}
+
+let stardustBgUrl = ''
+async function loadStardustBg() {
+  try {
+    const m = await import('@/assets/stardust.png')
+    stardustBgUrl = typeof m.default === 'string' ? m.default : ''
+  } catch {
+    stardustBgUrl = 'https://www.transparenttextures.com/patterns/stardust.png'
+  }
+  applyDarkVoidBg()
+}
+
+function applyDarkVoidBg() {
+  const root = document.documentElement
+  if (theme.isDarkVoid && stardustBgUrl) {
+    root.style.setProperty('--dark-void-bg-image', `url("${stardustBgUrl.replace(/"/g, '%22')}")`)
+  } else {
+    root.style.removeProperty('--dark-void-bg-image')
+  }
+}
+
 onMounted(() => {
   if (theme.bgImageUrl) theme.setBgImage(theme.bgImageUrl)
+  applyDarkVoidCursor(theme.isDarkVoid)
+  loadStardustBg()
+})
+watch(() => theme.isDarkVoid, () => {
+  applyDarkVoidCursor(theme.isDarkVoid)
+  applyDarkVoidBg()
 })
 </script>
 
@@ -254,5 +306,147 @@ a:hover { text-decoration: underline; color: var(--accent-burgundy); }
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+/* Dark Void UI theme – background image set via --dark-void-bg-image in script (local stardust.png or fallback) */
+html.ui-theme-dark-void body {
+  font-family: 'Space Grotesk', sans-serif;
+  background-color: #0d0d0f;
+  background-image: var(--dark-void-bg-image, url('https://www.transparenttextures.com/patterns/stardust.png'));
+  background-size: 30px 30px;
+  background-repeat: repeat;
+  background-attachment: scroll;
+  color: #e8e8ec;
+}
+html.ui-theme-dark-void {
+  --dark-void-bg: #0d0d0f;
+  --dark-void-card: #141418;
+  --dark-void-text: #e8e8ec;
+  --dark-void-text-muted: #888894;
+  --dark-void-border: #2a2a30;
+  --bg-primary: #0d0d0f;
+  --bg-secondary: #141418;
+  --bg-card: #1a1a1f;
+  --text-primary: #e8e8ec;
+  --text-secondary: #a0a0a8;
+  --text-tertiary: #888894;
+  --border-light: #2a2a30;
+  --border-medium: #3a3a42;
+  --nav-bg: #0d0d0f;
+  --accent-primary: #a0a0c0;
+  --accent-burgundy: #c090a0;
+}
+.main.dark-void-standalone {
+  padding: 2rem;
+  max-width: none;
+}
+
+/* Dark Void: PostCard – sharp corners, serif italic title, dark card, light grey actions */
+html.ui-theme-dark-void .card {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0;
+  color: var(--dark-void-text);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .card-header {
+  border-color: var(--dark-void-border);
+}
+html.ui-theme-dark-void .card-body:hover .card-title,
+html.ui-theme-dark-void .card-body:hover .card-excerpt {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .card-title {
+  font-family: Georgia, 'Libre Baskerville', serif;
+  font-style: italic;
+  font-weight: 600;
+  color: var(--dark-void-text);
+  font-size: 1.5rem;
+  line-height: 1.35;
+}
+html.ui-theme-dark-void .card-excerpt {
+  color: var(--dark-void-text-muted);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+html.ui-theme-dark-void .author-name {
+  color: var(--dark-void-text);
+  font-weight: 600;
+}
+html.ui-theme-dark-void .author-meta,
+html.ui-theme-dark-void .meta-date,
+html.ui-theme-dark-void .meta-read {
+  color: var(--dark-void-text-muted);
+  font-size: 0.8125rem;
+}
+html.ui-theme-dark-void .card-footer {
+  border-color: var(--dark-void-border);
+}
+html.ui-theme-dark-void .action-stat,
+html.ui-theme-dark-void .action-btn {
+  background: transparent;
+  border: none;
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .action-stat:hover,
+html.ui-theme-dark-void .action-btn:hover {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .action-like-btn.liked {
+  color: var(--accent-burgundy);
+}
+html.ui-theme-dark-void .tag {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .tag:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--dark-void-text);
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .card-thumb,
+html.ui-theme-dark-void .card-link-preview {
+  border-color: var(--dark-void-border);
+  background: var(--dark-void-bg);
+  border-radius: 0;
+}
+html.ui-theme-dark-void .card-link-preview-body .card-link-preview-title {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .card-link-preview-body .card-link-preview-desc,
+html.ui-theme-dark-void .card-link-preview-body .card-link-preview-site {
+  color: var(--dark-void-text-muted);
+}
+
+/* Dark Void: FAB – right edge of feed (left of sidebar), above status bar */
+html.ui-theme-dark-void .fab--dark-void.fab,
+html.ui-theme-dark-void .fab.fab--dark-void {
+  background: #fff;
+  color: #1a1a1f;
+  border-radius: 12px;
+  border: none;
+  outline: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  width: 56px;
+  height: 56px;
+  bottom: max(2.75rem, calc(env(safe-area-inset-bottom, 0px) + 2rem));
+  right: calc(280px + 1.5rem);
+}
+@media (max-width: 1024px) {
+  html.ui-theme-dark-void .fab--dark-void.fab,
+  html.ui-theme-dark-void .fab.fab--dark-void {
+    right: max(1.5rem, env(safe-area-inset-right, 0px));
+  }
+}
+html.ui-theme-dark-void .fab--dark-void.fab:hover,
+html.ui-theme-dark-void .fab.fab--dark-void:hover {
+  background: #e8e8ec;
+  color: #0d0d0f;
+}
+html.ui-theme-dark-void .fab--dark-void.fab .fab-icon,
+html.ui-theme-dark-void .fab.fab--dark-void .fab-icon {
+  width: 1.375rem;
+  height: 1.375rem;
 }
 </style>

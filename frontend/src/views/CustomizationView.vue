@@ -3,6 +3,21 @@
     <h1>Customization</h1>
     <p class="intro">Change how WriteSpace looks for you.</p>
 
+    <section class="theme-section ui-theme-section">
+      <h2 class="section-title">Interface theme</h2>
+      <p class="section-hint">Choose the layout and style of the app. Dark Void uses a dark layout with custom cursor, status bar, and trending tags.</p>
+      <div class="ui-theme-options" role="group" aria-label="Interface theme">
+        <label class="ui-theme-option">
+          <input type="radio" value="default" :checked="theme.uiTheme === 'default'" @change="theme.setUiTheme('default')" />
+          <span>Default</span>
+        </label>
+        <label class="ui-theme-option">
+          <input type="radio" value="dark-void" :checked="theme.uiTheme === 'dark-void'" @change="theme.setUiTheme('dark-void')" />
+          <span>Dark Void</span>
+        </label>
+      </div>
+    </section>
+
     <section class="theme-section templates-section">
       <h2 class="section-title">Theme templates</h2>
 
@@ -842,6 +857,10 @@ function previewStyle(palette: ThemeTemplate) {
 .intro { color: var(--text-secondary); font-size: 0.9375rem; margin: 0 0 2rem; }
 .theme-section { margin-bottom: 2rem; }
 .section-hint { font-size: 0.9375rem; color: var(--text-secondary); margin: 0 0 1rem; }
+.ui-theme-section .section-hint { margin-bottom: 0.75rem; }
+.ui-theme-options { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; }
+.ui-theme-option { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.9375rem; cursor: pointer; }
+.ui-theme-option input { cursor: pointer; }
 .templates-section .section-title { margin-bottom: 0.75rem; }
 
 .bg-image-section .section-title { margin-bottom: 0.5rem; }

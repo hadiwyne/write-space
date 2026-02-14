@@ -58,7 +58,7 @@ export class FollowService {
       orderBy: { createdAt: 'desc' },
       include: {
         follower: {
-          select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true },
+          select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true },
         },
       },
     });
@@ -75,7 +75,7 @@ export class FollowService {
       orderBy: { createdAt: 'desc' },
       include: {
         following: {
-          select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true },
+          select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true },
         },
       },
     });

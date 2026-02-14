@@ -53,7 +53,7 @@ export class LikesService {
       include: {
         post: {
           include: {
-            author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true } },
+            author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
             _count: { select: { likes: true, comments: true, reposts: true } },
           },
         },

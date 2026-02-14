@@ -6,7 +6,7 @@
     <ul v-else class="notification-list">
       <li v-for="n in notifications" :key="notifId(n)" class="notification-item" :class="{ unread: !n.readAt }">
         <router-link :to="notificationLink(n)" class="notification-link" @click="markRead(notifId(n))">
-          <AvatarFrame :frame="n.actor?.avatarFrame ?? null" :shape-class="avatarShapeClass(n.actor?.avatarShape)">
+          <AvatarFrame :frame="n.actor?.avatarFrame ?? null" :shape-class="avatarShapeClass(n.actor?.avatarShape)" :badge-url="actorBadgeUrl(n.actor)">
             <img v-if="n.actor?.avatarUrl" :src="actorAvatarSrc(n.actor)" alt="" class="notif-avatar" :class="avatarShapeClass(n.actor?.avatarShape)" />
             <span v-else class="notif-avatar-placeholder" :class="avatarShapeClass(n.actor?.avatarShape)">{{ (n.actor?.displayName || n.actor?.username || '?')[0] }}</span>
           </AvatarFrame>
@@ -36,7 +36,7 @@ type NotifRecord = Record<string, unknown> & {
   type?: string
   readAt?: string | null
   createdAt?: string
-  actor?: { id?: string; displayName?: string; username?: string; avatarUrl?: string | null; avatarShape?: string | null; avatarFrame?: unknown }
+  actor?: { id?: string; displayName?: string; username?: string; avatarUrl?: string | null; avatarShape?: string | null; avatarFrame?: unknown; badgeUrl?: string | null }
   postId?: string
 }
 
@@ -52,6 +52,10 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+function actorBadgeUrl(actor: NotifRecord['actor']): string | null {
+  return (actor as { badgeUrl?: string } | null)?.badgeUrl ?? null
+}
 
 function actorAvatarSrc(actor: NotifRecord['actor']) {
   if (!actor?.avatarUrl) return ''
