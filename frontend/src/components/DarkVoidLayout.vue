@@ -17,6 +17,15 @@
         <router-link v-if="auth.user" :to="`/u/${auth.user.username}`" class="dark-void-nav-btn" aria-label="Profile">
           <i class="pi pi-user" aria-hidden="true"></i>
         </router-link>
+        <button
+          type="button"
+          class="dark-void-sidebar-toggle"
+          aria-label="Open menu"
+          aria-expanded="sidebarOpen"
+          @click="sidebarOpen = true"
+        >
+          <i class="pi pi-bars" aria-hidden="true"></i>
+        </button>
       </nav>
     </aside>
 
@@ -25,7 +34,16 @@
       <RouterView />
     </main>
 
-    <aside class="dark-void-sidebar" aria-label="Profile and trending">
+    <Transition name="dark-void-fade">
+      <div
+        v-if="sidebarOpen"
+        class="dark-void-sidebar-backdrop"
+        aria-hidden="true"
+        @click="sidebarOpen = false"
+      />
+    </Transition>
+
+    <aside class="dark-void-sidebar" :class="{ 'dark-void-sidebar-open': sidebarOpen }" aria-label="Profile and trending">
       <div v-if="auth.user" class="dark-void-profile-card">
         <div class="dark-void-avatar-wrap" ref="avatarWrapRef">
           <button
@@ -49,26 +67,26 @@
           </button>
           <Transition name="dropdown">
             <div v-if="dropdownOpen" class="dark-void-dropdown" role="menu">
-              <router-link :to="`/u/${auth.user.username}`" class="dark-void-dropdown-item" role="menuitem" @click="closeDropdown">
+              <router-link :to="`/u/${auth.user.username}`" class="dark-void-dropdown-item" role="menuitem" @click="closeDropdownAndSidebar">
                 <i class="pi pi-user"></i> Profile
               </router-link>
-              <router-link to="/settings" class="dark-void-dropdown-item" role="menuitem" @click="closeDropdown">
+              <router-link to="/settings" class="dark-void-dropdown-item" role="menuitem" @click="closeDropdownAndSidebar">
                 <i class="pi pi-cog"></i> Settings
               </router-link>
-              <router-link to="/archived" class="dark-void-dropdown-item" role="menuitem" @click="closeDropdown">
+              <router-link to="/archived" class="dark-void-dropdown-item" role="menuitem" @click="closeDropdownAndSidebar">
                 <i class="pi pi-folder"></i> Archived
               </router-link>
-              <router-link to="/bookmarks" class="dark-void-dropdown-item" role="menuitem" @click="closeDropdown">
+              <router-link to="/bookmarks" class="dark-void-dropdown-item" role="menuitem" @click="closeDropdownAndSidebar">
                 <i class="pi pi-bookmark"></i> Bookmarks
               </router-link>
-              <router-link to="/collections" class="dark-void-dropdown-item" role="menuitem" @click="closeDropdown">
+              <router-link to="/collections" class="dark-void-dropdown-item" role="menuitem" @click="closeDropdownAndSidebar">
                 <i class="pi pi-folder-open"></i> Collections
               </router-link>
-              <router-link to="/customization" class="dark-void-dropdown-item" role="menuitem" @click="closeDropdown">
+              <router-link to="/customization" class="dark-void-dropdown-item" role="menuitem" @click="closeDropdownAndSidebar">
                 <i class="pi pi-palette"></i> Customization
               </router-link>
               <div class="dark-void-dropdown-divider"></div>
-              <button type="button" class="dark-void-dropdown-item dark-void-dropdown-item-danger" role="menuitem" @click="logout">
+              <button type="button" class="dark-void-dropdown-item dark-void-dropdown-item-danger" role="menuitem" @click="onLogout">
                 <i class="pi pi-sign-out"></i> Log out
               </button>
             </div>
@@ -101,6 +119,7 @@
             :key="t.tag"
             :to="{ path: '/search', query: { q: '#' + t.tag } }"
             class="dark-void-tag-chip"
+            @click="sidebarOpen = false"
           >#{{ t.tag }}</router-link>
         </div>
       </div>
@@ -129,6 +148,7 @@ const router = useRouter()
 const sidebarQuery = ref('')
 const onlineCount = ref(0)
 const dropdownOpen = ref(false)
+const sidebarOpen = ref(false)
 const avatarWrapRef = ref<HTMLElement | null>(null)
 const trendingTags = ref<{ tag: string; count: number }[]>([])
 
@@ -155,6 +175,16 @@ function closeDropdown() {
   dropdownOpen.value = false
 }
 
+function closeDropdownAndSidebar() {
+  dropdownOpen.value = false
+  sidebarOpen.value = false
+}
+
+function onLogout() {
+  sidebarOpen.value = false
+  logout()
+}
+
 function logout() {
   dropdownOpen.value = false
   theme.clearUserThemes()
@@ -171,6 +201,7 @@ function onSidebarSearch() {
   const q = sidebarQuery.value?.trim()
   if (q) router.push({ path: '/search', query: { q } })
   else router.push('/search')
+  sidebarOpen.value = false
 }
 
 async function fetchOnlineCount() {
@@ -252,7 +283,28 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  flex: 1;
 }
+.dark-void-sidebar-toggle {
+  display: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  margin-top: auto;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  color: var(--dark-void-text);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.dark-void-sidebar-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+.dark-void-sidebar-toggle .pi { font-size: 1.25rem; }
 .dark-void-nav-btn {
   width: 2.5rem;
   height: 2.5rem;
@@ -530,9 +582,32 @@ onUnmounted(() => {
   color: var(--dark-void-text);
 }
 
+.dark-void-sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 19;
+  cursor: pointer;
+}
+.dark-void-fade-enter-active,
+.dark-void-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.dark-void-fade-enter-from,
+.dark-void-fade-leave-to {
+  opacity: 0;
+}
+
 @media (max-width: 1024px) {
+  .dark-void-sidebar-toggle {
+    display: flex;
+  }
   .dark-void-sidebar {
-    display: none;
+    transform: translateX(100%);
+    transition: transform 0.25s ease-out;
+  }
+  .dark-void-sidebar.dark-void-sidebar-open {
+    transform: translateX(0);
   }
   .dark-void-layout {
     grid-template-columns: auto 1fr;
