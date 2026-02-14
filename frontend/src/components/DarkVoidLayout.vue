@@ -1,20 +1,40 @@
 <template>
-  <div class="dark-void-layout">
-    <aside class="dark-void-nav" aria-label="Main navigation">
-      <router-link :to="auth.isLoggedIn ? '/feed' : '/'" class="dark-void-logo" aria-label="WriteSpace">
+  <div class="dark-void-layout" :class="{ 'left-nav-open': leftNavOpen }">
+    <!-- Mobile-only: fixed trigger to open left nav (visible at any scroll position) -->
+    <button
+      type="button"
+      class="dark-void-nav-trigger"
+      aria-label="Open navigation"
+      :aria-expanded="leftNavOpen"
+      @click="leftNavOpen = !leftNavOpen"
+    >
+      <i class="pi pi-bars" aria-hidden="true"></i>
+    </button>
+
+    <Transition name="dark-void-fade">
+      <div
+        v-if="leftNavOpen"
+        class="dark-void-nav-backdrop"
+        aria-hidden="true"
+        @click="leftNavOpen = false"
+      />
+    </Transition>
+
+    <aside class="dark-void-nav" :class="{ 'dark-void-nav-open': leftNavOpen }" aria-label="Main navigation">
+      <router-link :to="auth.isLoggedIn ? '/feed' : '/'" class="dark-void-logo" aria-label="WriteSpace" @click="leftNavOpen = false">
         <span class="dark-void-logo-w">W</span>
       </router-link>
       <nav class="dark-void-nav-links">
-        <router-link to="/feed" class="dark-void-nav-btn" aria-label="Feed">
+        <router-link to="/feed" class="dark-void-nav-btn" aria-label="Feed" @click="leftNavOpen = false">
           <i class="pi pi-home" aria-hidden="true"></i>
         </router-link>
-        <router-link to="/search" class="dark-void-nav-btn" aria-label="Search">
+        <router-link to="/search" class="dark-void-nav-btn" aria-label="Search" @click="leftNavOpen = false">
           <i class="pi pi-search" aria-hidden="true"></i>
         </router-link>
-        <router-link to="/notifications" class="dark-void-nav-btn" aria-label="Notifications">
+        <router-link to="/notifications" class="dark-void-nav-btn" aria-label="Notifications" @click="leftNavOpen = false">
           <i class="pi pi-bell" aria-hidden="true"></i>
         </router-link>
-        <router-link v-if="auth.user" :to="`/u/${auth.user.username}`" class="dark-void-nav-btn" aria-label="Profile">
+        <router-link v-if="auth.user" :to="`/u/${auth.user.username}`" class="dark-void-nav-btn" aria-label="Profile" @click="leftNavOpen = false">
           <i class="pi pi-user" aria-hidden="true"></i>
         </router-link>
         <button
@@ -22,7 +42,7 @@
           class="dark-void-sidebar-toggle"
           aria-label="Open menu"
           :aria-expanded="sidebarOpen"
-          @click="sidebarOpen = true"
+          @click="sidebarOpen = true; leftNavOpen = false"
         >
           <i class="pi pi-bars" aria-hidden="true"></i>
         </button>
@@ -149,6 +169,7 @@ const sidebarQuery = ref('')
 const onlineCount = ref(0)
 const dropdownOpen = ref(false)
 const sidebarOpen = ref(false)
+const leftNavOpen = ref(false)
 const avatarWrapRef = ref<HTMLElement | null>(null)
 const trendingTags = ref<{ tag: string; count: number }[]>([])
 
@@ -595,6 +616,40 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 
+.dark-void-nav-trigger {
+  display: none;
+  position: fixed;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 21;
+  width: 2.25rem;
+  height: 3rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 0 6px 6px 0;
+  background: var(--dark-void-bg);
+  color: var(--dark-void-text);
+  border-right: 1px solid var(--dark-void-border);
+  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.dark-void-nav-trigger:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.dark-void-nav-trigger .pi {
+  font-size: 1.15rem;
+}
+.dark-void-nav-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 19;
+  cursor: pointer;
+}
 .dark-void-sidebar-backdrop {
   position: fixed;
   inset: 0;
@@ -612,6 +667,20 @@ onUnmounted(() => {
 }
 
 @media (max-width: 1024px) {
+  .dark-void-nav-trigger {
+    display: flex;
+  }
+  .dark-void-nav {
+    transform: translateX(-100%);
+    transition: transform 0.25s ease-out;
+  }
+  .dark-void-nav.dark-void-nav-open {
+    transform: translateX(0);
+  }
+  .dark-void-main {
+    margin-left: 0;
+    margin-right: 0;
+  }
   .dark-void-sidebar-toggle {
     display: flex;
   }
@@ -628,9 +697,6 @@ onUnmounted(() => {
       'nav main'
       'status status';
   }
-  .dark-void-main {
-    margin-right: 0;
-  }
 }
 @media (max-width: 768px) {
   .dark-void-nav {
@@ -638,7 +704,6 @@ onUnmounted(() => {
     padding: 0.75rem 0;
   }
   .dark-void-main {
-    margin-left: 3.5rem;
     padding: 1rem;
     padding-bottom: 4.5rem;
   }

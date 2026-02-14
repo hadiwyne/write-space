@@ -482,6 +482,7 @@ html.ui-theme-dark-void .dark-void-main .feed .filter-tabs-indicator {
 }
 html.ui-theme-dark-void .dark-void-main .feed .filter-tag-and-view {
   border-radius: 0;
+  justify-content: center;
 }
 html.ui-theme-dark-void .dark-void-main .feed .filter-tag .tag-input {
   font-family: 'Space Grotesk', sans-serif;
@@ -529,6 +530,11 @@ html.ui-theme-dark-void .dark-void-main .feed .view-btn.active {
   background: rgba(255, 255, 255, 0.12);
   border-color: var(--dark-void-text-muted);
   color: var(--dark-void-text);
+}
+@media (max-width: 1024px) {
+  html.ui-theme-dark-void .dark-void-main .feed .feed-filters {
+    justify-content: center;
+  }
 }
 
 /* Dark Void: profile page – same aesthetic as feed (sharp corners, dark cards, Space Grotesk) */
