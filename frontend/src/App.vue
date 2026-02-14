@@ -2,7 +2,7 @@
   <div class="app">
     <template v-if="theme.isDarkVoid && !hideLayout">
       <DarkVoidLayout />
-      <FloatingActionButton v-if="auth.isLoggedIn" class="fab--dark-void" />
+      <FloatingActionButton v-if="showFab" class="fab--dark-void" />
     </template>
     <main v-else-if="theme.isDarkVoid && hideLayout" class="main main--full dark-void-standalone">
       <RouterView />
@@ -12,7 +12,7 @@
       <main class="main" :class="{ 'main--full': hideLayout, 'main--with-header': !hideLayout }">
         <RouterView />
       </main>
-      <FloatingActionButton v-if="!hideLayout && auth.isLoggedIn" />
+      <FloatingActionButton v-if="!hideLayout && showFab" />
     </template>
   </div>
 </template>
@@ -31,6 +31,14 @@ const route = useRoute()
 const auth = useAuthStore()
 const theme = useThemeStore()
 const hideLayout = computed(() => route.meta.hideLayout === true)
+
+const showFab = computed(() => {
+  if (!auth.isLoggedIn) return false
+  const p = route.path
+  if (p === '/write' || p === '/settings' || p === '/customization') return false
+  if (/^\/posts\/[^/]+\/edit$/.test(p)) return false
+  return true
+})
 
 let cursorStyleEl: HTMLStyleElement | null = null
 function applyDarkVoidCursor(active: boolean) {
