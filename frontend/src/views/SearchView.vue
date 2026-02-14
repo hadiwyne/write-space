@@ -162,8 +162,22 @@ onMounted(() => {
 .user-handle { font-size: 0.875rem; color: var(--gray-600); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 @media (max-width: 480px) {
-  .search-form { flex-direction: column; }
-  .search-input { max-width: none; }
+  .search-form {
+    flex-direction: row;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .search-input {
+    max-width: none;
+    flex: 1;
+    min-width: 0;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9375rem;
+  }
+  .search-page .btn-primary {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+  }
   .search-tabs { justify-content: center; }
   .tab { flex: 1; min-width: 0; padding: 0.5rem; font-size: 0.875rem; }
   .user-avatar, .user-avatar-placeholder { width: 40px; height: 40px; font-size: 1rem; line-height: 40px; }
