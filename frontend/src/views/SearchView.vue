@@ -120,7 +120,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.search-page { padding: 0; }
+.search-page { padding: 0; max-width: 640px; margin: 0 auto; width: 100%; }
 .search-page h1 { font-size: clamp(1.5rem, 4vw, 1.75rem); margin: 0 0 1rem; }
 .search-form {
   display: flex;

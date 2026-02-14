@@ -120,7 +120,7 @@ async function markAllRead() {
 </script>
 
 <style scoped>
-.notifications-page { padding: 0; }
+.notifications-page { padding: 0; max-width: 640px; margin: 0 auto; width: 100%; }
 .notifications-page h1 { font-size: clamp(1.25rem, 4vw, 1.5rem); margin: 0 0 1rem; }
 .loading, .empty { color: var(--gray-700); padding: 1rem 0; }
 .notification-list { list-style: none; margin: 0; padding: 0; }

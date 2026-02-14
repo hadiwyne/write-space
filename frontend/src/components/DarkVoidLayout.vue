@@ -452,10 +452,19 @@ onUnmounted(() => {
   border: 1px solid var(--dark-void-border);
   border-radius: var(--radius-sm);
   color: var(--dark-void-text);
+  -webkit-text-fill-color: var(--dark-void-text);
   font-size: 0.875rem;
 }
 .dark-void-search-input::placeholder {
   color: var(--dark-void-text-muted);
+  opacity: 1;
+}
+.dark-void-search-input:-webkit-autofill,
+.dark-void-search-input:-webkit-autofill:hover,
+.dark-void-search-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--dark-void-text);
+  -webkit-box-shadow: 0 0 0 1000px var(--dark-void-card) inset;
+  transition: background-color 5000s ease-in-out 0s;
 }
 .dark-void-search-icon {
   position: absolute;
