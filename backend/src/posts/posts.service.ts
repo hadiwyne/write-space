@@ -12,11 +12,23 @@ import { extractFirstUrl, fetchLinkPreview } from './link-preview.service';
 export const MAX_IMAGES_PER_POST = 5;
 
 const ANONYMOUS_ALIASES = [
-  'Cosmic Burrito',
+  'Ganja Grin',
   'Giggly Ghost Pepper',
   'Noodle Ninja',
   'Bubblegum Bandit',
   'Whimsical Walrus',
+  'Pickle Pirate',
+  'Sassy Sock Puppet',
+  'Pickle Rick',
+  'Fizzy Flamingo',
+  'Mischief Mushroom',
+  'Sherlock Shroom',
+  'Quixote Quesadilla',
+  'Trimalchio Taco',
+  'Lucius Lollipop',
+  'Hannah Montana',
+  'I\'m Anonymous For Some Reason',
+  'Erotic Neurotic',
 ] as const;
 
 function pickAnonymousAlias(): string {

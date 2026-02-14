@@ -118,12 +118,13 @@
       </div>
       <div class="actions">
         <button type="button" class="btn btn-outline" @click="() => saveDraft()" :disabled="savingDraft">Save draft</button>
-        <button type="submit" class="btn btn-primary btn-publish" :disabled="loading">
-          <i v-if="loading" class="pi pi-spin pi-spinner publish-spinner" aria-hidden="true"></i>
-          <span>{{ loading ? 'Publishing' : 'Publish' }}</span>
+        <button type="submit" class="btn btn-primary btn-publish" :disabled="publishLoading || publishAnonymousLoading">
+          <i v-if="publishLoading" class="pi pi-spin pi-spinner publish-spinner" aria-hidden="true"></i>
+          <span>{{ publishLoading ? 'Publishing' : 'Publish' }}</span>
         </button>
-        <button type="button" class="btn btn-outline btn-publish-anonymous" :disabled="loading" @click="publishAnonymously">
-          <span>{{ loading && publishAnonymous ? 'Publishing' : 'Publish anonymously' }}</span>
+        <button type="button" class="btn btn-outline btn-publish-anonymous" :disabled="publishLoading || publishAnonymousLoading" @click="publishAnonymously">
+          <i v-if="publishAnonymousLoading" class="pi pi-spin pi-spinner publish-spinner" aria-hidden="true"></i>
+          <span>{{ publishAnonymousLoading ? 'Publishing' : 'Publish anonymously' }}</span>
         </button>
       </div>
     </form>
@@ -208,7 +209,8 @@ function onWritePageDocumentClick(e: MouseEvent) {
   if (visibilityDropdownRef.value && !visibilityDropdownRef.value.contains(target)) visibilityDropdownOpen.value = false
 }
 const error = ref('')
-const loading = ref(false)
+const publishLoading = ref(false)
+const publishAnonymousLoading = ref(false)
 const savingDraft = ref(false)
 const lastSavedAt = ref('')
 const conflictDraft = ref<{ id: string; version: number; content: string; title: string | null; contentType: string } | null>(null)
@@ -294,12 +296,10 @@ function useServer() {
   conflictDraft.value = null
 }
 
-const publishAnonymous = ref(false)
-
 async function doPublish(anonymous: boolean) {
   error.value = ''
-  loading.value = true
-  publishAnonymous.value = anonymous
+  if (anonymous) publishAnonymousLoading.value = true
+  else publishLoading.value = true
   try {
     const { data } = await api.post('/posts', {
       title: title.value,
@@ -314,8 +314,8 @@ async function doPublish(anonymous: boolean) {
   } catch (e: unknown) {
     error.value = (e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to publish'
   } finally {
-    loading.value = false
-    publishAnonymous.value = false
+    publishLoading.value = false
+    publishAnonymousLoading.value = false
   }
 }
 
