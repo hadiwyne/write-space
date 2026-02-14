@@ -521,12 +521,12 @@ html.ui-theme-dark-void .dark-void-main .feed .view-btn.active {
   color: var(--dark-void-text);
 }
 
-/* Dark Void: FAB – right edge of feed (left of sidebar), above status bar */
+/* Dark Void: FAB – right edge of feed (left of sidebar), sharp edges to match theme */
 html.ui-theme-dark-void .fab--dark-void.fab,
 html.ui-theme-dark-void .fab.fab--dark-void {
   background: #fff;
   color: #1a1a1f;
-  border-radius: 12px;
+  border-radius: 0;
   border: none;
   outline: none;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
