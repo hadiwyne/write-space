@@ -262,6 +262,7 @@ onUnmounted(() => {
   border-right: 1px solid var(--dark-void-border);
   background: var(--dark-void-bg);
   z-index: 20;
+  overflow: hidden;
 }
 .dark-void-logo {
   width: 2.5rem;
@@ -298,6 +299,12 @@ onUnmounted(() => {
   color: var(--dark-void-text);
   cursor: pointer;
   transition: background 0.2s;
+}
+@media (max-width: 1024px) {
+  .dark-void-sidebar-toggle {
+    /* Align hamburger center with status bar center (bar ~3.5rem: 2.5min + 0.5*2 padding) */
+    margin-bottom: 0.5rem;
+  }
 }
 .dark-void-sidebar-toggle:hover {
   background: rgba(255, 255, 255, 0.1);

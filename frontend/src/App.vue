@@ -37,6 +37,8 @@ const showFab = computed(() => {
   const p = route.path
   if (p === '/write' || p === '/settings' || p === '/customization') return false
   if (/^\/posts\/[^/]+\/edit$/.test(p)) return false
+  const profileMatch = p.match(/^\/u\/([^/]+)/)
+  if (profileMatch && profileMatch[1] === auth.user?.username) return false
   return true
 })
 
@@ -1857,7 +1859,7 @@ html.ui-theme-dark-void .fab.fab--dark-void {
   html.ui-theme-dark-void .fab.fab--dark-void {
     right: max(1.5rem, env(safe-area-inset-right, 0px));
     /* Sit above the fixed status bar (avoid overlap on mobile) */
-    bottom: max(4.5rem, calc(env(safe-area-inset-bottom, 0px) + 4rem));
+    bottom: max(6rem, calc(env(safe-area-inset-bottom, 0px) + 5.5rem));
   }
 }
 html.ui-theme-dark-void .fab--dark-void.fab:hover,
