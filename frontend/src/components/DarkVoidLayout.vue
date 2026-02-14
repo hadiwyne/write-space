@@ -145,7 +145,7 @@
       </div>
     </aside>
 
-    <footer class="dark-void-status-bar" :class="{ 'status-bar-hidden': statusBarHidden }" aria-live="polite">
+    <footer class="dark-void-status-bar" :class="{ 'status-bar-hidden': statusBarState.hidden }" aria-live="polite">
       <span class="dark-void-status-left">{{ statusLeft }}</span>
       <span class="dark-void-status-online">ONLINE NOW: {{ onlineCount.toLocaleString() }} SOULS</span>
       <span class="dark-void-status-right">{{ statusRight }}</span>
@@ -154,7 +154,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, inject, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, avatarSrc } from '@/api/client'
 import { avatarShapeClass } from '@/utils/avatar'
@@ -171,7 +171,7 @@ const dropdownOpen = ref(false)
 const sidebarOpen = ref(false)
 const leftNavOpen = ref(false)
 const mainRef = ref<HTMLElement | null>(null)
-const statusBarHidden = ref(false)
+const statusBarState = inject<{ hidden: boolean }>('statusBarState', { hidden: false })
 const lastScrollTop = ref(0)
 const SCROLL_THRESHOLD = 10
 const avatarWrapRef = ref<HTMLElement | null>(null)
@@ -225,13 +225,13 @@ function onMainScroll() {
   if (!el || window.innerWidth > 1024) return
   const st = el.scrollTop
   if (st <= 0) {
-    statusBarHidden.value = false
+    statusBarState.hidden = false
     lastScrollTop.value = st
     return
   }
   const delta = st - lastScrollTop.value
   if (Math.abs(delta) < SCROLL_THRESHOLD) return
-  statusBarHidden.value = delta > 0
+  statusBarState.hidden = delta > 0
   lastScrollTop.value = st
 }
 

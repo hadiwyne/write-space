@@ -1,5 +1,5 @@
 <template>
-  <div class="app">
+  <div class="app" :class="{ 'status-bar-hidden': statusBarState.hidden }">
     <template v-if="theme.isDarkVoid && !hideLayout">
       <DarkVoidLayout />
       <FloatingActionButton v-if="showFab" class="fab--dark-void" />
@@ -18,7 +18,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, provide, reactive, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppHeader from '@/components/AppHeader.vue'
 import FloatingActionButton from '@/components/FloatingActionButton.vue'
@@ -31,6 +31,9 @@ const route = useRoute()
 const auth = useAuthStore()
 const theme = useThemeStore()
 const hideLayout = computed(() => route.meta.hideLayout === true)
+
+const statusBarState = reactive({ hidden: false })
+provide('statusBarState', statusBarState)
 
 const showFab = computed(() => {
   if (!auth.isLoggedIn) return false
@@ -1874,8 +1877,14 @@ html.ui-theme-dark-void .fab.fab--dark-void {
   html.ui-theme-dark-void .fab--dark-void.fab,
   html.ui-theme-dark-void .fab.fab--dark-void {
     right: max(1.5rem, env(safe-area-inset-right, 0px));
-    /* Sit above the fixed status bar (avoid overlap on mobile) */
+    /* Sit above the fixed status bar when visible; moves down with bar when bar hides */
     bottom: max(6rem, calc(env(safe-area-inset-bottom, 0px) + 5.5rem));
+    transition: bottom 0.25s ease-out;
+  }
+  html.ui-theme-dark-void .app.status-bar-hidden .fab--dark-void.fab,
+  html.ui-theme-dark-void .app.status-bar-hidden .fab.fab--dark-void {
+    /* Same distance from bottom edge as the gap above the bar when visible */
+    bottom: max(2rem, calc(env(safe-area-inset-bottom, 0px) + 1.5rem));
   }
 }
 html.ui-theme-dark-void .fab--dark-void.fab:hover,
