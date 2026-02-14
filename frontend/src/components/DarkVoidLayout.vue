@@ -21,7 +21,7 @@
           type="button"
           class="dark-void-sidebar-toggle"
           aria-label="Open menu"
-          aria-expanded="sidebarOpen"
+          :aria-expanded="sidebarOpen"
           @click="sidebarOpen = true"
         >
           <i class="pi pi-bars" aria-hidden="true"></i>
@@ -93,7 +93,7 @@
           </Transition>
         </div>
         <h2 class="dark-void-username">{{ auth.user.displayName || auth.user.username }}</h2>
-        <p v-if="auth.user.bio" class="dark-void-bio">{{ auth.user.bio }}</p>
+        <p v-if="userBio" class="dark-void-bio">{{ userBio }}</p>
         <div class="dark-void-stats">
           <span class="dark-void-stat"><strong>POSTS</strong> {{ formatStat(profileStats.posts) }}</span>
           <span class="dark-void-stat"><strong>LIKES</strong> {{ formatStat(profileStats.likes) }}</span>
@@ -162,6 +162,8 @@ const profileStats = computed(() => {
   return { posts: c?.posts ?? 0, likes: c?.likes ?? 0 }
 })
 
+const userBio = computed(() => (auth.user as { bio?: string } | null)?.bio ?? '')
+
 function authUserBadgeUrl(): string | null {
   return (auth.user as { badgeUrl?: string } | null)?.badgeUrl ?? null
 }
@@ -169,10 +171,6 @@ function authUserBadgeUrl(): string | null {
 function formatStat(n: number): string {
   if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k'
   return n.toLocaleString()
-}
-
-function closeDropdown() {
-  dropdownOpen.value = false
 }
 
 function closeDropdownAndSidebar() {
