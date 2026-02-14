@@ -331,11 +331,13 @@ onUnmounted(() => {
   margin-right: 280px;
   height: 100vh;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 1.5rem clamp(1rem, 4vw, 2rem);
   padding-top: 1rem;
-  padding-bottom: 4.5rem; /* space above fixed status bar so last items don’t sit under it */
+  padding-bottom: 4.5rem;
   scrollbar-width: none;
   -ms-overflow-style: none;
+ /* space above fixed status bar so last items don’t sit under it */
 }
 .dark-void-main::-webkit-scrollbar {
   display: none;
@@ -561,7 +563,7 @@ onUnmounted(() => {
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 0.5rem 1rem 0.5rem 5rem;
+  padding: 0.5rem 6rem 0.5rem 5rem;
   background: var(--dark-void-bg);
   border-top: 1px solid var(--dark-void-border);
   font-size: 0.7rem;
@@ -571,15 +573,21 @@ onUnmounted(() => {
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
+  min-height: 2.5rem;
 }
-.dark-void-status-left,
+.dark-void-status-left {
+  flex: 0 1 auto;
+  min-width: 0;
+}
 .dark-void-status-right {
   flex: 0 1 auto;
+  min-width: 0;
 }
 .dark-void-status-online {
   flex: 0 0 auto;
   font-weight: 600;
   color: var(--dark-void-text);
+  white-space: nowrap;
 }
 
 .dark-void-sidebar-backdrop {
@@ -627,13 +635,14 @@ onUnmounted(() => {
   .dark-void-main {
     margin-left: 3.5rem;
     padding: 1rem;
-    padding-bottom: 4.5rem; /* keep space above fixed status bar on mobile */
+    padding-bottom: 4.5rem;
   }
   .dark-void-tagline {
     font-size: 0.65rem;
   }
   .dark-void-status-bar {
     padding-left: 4rem;
+    padding-right: 5rem;
   }
 }
 </style>

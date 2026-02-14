@@ -5,7 +5,7 @@
 
     <section class="theme-section ui-theme-section">
       <h2 class="section-title">Interface theme</h2>
-      <p class="section-hint">Choose the layout and style of the app. Dark Void uses a dark layout with custom cursor, status bar, and trending tags.</p>
+      <p class="section-hint">Change the </p>
       <div class="ui-theme-options" role="group" aria-label="Interface theme">
         <label class="ui-theme-option">
           <input type="radio" value="default" :checked="theme.uiTheme === 'default'" @change="theme.setUiTheme('default')" />
@@ -248,9 +248,11 @@
     </section>
 
     <div class="actions">
-      <button type="button" class="btn btn-primary" @click="randomizeAll">Randomize</button>
+      <div class="actions-group">
+        <button type="button" class="btn btn-primary" @click="randomizeAll">Randomize</button>
+        <button type="button" class="btn btn-outline" @click="resetAndClearDirty">Reset to default</button>
+      </div>
       <button type="button" class="btn btn-outline" :disabled="!userHasEdited" @click="openSaveModal">Save theme</button>
-      <button type="button" class="btn btn-outline" @click="resetAndClearDirty">Reset to default</button>
     </div>
 
     <Teleport to="body">
@@ -859,8 +861,25 @@ function previewStyle(palette: ThemeTemplate) {
 .section-hint { font-size: 0.9375rem; color: var(--text-secondary); margin: 0 0 1rem; }
 .ui-theme-section .section-hint { margin-bottom: 0.75rem; }
 .ui-theme-options { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; }
-.ui-theme-option { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.9375rem; cursor: pointer; }
+.ui-theme-option { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.9375rem; cursor: pointer; }
 .ui-theme-option input { cursor: pointer; }
+.ui-theme-option input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 2px solid var(--border-medium);
+  border-radius: 2px;
+  background: var(--bg-card);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.2s, background 0.2s;
+}
+.ui-theme-option input[type="radio"]:checked {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  box-shadow: inset 0 0 0 2px var(--bg-card);
+}
 .templates-section .section-title { margin-bottom: 0.75rem; }
 
 .bg-image-section .section-title { margin-bottom: 0.5rem; }
@@ -1074,6 +1093,53 @@ function previewStyle(palette: ThemeTemplate) {
 }
 .bg-image-url-input:focus { outline: none; border-color: var(--accent-primary); }
 .bg-image-url-input::placeholder { color: var(--text-tertiary); }
+
+@media (max-width: 600px) {
+  .customization-page {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    box-sizing: border-box;
+  }
+  .actions {
+    gap: 0.5rem;
+  }
+  .actions-group {
+    flex-shrink: 0;
+    gap: 0.5rem;
+  }
+  .actions-group .btn,
+  .actions > .btn-outline {
+    padding: 0.35rem 0.5rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+  .bg-image-upload {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+  }
+  .bg-image-upload .btn.btn-outline:first-of-type {
+    align-self: flex-start;
+  }
+  .bg-image-url-wrap {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+  }
+  .bg-image-url-input {
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .bg-image-url-wrap .btn-outline {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
 .subsection-title {
   font-size: 1rem;
   font-weight: 600;
@@ -1250,6 +1316,12 @@ function previewStyle(palette: ThemeTemplate) {
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
+  align-items: center;
+}
+.actions-group {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: nowrap;
 }
 .btn { padding: 0.5rem 1rem; border-radius: var(--radius-md); font-size: 0.9375rem; font-weight: 600; cursor: pointer; font-family: inherit; border: 2px solid transparent; }
 .btn-primary { background: var(--accent-primary); color: #fff; border-color: var(--accent-primary); }
