@@ -1,28 +1,88 @@
 <template>
   <div class="app">
-    <AppHeader v-if="!hideLayout" />
-    <main class="main" :class="{ 'main--full': hideLayout, 'main--with-header': !hideLayout }">
+    <template v-if="theme.isDarkVoid && !hideLayout">
+      <DarkVoidLayout />
+      <FloatingActionButton v-if="showFab" class="fab--dark-void" />
+    </template>
+    <main v-else-if="theme.isDarkVoid && hideLayout" class="main main--full dark-void-standalone">
       <RouterView />
     </main>
-    <FloatingActionButton v-if="!hideLayout && auth.isLoggedIn" />
+    <template v-else>
+      <AppHeader v-if="!hideLayout" />
+      <main class="main" :class="{ 'main--full': hideLayout, 'main--with-header': !hideLayout }">
+        <RouterView />
+      </main>
+      <FloatingActionButton v-if="!hideLayout && showFab" />
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppHeader from '@/components/AppHeader.vue'
 import FloatingActionButton from '@/components/FloatingActionButton.vue'
+import DarkVoidLayout from '@/components/DarkVoidLayout.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
+import knightCursorUrl from '@/assets/knight.png'
 
 const route = useRoute()
 const auth = useAuthStore()
 const theme = useThemeStore()
 const hideLayout = computed(() => route.meta.hideLayout === true)
 
+const showFab = computed(() => {
+  if (!auth.isLoggedIn) return false
+  const p = route.path
+  if (p === '/write' || p === '/settings' || p === '/customization') return false
+  if (/^\/posts\/[^/]+\/edit$/.test(p)) return false
+  return true
+})
+
+let cursorStyleEl: HTMLStyleElement | null = null
+function applyDarkVoidCursor(active: boolean) {
+  if (active) {
+    if (!cursorStyleEl) {
+      cursorStyleEl = document.createElement('style')
+      cursorStyleEl.setAttribute('data-dark-void-cursor', '')
+      cursorStyleEl.textContent = `html.ui-theme-dark-void, html.ui-theme-dark-void * { cursor: url("${knightCursorUrl}") 0 0, auto !important; }`
+      document.head.appendChild(cursorStyleEl)
+    }
+  } else {
+    if (cursorStyleEl?.parentNode) cursorStyleEl.remove()
+    cursorStyleEl = null
+  }
+}
+
+let stardustBgUrl = ''
+async function loadStardustBg() {
+  try {
+    const m = await import('@/assets/stardust.png')
+    stardustBgUrl = typeof m.default === 'string' ? m.default : ''
+  } catch {
+    stardustBgUrl = 'https://www.transparenttextures.com/patterns/stardust.png'
+  }
+  applyDarkVoidBg()
+}
+
+function applyDarkVoidBg() {
+  const root = document.documentElement
+  if (theme.isDarkVoid && stardustBgUrl) {
+    root.style.setProperty('--dark-void-bg-image', `url("${stardustBgUrl.replace(/"/g, '%22')}")`)
+  } else {
+    root.style.removeProperty('--dark-void-bg-image')
+  }
+}
+
 onMounted(() => {
   if (theme.bgImageUrl) theme.setBgImage(theme.bgImageUrl)
+  applyDarkVoidCursor(theme.isDarkVoid)
+  loadStardustBg()
+})
+watch(() => theme.isDarkVoid, () => {
+  applyDarkVoidCursor(theme.isDarkVoid)
+  applyDarkVoidBg()
 })
 </script>
 
@@ -254,5 +314,1560 @@ a:hover { text-decoration: underline; color: var(--accent-burgundy); }
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+/* Dark Void UI theme – background image set via --dark-void-bg-image in script (local stardust.png or fallback) */
+html.ui-theme-dark-void body {
+  font-family: 'Space Grotesk', sans-serif;
+  background-color: #0d0d0f;
+  background-image: var(--dark-void-bg-image, url('https://www.transparenttextures.com/patterns/stardust.png'));
+  background-size: 30px 30px;
+  background-repeat: repeat;
+  background-attachment: scroll;
+  color: #e8e8ec;
+}
+html.ui-theme-dark-void {
+  --dark-void-bg: #0d0d0f;
+  --dark-void-card: #141418;
+  --dark-void-text: #e8e8ec;
+  --dark-void-text-muted: #888894;
+  --dark-void-border: #2a2a30;
+  --bg-primary: #0d0d0f;
+  --bg-secondary: #141418;
+  --bg-card: #1a1a1f;
+  --text-primary: #e8e8ec;
+  --text-secondary: #a0a0a8;
+  --text-tertiary: #888894;
+  --border-light: #2a2a30;
+  --border-medium: #3a3a42;
+  --nav-bg: #0d0d0f;
+  --accent-primary: #a0a0c0;
+  --accent-burgundy: #c090a0;
+}
+.main.dark-void-standalone {
+  padding: 2rem;
+  max-width: none;
+}
+
+/* Dark Void: PostCard – sharp corners, serif italic title, dark card, light grey actions */
+html.ui-theme-dark-void .card {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0;
+  color: var(--dark-void-text);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .card-header {
+  border-color: var(--dark-void-border);
+}
+html.ui-theme-dark-void .card-body:hover .card-title,
+html.ui-theme-dark-void .card-body:hover .card-excerpt {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .card-title {
+  font-family: Georgia, 'Libre Baskerville', serif;
+  font-style: italic;
+  font-weight: 600;
+  color: var(--dark-void-text);
+  font-size: 1.5rem;
+  line-height: 1.35;
+}
+html.ui-theme-dark-void .card-excerpt {
+  color: var(--dark-void-text-muted);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+html.ui-theme-dark-void .author-name {
+  color: var(--dark-void-text);
+  font-weight: 600;
+}
+html.ui-theme-dark-void .author-meta,
+html.ui-theme-dark-void .meta-date,
+html.ui-theme-dark-void .meta-read {
+  color: var(--dark-void-text-muted);
+  font-size: 0.8125rem;
+}
+html.ui-theme-dark-void .card-footer {
+  border-color: var(--dark-void-border);
+}
+html.ui-theme-dark-void .action-stat,
+html.ui-theme-dark-void .action-btn {
+  background: transparent;
+  border: none;
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .action-stat:hover,
+html.ui-theme-dark-void .action-btn:hover {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .action-like-btn.liked {
+  color: var(--accent-burgundy);
+}
+html.ui-theme-dark-void .tag {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .tag:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--dark-void-text);
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .card-thumb,
+html.ui-theme-dark-void .card-link-preview {
+  border-color: var(--dark-void-border);
+  background: var(--dark-void-bg);
+  border-radius: 0;
+}
+html.ui-theme-dark-void .card-link-preview-body .card-link-preview-title {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .card-link-preview-body .card-link-preview-desc,
+html.ui-theme-dark-void .card-link-preview-body .card-link-preview-site {
+  color: var(--dark-void-text-muted);
+}
+
+/* Dark Void: feed – only post list centered; filter bar full width with theme typography */
+html.ui-theme-dark-void .dark-void-main .feed .feed-content {
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+}
+html.ui-theme-dark-void .dark-void-main .feed .feed-hero h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: var(--dark-void-text);
+}
+/* Dark Void: filter bar – slightly wider than post card, sharp corners everywhere */
+html.ui-theme-dark-void .dark-void-main .feed .feed-filters {
+  font-family: 'Space Grotesk', sans-serif;
+  max-width: 672px;
+  width: 100%;
+  margin: 0 auto 0.75rem;
+  padding: 0.25rem;
+  border-radius: 0 !important;
+  border: 1px solid var(--dark-void-border);
+  background: var(--dark-void-card);
+  box-shadow: none;
+}
+html.ui-theme-dark-void .dark-void-main .feed .filter-tabs {
+  background: transparent;
+  border: none;
+  padding: 0.2rem;
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .feed .filter-tab {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--dark-void-text-muted);
+  padding: 0.4rem 0.875rem;
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .feed .filter-tab:hover:not(.active) {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .feed .filter-tab.active {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .feed .filter-tab .pi {
+  font-size: 0.875rem;
+}
+html.ui-theme-dark-void .dark-void-main .feed .filter-tabs-indicator {
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: none;
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .feed .filter-tag-and-view {
+  border-radius: 0;
+}
+html.ui-theme-dark-void .dark-void-main .feed .filter-tag .tag-input {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.8125rem;
+  background: var(--dark-void-bg);
+  border: 1px solid var(--dark-void-border);
+  color: var(--dark-void-text);
+  padding: 0.4rem 0.6rem;
+  min-width: 8rem;
+  max-width: 14rem;
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .feed .filter-tag .tag-input::placeholder {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .feed .tag-btn {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  padding: 0.4rem 0.75rem;
+  background: var(--dark-void-text);
+  border: 1px solid var(--dark-void-text);
+  color: var(--dark-void-bg);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .feed .tag-btn:hover {
+  background: var(--dark-void-text-muted);
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .feed .view-btn {
+  font-family: 'Space Grotesk', sans-serif;
+  border: 1px solid var(--dark-void-border);
+  background: var(--dark-void-card);
+  color: var(--dark-void-text-muted);
+  width: 36px;
+  height: 36px;
+  border-radius: 0 !important;
+  font-size: 1rem;
+}
+html.ui-theme-dark-void .dark-void-main .feed .view-btn:hover:not(.active) {
+  border-color: var(--dark-void-text-muted);
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .feed .view-btn.active {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--dark-void-text-muted);
+  color: var(--dark-void-text);
+}
+
+/* Dark Void: profile page – same aesthetic as feed (sharp corners, dark cards, Space Grotesk) */
+html.ui-theme-dark-void .dark-void-main .profile-page .profile-header,
+html.ui-theme-dark-void .dark-void-main .profile-page .posts-section {
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .profile-header {
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0 !important;
+  box-shadow: none;
+  border-bottom: 1px solid var(--dark-void-border);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .profile-header h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .bio,
+html.ui-theme-dark-void .dark-void-main .profile-page .profile-html {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .profile-stats {
+  border-top-color: var(--dark-void-border);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .stat-item {
+  border-radius: 0 !important;
+  color: inherit;
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .stat-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .stat-value {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .stat-item:hover .stat-value {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .stat-label {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .stat-item:hover .stat-label {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .edit-link {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .edit-link:hover {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .archived-link:hover {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .btn-follow {
+  font-family: 'Space Grotesk', sans-serif;
+  border-radius: 0 !important;
+  border: 1px solid var(--dark-void-text);
+  background: var(--dark-void-text);
+  color: var(--dark-void-bg);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .btn-follow:hover:not(:disabled) {
+  background: var(--dark-void-text-muted);
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .btn-following {
+  background: transparent;
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .btn-following:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--dark-void-text-muted);
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .profile-tabs {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0 !important;
+  padding: 0.2rem;
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .profile-tab {
+  font-family: 'Space Grotesk', sans-serif;
+  border-radius: 0 !important;
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .profile-tab:hover:not(.active) {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .profile-tab.active {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--dark-void-text);
+  box-shadow: none;
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .profile-tabs-indicator {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 0 !important;
+  box-shadow: none;
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .empty {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .loading,
+html.ui-theme-dark-void .dark-void-main .profile-page .error {
+  color: var(--dark-void-text-muted);
+}
+/* Dark Void: modals (profile followers/following + any teleported modal) */
+html.ui-theme-dark-void .modal-backdrop {
+  background: rgba(0, 0, 0, 0.7);
+}
+html.ui-theme-dark-void .modal {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0 !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+html.ui-theme-dark-void .modal-header {
+  border-bottom-color: var(--dark-void-border);
+}
+html.ui-theme-dark-void .modal-title {
+  font-family: 'Space Grotesk', sans-serif;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .modal-close {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .modal-close:hover {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .modal-list-item {
+  border-bottom-color: var(--dark-void-border);
+}
+html.ui-theme-dark-void .modal-user:hover {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .modal-user-name {
+  color: var(--dark-void-text);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .modal-user-handle {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .btn-modal {
+  border-radius: 0 !important;
+  border-color: var(--dark-void-border);
+  background: var(--dark-void-card);
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .btn-modal:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .btn-remove:hover:not(:disabled) {
+  border-color: var(--accent-burgundy);
+  color: var(--accent-burgundy);
+}
+html.ui-theme-dark-void .btn-unfollow:hover:not(:disabled) {
+  border-color: var(--dark-void-text);
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .avatar-clip,
+html.ui-theme-dark-void .dark-void-main .profile-page .avatar-placeholder {
+  border-color: var(--dark-void-card);
+  outline-color: var(--dark-void-border);
+  box-shadow: none;
+}
+
+/* Dark Void: post view (single post) – same aesthetic as feed/profile */
+html.ui-theme-dark-void .dark-void-main .post-page {
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 0;
+}
+html.ui-theme-dark-void .dark-void-main .post-page .loading,
+html.ui-theme-dark-void .dark-void-main .post-page .error {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .post-page .post {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0 !important;
+  box-shadow: none;
+  margin-bottom: clamp(1rem, 4vw, 2rem);
+  padding: clamp(1rem, 4vw, 2rem);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .post-title {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-weight: 700;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .post-meta {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .post-meta .author {
+  color: var(--dark-void-text);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .post-page .post-meta .author:hover {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .post-content {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .post-tags .tag {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  color: var(--dark-void-text-muted);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .post-page .post-tags .tag:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--dark-void-text-muted);
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .post-actions {
+  border-top-color: var(--dark-void-border);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .action {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  color: var(--dark-void-text-muted);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .post-page .action:hover {
+  color: var(--dark-void-text);
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .action.active {
+  color: var(--dark-void-text);
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .action-like.active {
+  color: var(--like-color);
+  border-color: var(--like-color);
+  background: rgba(220, 20, 60, 0.15);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .action-edit {
+  color: var(--dark-void-text-muted);
+  border-color: transparent;
+  background: transparent;
+}
+html.ui-theme-dark-void .dark-void-main .post-page .action-edit:hover {
+  color: var(--dark-void-text);
+  border-color: transparent;
+}
+html.ui-theme-dark-void .dark-void-main .post-page .action-archive:hover,
+html.ui-theme-dark-void .dark-void-main .post-page .action-delete:hover {
+  border-color: var(--dark-void-text-muted);
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .action-dropdown,
+html.ui-theme-dark-void .dark-void-main .post-page .export-dropdown {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0 !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .dropdown-option,
+html.ui-theme-dark-void .dark-void-main .post-page .export-option {
+  color: var(--dark-void-text);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .post-page .dropdown-option:hover:not(:disabled),
+html.ui-theme-dark-void .dark-void-main .post-page .export-option:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .dropdown-loading,
+html.ui-theme-dark-void .dark-void-main .post-page .dropdown-empty {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .comments h2 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .comment-form textarea {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .post-page .comment-form textarea::placeholder {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .comment-form textarea:focus {
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .comment-form .btn-primary {
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--dark-void-text);
+  border-color: var(--dark-void-text);
+  color: var(--dark-void-bg);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .comment-form .btn-primary:hover:not(:disabled) {
+  background: var(--dark-void-text-muted);
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .comment-list .comment {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .post-page .comment-author {
+  color: var(--dark-void-text);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .post-page .comment-body {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .comment-time,
+html.ui-theme-dark-void .dark-void-main .post-page .comment-meta {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .comment-reply-btn,
+html.ui-theme-dark-void .dark-void-main .post-page .comment-delete-btn {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .post-page .comment-reply-btn:hover,
+html.ui-theme-dark-void .dark-void-main .post-page .comment-delete-btn:hover {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .reply-textarea {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .post-page .btn-reply-primary {
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--dark-void-text);
+  border-color: var(--dark-void-text);
+  color: var(--dark-void-bg);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .btn-reply-primary:hover:not(:disabled) {
+  background: var(--dark-void-text-muted);
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .btn-reply-ghost {
+  border-radius: 0 !important;
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .post-page .btn-reply-ghost:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--dark-void-text);
+}
+
+/* Dark Void: archived posts page */
+html.ui-theme-dark-void .dark-void-main .archived-page {
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+}
+html.ui-theme-dark-void .dark-void-main .archived-page h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .archived-page .intro {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.9375rem;
+}
+html.ui-theme-dark-void .dark-void-main .archived-page .loading,
+html.ui-theme-dark-void .dark-void-main .archived-page .empty {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+/* Dark Void: bookmarks page */
+html.ui-theme-dark-void .dark-void-main .bookmarks-page {
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+}
+html.ui-theme-dark-void .dark-void-main .bookmarks-page h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .bookmarks-page .hint,
+html.ui-theme-dark-void .dark-void-main .bookmarks-page .loading,
+html.ui-theme-dark-void .dark-void-main .bookmarks-page .empty {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+/* Dark Void: search page */
+html.ui-theme-dark-void .dark-void-main .search-page {
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+}
+html.ui-theme-dark-void .dark-void-main .search-page h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .search-page .search-input {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .search-page .search-input::placeholder {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .search-page .search-input:focus {
+  border-color: var(--dark-void-text-muted);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08);
+}
+html.ui-theme-dark-void .dark-void-main .search-page .btn-primary {
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--dark-void-text);
+  border: 1px solid var(--dark-void-text);
+  color: var(--dark-void-bg);
+}
+html.ui-theme-dark-void .dark-void-main .search-page .btn-primary:hover:not(:disabled) {
+  background: var(--dark-void-text-muted);
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .search-page .search-tabs {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0 !important;
+  padding: 0.2rem;
+}
+html.ui-theme-dark-void .dark-void-main .search-page .tab {
+  border-radius: 0 !important;
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .search-page .tab:hover:not(.active) {
+  color: var(--dark-void-text);
+  background: rgba(255, 255, 255, 0.06);
+}
+html.ui-theme-dark-void .dark-void-main .search-page .tab.active {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--dark-void-text);
+  box-shadow: none;
+}
+html.ui-theme-dark-void .dark-void-main .search-page .loading,
+html.ui-theme-dark-void .dark-void-main .search-page .empty {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .search-page .user-item {
+  border-bottom-color: var(--dark-void-border);
+}
+html.ui-theme-dark-void .dark-void-main .search-page .user-link:hover {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .search-page .user-name {
+  color: var(--dark-void-text);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .search-page .user-handle {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+/* Dark Void: notifications page */
+html.ui-theme-dark-void .dark-void-main .notifications-page {
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+}
+html.ui-theme-dark-void .dark-void-main .notifications-page h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .notifications-page .loading,
+html.ui-theme-dark-void .dark-void-main .notifications-page .empty {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .notifications-page .notification-item {
+  border-bottom-color: var(--dark-void-border);
+}
+html.ui-theme-dark-void .dark-void-main .notifications-page .notification-item.unread {
+  background: rgba(255, 255, 255, 0.04);
+}
+html.ui-theme-dark-void .dark-void-main .notifications-page .notification-link {
+  color: inherit;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .notifications-page .notification-link:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+html.ui-theme-dark-void .dark-void-main .notifications-page .notif-text {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .notifications-page .notif-date {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .notifications-page .mark-all {
+  border-radius: 0 !important;
+  border: 1px solid var(--dark-void-border);
+  background: var(--dark-void-card);
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .notifications-page .mark-all:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--dark-void-text);
+}
+
+/* Dark Void: collections list page */
+html.ui-theme-dark-void .dark-void-main .collections-page {
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+}
+html.ui-theme-dark-void .dark-void-main .collections-page h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .intro {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.9375rem;
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .loading {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .empty {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .btn-primary {
+  font-family: 'Space Grotesk', sans-serif;
+  border-radius: 0;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .btn-primary:hover:not(:disabled) {
+  background: var(--dark-void-text-muted);
+  border-color: var(--dark-void-text-muted);
+  color: #1a1a1f;
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .collection-link {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0;
+  color: var(--dark-void-text);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .collection-link:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--dark-void-border);
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .collection-title {
+  color: var(--dark-void-text);
+  font-weight: 500;
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .collection-count {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+/* Collections page "New collection" modal (in-page) */
+html.ui-theme-dark-void .dark-void-main .collections-page .modal-backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .modal {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0;
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .modal h2 {
+  font-family: 'Space Grotesk', sans-serif;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .form-group label {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .form-group input,
+html.ui-theme-dark-void .dark-void-main .collections-page .form-group textarea {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .form-group input::placeholder,
+html.ui-theme-dark-void .dark-void-main .collections-page .form-group textarea::placeholder {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .form-group input:focus,
+html.ui-theme-dark-void .dark-void-main .collections-page .form-group textarea:focus {
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .modal-actions .btn-ghost {
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text-muted);
+  border-radius: 0;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .modal-actions .btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--dark-void-text);
+  border-color: var(--dark-void-border);
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .modal-actions .btn-primary {
+  border-radius: 0;
+}
+
+/* Dark Void: settings page */
+html.ui-theme-dark-void .dark-void-main .settings-page {
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+}
+html.ui-theme-dark-void .dark-void-main .settings-page h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .form {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0 !important;
+  padding: clamp(1rem, 4vw, 2rem);
+  box-shadow: none;
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .form-group label {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .input,
+html.ui-theme-dark-void .dark-void-main .settings-page .textarea {
+  background: var(--dark-void-bg);
+  border: 1px solid var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .input::placeholder,
+html.ui-theme-dark-void .dark-void-main .settings-page .textarea::placeholder {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .input:focus,
+html.ui-theme-dark-void .dark-void-main .settings-page .textarea:focus {
+  outline: none;
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .hint {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .btn-primary {
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--dark-void-text);
+  border-color: var(--dark-void-text);
+  color: var(--dark-void-bg);
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .btn-primary:hover:not(:disabled) {
+  background: var(--dark-void-text-muted);
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .error {
+  color: #f87171;
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .success {
+  color: #86efac;
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .avatar-shape-label {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .avatar-shape-options,
+html.ui-theme-dark-void .dark-void-main .settings-page .frame-type-options {
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .avatar-shape-option span {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .frame-label,
+html.ui-theme-dark-void .dark-void-main .settings-page .frame-color-label {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .frame-value {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .frame-check {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .frame-select {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .frame-select:focus {
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .color-picker {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .color-adjust-btn {
+  border-color: var(--dark-void-border);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .color-hex {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .frame-slider {
+  accent-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .avatar-row {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .avatar-shape-option input[type="radio"],
+html.ui-theme-dark-void .dark-void-main .settings-page .frame-type-options input[type="radio"] {
+  border-radius: 0 !important;
+  border-color: var(--dark-void-border);
+  background: var(--dark-void-bg);
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .avatar-shape-option input[type="radio"]:checked,
+html.ui-theme-dark-void .dark-void-main .settings-page .frame-type-options input[type="radio"]:checked {
+  background: var(--dark-void-text-muted);
+  border-color: var(--dark-void-text-muted);
+  box-shadow: inset 0 0 0 2px var(--dark-void-card);
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .frame-check input[type="checkbox"] {
+  border-radius: 0 !important;
+  border-color: var(--dark-void-border);
+  background: var(--dark-void-bg);
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .frame-check input[type="checkbox"]:checked {
+  background: var(--dark-void-text-muted);
+  border-color: var(--dark-void-text-muted);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 6l3 3 5-6'/%3E%3C/svg%3E");
+  background-size: 0.75rem 0.75rem;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Dark Void: customization page – sections as cards, centered, sharp corners */
+html.ui-theme-dark-void .dark-void-main .customization-page {
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .intro {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .theme-section {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0 !important;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.25rem;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .section-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: var(--dark-void-text);
+  border-bottom-color: var(--dark-void-border);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .section-hint {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .ui-theme-options {
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .ui-theme-option span {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .subsection-title {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .template-card {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .template-card:hover {
+  border-color: var(--dark-void-text-muted);
+  background: rgba(255, 255, 255, 0.06);
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .template-name {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .template-delete {
+  background: var(--dark-void-card);
+  color: var(--dark-void-text-muted);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .template-delete:hover {
+  color: var(--dark-void-text);
+  background: rgba(255, 255, 255, 0.08);
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .bg-image-preview {
+  border-color: var(--dark-void-border);
+  border-radius: 0 !important;
+  background: var(--dark-void-bg);
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .bg-arrange-label,
+html.ui-theme-dark-void .dark-void-main .customization-page .bg-zoom-label {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .bg-position-btn {
+  border-color: var(--dark-void-border);
+  background: var(--dark-void-bg);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .bg-position-btn:hover {
+  border-color: var(--dark-void-text-muted);
+  background: rgba(255, 255, 255, 0.06);
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .bg-position-btn.active {
+  border-color: var(--dark-void-text-muted);
+  background: rgba(255, 255, 255, 0.12);
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .bg-position-dot {
+  background: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .bg-size-option,
+html.ui-theme-dark-void .dark-void-main .customization-page .bg-repeat-options .bg-size-option {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .bg-zoom-slider {
+  accent-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .bg-crop-hint,
+html.ui-theme-dark-void .dark-void-main .customization-page .bg-crop-active {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .bg-image-url-input {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .bg-image-url-input::placeholder {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .bg-image-or {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .color-label {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .color-picker {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .color-adjust-btn {
+  border-color: var(--dark-void-border);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .color-hex {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .btn-icon-small {
+  color: var(--dark-void-text-muted);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .btn-icon-small:hover {
+  color: var(--dark-void-text);
+  background: rgba(255, 255, 255, 0.06);
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .actions {
+  border-top-color: var(--dark-void-border);
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .btn {
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .btn-primary {
+  background: var(--dark-void-text);
+  border-color: var(--dark-void-text);
+  color: var(--dark-void-bg);
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .btn-primary:hover:not(:disabled) {
+  background: var(--dark-void-text-muted);
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .btn-outline {
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text-muted);
+  background: transparent;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .btn-outline:hover:not(:disabled) {
+  border-color: var(--dark-void-text-muted);
+  color: var(--dark-void-text);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Dark Void: teleported modals (color editor, save theme) */
+html.ui-theme-dark-void .color-editor-backdrop {
+  background: rgba(0, 0, 0, 0.7);
+}
+html.ui-theme-dark-void .color-editor-modal {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0 !important;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .color-editor-modal .modal-heading {
+  font-family: 'Space Grotesk', sans-serif;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .color-editor-modal .modal-hint {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .color-editor-modal .color-editor-preview {
+  border-color: var(--dark-void-border);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .color-editor-modal .color-editor-hex {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .color-editor-modal .color-editor-slider-label {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .color-editor-modal .color-editor-value {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .color-editor-modal .btn-primary {
+  background: var(--dark-void-text);
+  border-color: var(--dark-void-text);
+  color: var(--dark-void-bg);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .color-editor-modal .btn-primary:hover:not(:disabled) {
+  background: var(--dark-void-text-muted);
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .color-editor-modal .color-editor-range::-webkit-slider-runnable-track {
+  background: var(--dark-void-border);
+}
+html.ui-theme-dark-void .color-editor-modal .color-editor-range::-webkit-slider-thumb {
+  background: var(--dark-void-text-muted);
+  border-color: var(--dark-void-card);
+}
+html.ui-theme-dark-void .save-theme-modal {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .save-theme-modal .modal-heading {
+  font-family: 'Space Grotesk', sans-serif;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .save-theme-modal .modal-hint {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .save-theme-modal .save-theme-preview {
+  border-color: var(--dark-void-border);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .save-theme-modal .save-theme-input {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .save-theme-modal .save-theme-input::placeholder {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .save-theme-modal .btn-primary {
+  background: var(--dark-void-text);
+  border-color: var(--dark-void-text);
+  color: var(--dark-void-bg);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .save-theme-modal .btn-outline {
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text-muted);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+/* Dark Void: write post & edit post – focused writing experience, sharp corners, dark cards */
+html.ui-theme-dark-void .dark-void-main .write-page,
+html.ui-theme-dark-void .dark-void-main .edit-page {
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
+}
+html.ui-theme-dark-void .dark-void-main .write-page h1,
+html.ui-theme-dark-void .dark-void-main .edit-page h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .form,
+html.ui-theme-dark-void .dark-void-main .edit-page .form {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0 !important;
+  padding: clamp(1.25rem, 4vw, 2rem);
+  box-shadow: none;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .title-input,
+html.ui-theme-dark-void .dark-void-main .edit-page .title-input {
+  color: var(--dark-void-text);
+  border-bottom-color: var(--dark-void-border);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .title-input::placeholder,
+html.ui-theme-dark-void .dark-void-main .edit-page .title-input::placeholder {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .title-warning {
+  color: #fca5a5;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .dropdown-trigger,
+html.ui-theme-dark-void .dark-void-main .edit-page .dropdown-trigger {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .dropdown-trigger:hover,
+html.ui-theme-dark-void .dark-void-main .edit-page .dropdown-trigger:hover {
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .dropdown-trigger:focus,
+html.ui-theme-dark-void .dark-void-main .edit-page .dropdown-trigger:focus {
+  border-color: var(--dark-void-text-muted);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .dropdown-chevron,
+html.ui-theme-dark-void .dark-void-main .edit-page .dropdown-chevron {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .dropdown-panel,
+html.ui-theme-dark-void .dark-void-main .edit-page .dropdown-panel {
+  background: var(--dark-void-card);
+  border-color: var(--dark-void-border);
+  border-radius: 0 !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .dropdown-option,
+html.ui-theme-dark-void .dark-void-main .edit-page .dropdown-option {
+  color: var(--dark-void-text);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .dropdown-option:hover,
+html.ui-theme-dark-void .dark-void-main .edit-page .dropdown-option:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .dropdown-option.active,
+html.ui-theme-dark-void .dark-void-main .edit-page .dropdown-option.active {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--dark-void-text);
+  font-weight: 600;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .btn-outline,
+html.ui-theme-dark-void .dark-void-main .edit-page .btn-outline {
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text-muted);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .btn-outline:hover:not(:disabled),
+html.ui-theme-dark-void .dark-void-main .edit-page .btn-outline:hover:not(:disabled) {
+  border-color: var(--dark-void-text-muted);
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .saved-hint,
+html.ui-theme-dark-void .dark-void-main .write-page .upload-hint {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .editor {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .editor::placeholder {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .edit-page .editor {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .edit-page .editor::placeholder {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .preview-pane {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .preview-label {
+  color: var(--dark-void-text-muted);
+  border-bottom-color: var(--dark-void-border);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .preview-content {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .tags-input,
+html.ui-theme-dark-void .dark-void-main .edit-page .tags-input {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .tags-input::placeholder,
+html.ui-theme-dark-void .dark-void-main .edit-page .tags-input::placeholder {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .actions,
+html.ui-theme-dark-void .dark-void-main .edit-page .actions {
+  border-top-color: var(--dark-void-border);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .btn-primary,
+html.ui-theme-dark-void .dark-void-main .edit-page .btn-primary {
+  background: var(--dark-void-text);
+  border-color: var(--dark-void-text);
+  color: var(--dark-void-bg);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .btn-primary:hover:not(:disabled),
+html.ui-theme-dark-void .dark-void-main .edit-page .btn-primary:hover:not(:disabled) {
+  background: var(--dark-void-text-muted);
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .error {
+  color: #f87171;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .edit-page .error {
+  color: #f87171;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .conflict-banner {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.5);
+  border-radius: 0 !important;
+  color: var(--dark-void-text);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .versions-panel {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .versions-title,
+html.ui-theme-dark-void .dark-void-main .write-page .versions-item {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .btn-ghost {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .btn-ghost:hover {
+  color: var(--dark-void-text);
+}
+/* Rich text editor (Write view) – Dark Void */
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor {
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .editor-toolbar {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-btn,
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-select {
+  background: var(--dark-void-card);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-btn:hover,
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-btn.active {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--dark-void-text-muted);
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-select {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-divider {
+  background: var(--dark-void-border);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-loading {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .ProseMirror {
+  background: var(--dark-void-bg);
+  color: var(--dark-void-text);
+  border-color: var(--dark-void-border);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .ProseMirror p.is-editor-empty:first-child::before {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .edit-page > div {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+/* Dark Void: single collection page */
+html.ui-theme-dark-void .dark-void-main .collection-page {
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+}
+html.ui-theme-dark-void .dark-void-main .collection-page .collection-header h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .collection-page .description {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .collection-page .owner {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .collection-page .owner:hover {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .collection-page .loading,
+html.ui-theme-dark-void .dark-void-main .collection-page .empty,
+html.ui-theme-dark-void .dark-void-main .collection-page .error {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+/* Dark Void: FAB – right edge of feed (left of sidebar), sharp edges to match theme */
+html.ui-theme-dark-void .fab--dark-void.fab,
+html.ui-theme-dark-void .fab.fab--dark-void {
+  background: #fff;
+  color: #1a1a1f;
+  border-radius: 0;
+  border: none;
+  outline: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  width: 56px;
+  height: 56px;
+  bottom: max(2.75rem, calc(env(safe-area-inset-bottom, 0px) + 2rem));
+  right: calc(280px + 1.5rem);
+}
+@media (max-width: 1024px) {
+  html.ui-theme-dark-void .fab--dark-void.fab,
+  html.ui-theme-dark-void .fab.fab--dark-void {
+    right: max(1.5rem, env(safe-area-inset-right, 0px));
+    /* Sit above the fixed status bar (avoid overlap on mobile) */
+    bottom: max(4.5rem, calc(env(safe-area-inset-bottom, 0px) + 4rem));
+  }
+}
+html.ui-theme-dark-void .fab--dark-void.fab:hover,
+html.ui-theme-dark-void .fab.fab--dark-void:hover {
+  background: #e8e8ec;
+  color: #0d0d0f;
+}
+html.ui-theme-dark-void .fab--dark-void.fab .fab-icon,
+html.ui-theme-dark-void .fab.fab--dark-void .fab-icon {
+  width: 1.375rem;
+  height: 1.375rem;
 }
 </style>

@@ -5,6 +5,27 @@ import { api } from '@/api/client'
 const STORAGE_KEY = 'writespace-theme'
 const STORAGE_BG_IMAGE = 'writespace-theme-bg-image'
 const STORAGE_BG_OPTIONS = 'writespace-theme-bg-options'
+const STORAGE_UI_THEME = 'writespace-ui-theme'
+
+export type UiThemeId = 'default' | 'dark-void'
+
+function loadUiThemeFromStorage(): UiThemeId {
+  try {
+    const v = localStorage.getItem(STORAGE_UI_THEME)
+    if (v === 'dark-void' || v === 'default') return v
+  } catch {
+    // ignore
+  }
+  return 'default'
+}
+
+function saveUiThemeToStorage(id: UiThemeId) {
+  try {
+    localStorage.setItem(STORAGE_UI_THEME, id)
+  } catch {
+    // ignore
+  }
+}
 
 export type BgImagePosition =
   | 'center'
@@ -506,11 +527,21 @@ function applyBgImageToDocument(url: string | null, options?: BgImageOptions) {
 
 const allKeys = Object.keys(THEME_DEFAULTS) as ThemeKey[]
 
+const UI_THEME_CLASS = 'ui-theme-dark-void'
+
+function applyUiThemeToDocument(uiTheme: UiThemeId) {
+  const root = document.documentElement
+  if (uiTheme === 'dark-void') root.classList.add(UI_THEME_CLASS)
+  else root.classList.remove(UI_THEME_CLASS)
+}
+
 export const useThemeStore = defineStore('theme', () => {
   const overrides = ref<Partial<Record<ThemeKey, string>>>(loadFromStorage())
   const bgImageUrl = ref<string | null>(loadBgImageFromStorage())
   const bgImageOptions = ref<BgImageOptions>(loadBgOptionsFromStorage())
   const userTemplates = ref<UserSavedTheme[]>([])
+  const uiTheme = ref<UiThemeId>(loadUiThemeFromStorage())
+  const isDarkVoid = computed(() => uiTheme.value === 'dark-void')
 
   const templatesList = computed(() => {
     const builtIn = Object.entries(THEME_TEMPLATES).map(([id, t]) => ({
@@ -540,9 +571,16 @@ export const useThemeStore = defineStore('theme', () => {
       .map(([id, t]) => ({ id, name: t.name, palette: t.palette, isUser: false as const }))
   )
 
+  function setUiTheme(id: UiThemeId) {
+    uiTheme.value = id
+    saveUiThemeToStorage(id)
+    applyUiThemeToDocument(id)
+  }
+
   function init() {
     applyToDocument(overrides.value)
     applyBgImageToDocument(bgImageUrl.value, bgImageOptions.value)
+    applyUiThemeToDocument(uiTheme.value)
   }
 
   function setBgImage(url: string | null) {
@@ -661,6 +699,9 @@ export const useThemeStore = defineStore('theme', () => {
     overrides,
     bgImageUrl,
     bgImageOptions,
+    uiTheme,
+    isDarkVoid,
+    setUiTheme,
     setBgImageOptions,
     defaults: THEME_DEFAULTS,
     THEME_KEYS,

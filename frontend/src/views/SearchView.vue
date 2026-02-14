@@ -22,7 +22,7 @@
         <ul v-else class="user-list">
           <li v-for="u in users" :key="userKey(u)" class="user-item">
             <router-link :to="`/u/${userUsername(u)}`" class="user-link">
-              <AvatarFrame :frame="userAvatarFrame(u) ?? null" :shape-class="avatarShapeClass(userAvatarShape(u))">
+              <AvatarFrame :frame="userAvatarFrame(u) ?? null" :shape-class="avatarShapeClass(userAvatarShape(u))" :badge-url="userBadgeUrl(u)">
                 <img v-if="userAvatarUrl(u)" :src="avatarSrc(userAvatarUrl(u), u?.id === auth.user?.id ? auth.avatarVersion : undefined)" alt="" class="user-avatar" :class="avatarShapeClass(userAvatarShape(u))" />
                 <span v-else class="user-avatar-placeholder" :class="avatarShapeClass(userAvatarShape(u))">{{ (userDisplayName(u) || userUsername(u) || '?')[0] }}</span>
               </AvatarFrame>
@@ -86,6 +86,10 @@ function userAvatarFrame(u: Record<string, unknown>) {
   return (u as { avatarFrame?: unknown }).avatarFrame
 }
 
+function userBadgeUrl(u: Record<string, unknown>): string | null {
+  return (u as { badgeUrl?: string }).badgeUrl ?? null
+}
+
 async function search() {
   const q = typeof query.value === 'string' ? query.value.trim() : ''
   if (!q) return
@@ -116,7 +120,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.search-page { padding: 0; }
+.search-page { padding: 0; max-width: 640px; margin: 0 auto; width: 100%; }
 .search-page h1 { font-size: clamp(1.5rem, 4vw, 1.75rem); margin: 0 0 1rem; }
 .search-form {
   display: flex;
@@ -158,8 +162,22 @@ onMounted(() => {
 .user-handle { font-size: 0.875rem; color: var(--gray-600); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 @media (max-width: 480px) {
-  .search-form { flex-direction: column; }
-  .search-input { max-width: none; }
+  .search-form {
+    flex-direction: row;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .search-input {
+    max-width: none;
+    flex: 1;
+    min-width: 0;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9375rem;
+  }
+  .search-page .btn-primary {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+  }
   .search-tabs { justify-content: center; }
   .tab { flex: 1; min-width: 0; padding: 0.5rem; font-size: 0.875rem; }
   .user-avatar, .user-avatar-placeholder { width: 40px; height: 40px; font-size: 1rem; line-height: 40px; }

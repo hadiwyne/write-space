@@ -5,13 +5,20 @@ import { fileURLToPath, URL } from 'node:url'
 export default defineConfig({
   plugins: [vue()],
   resolve: {
-    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
   },
   server: {
     port: 5173,
     proxy: {
-      '/api': { target: 'http://localhost:3000', changeOrigin: true, rewrite: (p) => p.replace(/^\/api/, '') },
-      '/socket.io': { target: 'http://localhost:3000', ws: true },
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+      // Uncomment to proxy Socket.IO (real-time notifications). Can cause noisy ws errors when backend restarts.
+      // '/socket.io': { target: 'http://localhost:3000', ws: true },
     },
   },
 })

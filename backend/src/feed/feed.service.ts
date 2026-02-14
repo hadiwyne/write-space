@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 
 function postInclude(userId: string | null) {
   return {
-    author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true } },
+    author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
     _count: { select: { likes: true, comments: true, reposts: true } },
     ...(userId ? { likes: { where: { userId }, take: 1, select: { id: true } } } : {}),
   };

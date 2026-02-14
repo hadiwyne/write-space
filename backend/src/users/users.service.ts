@@ -1,7 +1,8 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import sharp from 'sharp';
 // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
 const DOMPurify = require('isomorphic-dompurify') as { sanitize: (html: string, options?: object) => string };
 import { PrismaService } from '../prisma/prisma.service';
@@ -9,6 +10,11 @@ import { RegisterDto } from '../auth/dto/register.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 
 const MAX_AVATAR_FRAME_BYTES = 2048;
+
+/** Max upload size for custom badge (100 KB). Favicon-like small transparent icons. */
+const MAX_BADGE_SIZE = 100 * 1024;
+const BADGE_TARGET_SIZE = 64;
+const BADGE_MIME = 'image/png';
 
 /** Sanitize avatarFrame object: only allowed keys, reasonable values. Returns undefined if invalid. */
 function sanitizeAvatarFrame(
@@ -18,7 +24,7 @@ function sanitizeAvatarFrame(
   if (typeof raw !== 'object' || Array.isArray(raw)) return undefined;
   const out: Record<string, unknown> = {};
   const allowed = ['borderType', 'gradient', 'glow', 'preset', 'badge', 'badgePosition', 'animation'];
-  const allowedBadges = ['none', 'star', 'crown', 'flame', 'heart', 'sparkle', 'bolt'];
+  const allowedBadges = ['none', 'star', 'crown', 'flame', 'heart', 'sparkle', 'bolt', 'custom'];
   const allowedBadgePositions = ['bottom-right', 'top-right', 'top-left', 'bottom-left'];
   const allowedAnimations = ['none', 'shimmer', 'dashed', 'spin'];
   for (const key of Object.keys(raw)) {
@@ -66,6 +72,7 @@ const userSelectWithoutPassword = {
   avatarUrl: true,
   avatarShape: true,
   avatarFrame: true,
+  badgeUrl: true,
   isSuperadmin: true,
   createdAt: true,
   updatedAt: true,
@@ -94,7 +101,7 @@ export class UsersService {
   }
 
   async findMe(id: string) {
-    return this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { id },
       select: {
         id: true,
@@ -106,11 +113,24 @@ export class UsersService {
         avatarUrl: true,
         avatarShape: true,
         avatarFrame: true,
+        badgeUrl: true,
         isSuperadmin: true,
         createdAt: true,
         updatedAt: true,
+        _count: { select: { likes: true } },
       },
     });
+    if (!user) return null;
+    const postsCount = await this.prisma.post.count({
+      where: { authorId: id, isPublished: true, archivedAt: null },
+    });
+    return {
+      ...user,
+      _count: {
+        ...(user._count ?? {}),
+        posts: postsCount,
+      },
+    };
   }
 
   /** Returns profile by username. If profile is superadmin and viewer is not that user, returns null (invisible). */
@@ -126,6 +146,7 @@ export class UsersService {
         avatarUrl: true,
         avatarShape: true,
         avatarFrame: true,
+        badgeUrl: true,
         isSuperadmin: true,
         createdAt: true,
         updatedAt: true,
@@ -224,5 +245,63 @@ export class UsersService {
     });
     if (!user?.avatarData || !user.avatarMimeType) return null;
     return { buffer: Buffer.from(user.avatarData), mimeType: user.avatarMimeType };
+  }
+
+  /**
+   * Save custom badge image. Accepts PNG or WebP (transparency), max 100 KB.
+   * Resizes to 64x64 PNG for consistent display and small storage (favicon-like).
+   */
+  async saveBadge(userId: string, buffer: Buffer, mimeType: string) {
+    if (buffer.length > MAX_BADGE_SIZE) {
+      throw new BadRequestException(`Badge image must be under ${MAX_BADGE_SIZE / 1024} KB`);
+    }
+    if (!['image/png', 'image/webp', 'image/x-icon', 'image/vnd.microsoft.icon'].includes(mimeType)) {
+      throw new BadRequestException('Badge must be PNG or WebP (transparent background recommended).');
+    }
+    if (mimeType === 'image/x-icon' || mimeType === 'image/vnd.microsoft.icon') {
+      throw new BadRequestException('ICO favicons are not supported. Please export or save your icon as PNG or WebP (e.g. use "Export as PNG" in your editor or a favicon-to-PNG converter).');
+    }
+    let pngBuffer: Buffer;
+    try {
+      pngBuffer = await sharp(buffer, { failOnError: true })
+        .resize(BADGE_TARGET_SIZE, BADGE_TARGET_SIZE, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+        .png()
+        .toBuffer();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '';
+      if (msg && (msg.includes('Vips') || msg.includes('load') || msg.includes('decode') || msg.includes('buffer'))) {
+        throw new BadRequestException('Image could not be read. If this is an ICO favicon, export it as PNG or WebP first. Otherwise try a different PNG/WebP file (max 100 KB).');
+      }
+      throw new BadRequestException('Invalid or corrupted image. Try a PNG or WebP file, max 100 KB, with transparent background.');
+    }
+    const badgeUrl = `/users/badge/${userId}`;
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { badgeUrl, badgeData: pngBuffer, badgeMimeType: BADGE_MIME },
+    });
+    return this.prisma.user.findUnique({
+      where: { id: userId },
+      select: userSelectWithoutPassword,
+    });
+  }
+
+  async getBadge(userId: string): Promise<{ buffer: Buffer; mimeType: string } | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { badgeData: true, badgeMimeType: true },
+    });
+    if (!user?.badgeData || !user.badgeMimeType) return null;
+    return { buffer: Buffer.from(user.badgeData), mimeType: user.badgeMimeType };
+  }
+
+  async deleteBadge(userId: string) {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { badgeUrl: null, badgeData: null, badgeMimeType: null },
+    });
+    return this.prisma.user.findUnique({
+      where: { id: userId },
+      select: userSelectWithoutPassword,
+    });
   }
 }

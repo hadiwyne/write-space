@@ -33,4 +33,10 @@ export class SearchController {
       Number(offset) || 0,
     );
   }
+
+  @Public()
+  @Get('trending-tags')
+  getTrendingTags(@Query('limit') limit?: string) {
+    return this.searchService.getTrendingTags(Number(limit) || 10);
+  }
 }
