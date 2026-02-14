@@ -521,6 +521,542 @@ html.ui-theme-dark-void .dark-void-main .feed .view-btn.active {
   color: var(--dark-void-text);
 }
 
+/* Dark Void: profile page – same aesthetic as feed (sharp corners, dark cards, Space Grotesk) */
+html.ui-theme-dark-void .dark-void-main .profile-page .profile-header,
+html.ui-theme-dark-void .dark-void-main .profile-page .posts-section {
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .profile-header {
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0 !important;
+  box-shadow: none;
+  border-bottom: 1px solid var(--dark-void-border);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .profile-header h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .bio,
+html.ui-theme-dark-void .dark-void-main .profile-page .profile-html {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .profile-stats {
+  border-top-color: var(--dark-void-border);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .stat-item {
+  border-radius: 0 !important;
+  color: inherit;
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .stat-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .stat-value {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .stat-item:hover .stat-value {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .stat-label {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .stat-item:hover .stat-label {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .edit-link {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .edit-link:hover {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .archived-link:hover {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .btn-follow {
+  font-family: 'Space Grotesk', sans-serif;
+  border-radius: 0 !important;
+  border: 1px solid var(--dark-void-text);
+  background: var(--dark-void-text);
+  color: var(--dark-void-bg);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .btn-follow:hover:not(:disabled) {
+  background: var(--dark-void-text-muted);
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .btn-following {
+  background: transparent;
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .btn-following:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--dark-void-text-muted);
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .profile-tabs {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0 !important;
+  padding: 0.2rem;
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .profile-tab {
+  font-family: 'Space Grotesk', sans-serif;
+  border-radius: 0 !important;
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .profile-tab:hover:not(.active) {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .profile-tab.active {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--dark-void-text);
+  box-shadow: none;
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .profile-tabs-indicator {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 0 !important;
+  box-shadow: none;
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .empty {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .loading,
+html.ui-theme-dark-void .dark-void-main .profile-page .error {
+  color: var(--dark-void-text-muted);
+}
+/* Dark Void: modals (profile followers/following + any teleported modal) */
+html.ui-theme-dark-void .modal-backdrop {
+  background: rgba(0, 0, 0, 0.7);
+}
+html.ui-theme-dark-void .modal {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0 !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+html.ui-theme-dark-void .modal-header {
+  border-bottom-color: var(--dark-void-border);
+}
+html.ui-theme-dark-void .modal-title {
+  font-family: 'Space Grotesk', sans-serif;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .modal-close {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .modal-close:hover {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .modal-list-item {
+  border-bottom-color: var(--dark-void-border);
+}
+html.ui-theme-dark-void .modal-user:hover {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .modal-user-name {
+  color: var(--dark-void-text);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .modal-user-handle {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .btn-modal {
+  border-radius: 0 !important;
+  border-color: var(--dark-void-border);
+  background: var(--dark-void-card);
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .btn-modal:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .btn-remove:hover:not(:disabled) {
+  border-color: var(--accent-burgundy);
+  color: var(--accent-burgundy);
+}
+html.ui-theme-dark-void .btn-unfollow:hover:not(:disabled) {
+  border-color: var(--dark-void-text);
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .profile-page .avatar-clip,
+html.ui-theme-dark-void .dark-void-main .profile-page .avatar-placeholder {
+  border-color: var(--dark-void-card);
+  outline-color: var(--dark-void-border);
+  box-shadow: none;
+}
+
+/* Dark Void: post view (single post) – same aesthetic as feed/profile */
+html.ui-theme-dark-void .dark-void-main .post-page {
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 0;
+}
+html.ui-theme-dark-void .dark-void-main .post-page .loading,
+html.ui-theme-dark-void .dark-void-main .post-page .error {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .post-page .post {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0 !important;
+  box-shadow: none;
+  margin-bottom: clamp(1rem, 4vw, 2rem);
+  padding: clamp(1rem, 4vw, 2rem);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .post-title {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-weight: 700;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .post-meta {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .post-meta .author {
+  color: var(--dark-void-text);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .post-page .post-meta .author:hover {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .post-content {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .post-tags .tag {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  color: var(--dark-void-text-muted);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .post-page .post-tags .tag:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--dark-void-text-muted);
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .post-actions {
+  border-top-color: var(--dark-void-border);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .action {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  color: var(--dark-void-text-muted);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .post-page .action:hover {
+  color: var(--dark-void-text);
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .action.active {
+  color: var(--dark-void-text);
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .action-like.active {
+  color: var(--like-color);
+  border-color: var(--like-color);
+  background: rgba(220, 20, 60, 0.15);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .action-edit {
+  color: var(--dark-void-text-muted);
+  border-color: transparent;
+  background: transparent;
+}
+html.ui-theme-dark-void .dark-void-main .post-page .action-edit:hover {
+  color: var(--dark-void-text);
+  border-color: transparent;
+}
+html.ui-theme-dark-void .dark-void-main .post-page .action-archive:hover,
+html.ui-theme-dark-void .dark-void-main .post-page .action-delete:hover {
+  border-color: var(--dark-void-text-muted);
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .action-dropdown,
+html.ui-theme-dark-void .dark-void-main .post-page .export-dropdown {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0 !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .dropdown-option,
+html.ui-theme-dark-void .dark-void-main .post-page .export-option {
+  color: var(--dark-void-text);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .post-page .dropdown-option:hover:not(:disabled),
+html.ui-theme-dark-void .dark-void-main .post-page .export-option:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .dropdown-loading,
+html.ui-theme-dark-void .dark-void-main .post-page .dropdown-empty {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .comments h2 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .comment-form textarea {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .post-page .comment-form textarea::placeholder {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .comment-form textarea:focus {
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .comment-form .btn-primary {
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--dark-void-text);
+  border-color: var(--dark-void-text);
+  color: var(--dark-void-bg);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .comment-form .btn-primary:hover:not(:disabled) {
+  background: var(--dark-void-text-muted);
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .comment-list .comment {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .post-page .comment-author {
+  color: var(--dark-void-text);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .post-page .comment-body {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .comment-time,
+html.ui-theme-dark-void .dark-void-main .post-page .comment-meta {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .comment-reply-btn,
+html.ui-theme-dark-void .dark-void-main .post-page .comment-delete-btn {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .post-page .comment-reply-btn:hover,
+html.ui-theme-dark-void .dark-void-main .post-page .comment-delete-btn:hover {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .reply-textarea {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .post-page .btn-reply-primary {
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--dark-void-text);
+  border-color: var(--dark-void-text);
+  color: var(--dark-void-bg);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .btn-reply-primary:hover:not(:disabled) {
+  background: var(--dark-void-text-muted);
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .btn-reply-ghost {
+  border-radius: 0 !important;
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .post-page .btn-reply-ghost:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--dark-void-text);
+}
+
+/* Dark Void: archived posts page */
+html.ui-theme-dark-void .dark-void-main .archived-page {
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+}
+html.ui-theme-dark-void .dark-void-main .archived-page h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .archived-page .intro {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.9375rem;
+}
+html.ui-theme-dark-void .dark-void-main .archived-page .loading,
+html.ui-theme-dark-void .dark-void-main .archived-page .empty {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+/* Dark Void: bookmarks page */
+html.ui-theme-dark-void .dark-void-main .bookmarks-page {
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+}
+html.ui-theme-dark-void .dark-void-main .bookmarks-page h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .bookmarks-page .hint,
+html.ui-theme-dark-void .dark-void-main .bookmarks-page .loading,
+html.ui-theme-dark-void .dark-void-main .bookmarks-page .empty {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+/* Dark Void: collections list page */
+html.ui-theme-dark-void .dark-void-main .collections-page {
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+}
+html.ui-theme-dark-void .dark-void-main .collections-page h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .intro {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.9375rem;
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .loading {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .empty {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .btn-primary {
+  font-family: 'Space Grotesk', sans-serif;
+  border-radius: 0;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .btn-primary:hover:not(:disabled) {
+  background: var(--dark-void-text-muted);
+  border-color: var(--dark-void-text-muted);
+  color: #1a1a1f;
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .collection-link {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0;
+  color: var(--dark-void-text);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .collection-link:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--dark-void-border);
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .collection-title {
+  color: var(--dark-void-text);
+  font-weight: 500;
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .collection-count {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+/* Collections page "New collection" modal (in-page) */
+html.ui-theme-dark-void .dark-void-main .collections-page .modal-backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .modal {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0;
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .modal h2 {
+  font-family: 'Space Grotesk', sans-serif;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .form-group label {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .form-group input,
+html.ui-theme-dark-void .dark-void-main .collections-page .form-group textarea {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .form-group input::placeholder,
+html.ui-theme-dark-void .dark-void-main .collections-page .form-group textarea::placeholder {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .form-group input:focus,
+html.ui-theme-dark-void .dark-void-main .collections-page .form-group textarea:focus {
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .modal-actions .btn-ghost {
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text-muted);
+  border-radius: 0;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .modal-actions .btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--dark-void-text);
+  border-color: var(--dark-void-border);
+}
+html.ui-theme-dark-void .dark-void-main .collections-page .modal-actions .btn-primary {
+  border-radius: 0;
+}
+
+/* Dark Void: single collection page */
+html.ui-theme-dark-void .dark-void-main .collection-page {
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+}
+html.ui-theme-dark-void .dark-void-main .collection-page .collection-header h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .collection-page .description {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .collection-page .owner {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .collection-page .owner:hover {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .collection-page .loading,
+html.ui-theme-dark-void .dark-void-main .collection-page .empty,
+html.ui-theme-dark-void .dark-void-main .collection-page .error {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+
 /* Dark Void: FAB – right edge of feed (left of sidebar), sharp edges to match theme */
 html.ui-theme-dark-void .fab--dark-void.fab,
 html.ui-theme-dark-void .fab.fab--dark-void {

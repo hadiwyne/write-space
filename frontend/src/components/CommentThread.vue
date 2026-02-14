@@ -145,7 +145,30 @@ function onReplyContentInput(e: Event) {
   border-radius: var(--radius-md);
   border: 1px solid var(--border-light);
 }
-.comment-avatar-link { flex-shrink: 0; }
+.comment-avatar-link {
+  flex-shrink: 0;
+  display: block;
+  width: 36px;
+  height: 36px;
+  overflow: hidden;
+}
+.comment-avatar-link :deep(.avatar-frame-root),
+.comment-avatar-link :deep(.avatar-frame) {
+  width: 100%;
+  height: 100%;
+  max-width: 36px;
+  max-height: 36px;
+  min-width: 0;
+  min-height: 0;
+}
+.comment-avatar-link :deep(.avatar-frame > *) {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: cover;
+  display: block;
+}
 .comment-avatar,
 .comment-avatar-placeholder {
   width: 36px;
@@ -153,17 +176,27 @@ function onReplyContentInput(e: Event) {
   border-radius: 50%;
   object-fit: cover;
   background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  display: block;
+  box-sizing: border-box;
 }
 .comment-avatar.avatar-shape-rounded, .comment-avatar-placeholder.avatar-shape-rounded { border-radius: 12%; }
 .comment-avatar.avatar-shape-square, .comment-avatar-placeholder.avatar-shape-square { border-radius: 0; }
 .comment-avatar.avatar-shape-squircle, .comment-avatar-placeholder.avatar-shape-squircle { border-radius: 25%; }
 .comment-avatar-placeholder {
-  display: block;
   line-height: 36px;
   font-size: 0.875rem;
   text-align: center;
   color: white;
   font-weight: 600;
+}
+.comment-reply .comment-avatar-link {
+  width: 28px;
+  height: 28px;
+}
+.comment-reply .comment-avatar-link :deep(.avatar-frame-root),
+.comment-reply .comment-avatar-link :deep(.avatar-frame) {
+  max-width: 28px;
+  max-height: 28px;
 }
 .comment-reply .comment-avatar,
 .comment-reply .comment-avatar-placeholder { width: 28px; height: 28px; font-size: 0.75rem; line-height: 28px; }
@@ -271,7 +304,13 @@ function onReplyContentInput(e: Event) {
 
 @media (max-width: 480px) {
   .comment { padding: 0.625rem; gap: 0.5rem; }
+  .comment-avatar-link { width: 32px; height: 32px; }
+  .comment-avatar-link :deep(.avatar-frame-root),
+  .comment-avatar-link :deep(.avatar-frame) { max-width: 32px; max-height: 32px; }
   .comment-avatar, .comment-avatar-placeholder { width: 32px; height: 32px; font-size: 0.8125rem; line-height: 32px; }
+  .comment-reply .comment-avatar-link { width: 24px; height: 24px; }
+  .comment-reply .comment-avatar-link :deep(.avatar-frame-root),
+  .comment-reply .comment-avatar-link :deep(.avatar-frame) { max-width: 24px; max-height: 24px; }
   .comment-reply .comment-avatar, .comment-reply .comment-avatar-placeholder { width: 24px; height: 24px; font-size: 0.6875rem; line-height: 24px; }
   .comment-body, .comment-reply .comment-body { font-size: 0.875rem; }
   .reply-form-wrap { margin-left: 1rem; }
