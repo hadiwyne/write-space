@@ -1482,6 +1482,8 @@ html.ui-theme-dark-void .fab.fab--dark-void {
   html.ui-theme-dark-void .fab--dark-void.fab,
   html.ui-theme-dark-void .fab.fab--dark-void {
     right: max(1.5rem, env(safe-area-inset-right, 0px));
+    /* Sit above the fixed status bar (avoid overlap on mobile) */
+    bottom: max(4.5rem, calc(env(safe-area-inset-bottom, 0px) + 4rem));
   }
 }
 html.ui-theme-dark-void .fab--dark-void.fab:hover,
