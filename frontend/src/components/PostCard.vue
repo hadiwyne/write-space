@@ -23,7 +23,8 @@
       </router-link>
       <div v-else class="card-author card-author-anonymous">
         <div class="author-avatar author-avatar-anonymous">
-          <span class="avatar-initial">{{ (post.anonymousAlias || '?')[0] }}</span>
+          <img v-if="anonAvatarUrl" :src="anonAvatarUrl" alt="" class="avatar-img" />
+          <span v-else class="avatar-initial">{{ (post.anonymousAlias || '?')[0] }}</span>
         </div>
         <div class="author-info">
           <span class="author-name">{{ post.anonymousAlias || 'Anonymous' }}</span>
@@ -155,6 +156,17 @@ import { useLikedPostsStore } from '@/stores/likedPosts'
 const auth = useAuthStore()
 const likedStore = useLikedPostsStore()
 
+const anonAvatarModules = import.meta.glob<{ default: string }>('@/assets/anonavatars/*', { eager: true })
+const anonAvatarUrls = Object.values(anonAvatarModules).map((m) => m.default).filter(Boolean)
+
+function getAnonAvatarUrl(postId: string): string {
+  if (anonAvatarUrls.length === 0) return ''
+  let hash = 0
+  for (let i = 0; i < postId.length; i++) hash = (hash << 5) - hash + postId.charCodeAt(i)
+  const index = Math.abs(hash) % anonAvatarUrls.length
+  return anonAvatarUrls[index]
+}
+
 function authorFrame(author: unknown): AvatarFrameType | null {
   return ((author as { avatarFrame?: AvatarFrameType } | null)?.avatarFrame ?? null) as AvatarFrameType | null
 }
@@ -173,6 +185,11 @@ const props = defineProps({
   animationDelay: { type: String, default: '0s' },
 })
 const canLike = computed(() => props.showLike && !!auth.token)
+
+const anonAvatarUrl = computed(() => {
+  if (!props.post?.isAnonymous || !props.post?.id) return ''
+  return getAnonAvatarUrl(props.post.id)
+})
 
 const likedFromApi = computed(() =>
   !!(props.post.likes && Array.isArray(props.post.likes) && props.post.likes.length > 0)
