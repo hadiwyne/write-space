@@ -852,7 +852,7 @@ function previewStyle(palette: ThemeTemplate) {
 </script>
 
 <style scoped>
-.customization-page { padding: 0; max-width: 640px; }
+.customization-page { padding: 0; max-width: 640px; margin: 0 auto; width: 100%; }
 .customization-page h1 { font-size: clamp(1.5rem, 4vw, 2rem); margin: 0 0 0.5rem; color: var(--text-primary); }
 .intro { color: var(--text-secondary); font-size: 0.9375rem; margin: 0 0 2rem; }
 .theme-section { margin-bottom: 2rem; }
@@ -1151,15 +1151,22 @@ function previewStyle(palette: ThemeTemplate) {
   padding-bottom: 0.5rem;
   border-bottom: 2px solid var(--border-light);
 }
-.color-grid { display: flex; flex-direction: column; gap: 0.75rem; }
-.color-row { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.color-grid { display: flex; flex-direction: column; gap: 1rem; }
+.color-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem 1rem;
+  align-items: center;
+}
+@media (max-width: 600px) {
+  .color-row { grid-template-columns: 1fr; }
+}
 .color-label {
-  flex: 1 1 200px;
-  min-width: 0;
   font-size: 0.9375rem;
   color: var(--text-secondary);
+  min-width: 0;
 }
-.color-input-wrap { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; flex-wrap: wrap; }
+.color-input-wrap { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 .color-picker {
   width: 2.5rem;
   height: 2.5rem;

@@ -5,26 +5,30 @@
         <div class="form-group avatar-section">
           <label>Avatar</label>
           <div class="avatar-row">
-            <AvatarFrame :frame="avatarFrame" :shape-class="avatarShapeClass(auth.user?.avatarShape)">
-              <div
-                v-if="avatarPreview || auth.user?.avatarUrl"
-                class="avatar-preview-clip"
-                :class="avatarShapeClass(auth.user?.avatarShape)"
-              >
-                <img :src="avatarPreview || avatarSrc(auth.user?.avatarUrl, auth.avatarVersion)" alt="" class="avatar-preview-img" />
+            <div class="avatar-with-upload">
+              <AvatarFrame :frame="avatarFrame" :shape-class="avatarShapeClass(auth.user?.avatarShape)">
+                <div
+                  v-if="avatarPreview || auth.user?.avatarUrl"
+                  class="avatar-preview-clip"
+                  :class="avatarShapeClass(auth.user?.avatarShape)"
+                >
+                  <img :src="avatarPreview || avatarSrc(auth.user?.avatarUrl, auth.avatarVersion)" alt="" class="avatar-preview-img" />
+                </div>
+                <span
+                  v-else
+                  class="avatar-placeholder"
+                  :class="avatarShapeClass(auth.user?.avatarShape)"
+                >{{ (auth.user?.displayName || auth.user?.username || '?')[0] }}</span>
+              </AvatarFrame>
+              <div class="avatar-upload-block">
+                <AvatarUploadCrop
+                  :current-preview-url="avatarPreview || avatarSrc(auth.user?.avatarUrl, auth.avatarVersion) || null"
+                  @crop="onAvatarCrop"
+                />
+                <p class="hint">JPEG, PNG, GIF or WebP. Max 5MB.</p>
               </div>
-              <span
-                v-else
-                class="avatar-placeholder"
-                :class="avatarShapeClass(auth.user?.avatarShape)"
-              >{{ (auth.user?.displayName || auth.user?.username || '?')[0] }}</span>
-            </AvatarFrame>
+            </div>
             <div class="avatar-actions">
-              <AvatarUploadCrop
-                :current-preview-url="avatarPreview || avatarSrc(auth.user?.avatarUrl, auth.avatarVersion) || null"
-                @crop="onAvatarCrop"
-              />
-              <p class="hint">JPEG, PNG, GIF or WebP. Max 5MB.</p>
               <label class="avatar-shape-label">Avatar shape</label>
               <div class="avatar-shape-options" role="group" aria-label="Avatar shape">
                 <label class="avatar-shape-option">
@@ -540,15 +544,22 @@
   </script>
   
   <style scoped>
-  .settings-page { padding: 0; }
+  .settings-page { padding: 0; max-width: 640px; margin: 0 auto; width: 100%; }
   .settings-page h1 { font-size: clamp(1.25rem, 4vw, 1.5rem); margin: 0 0 1rem; }
-  .form { max-width: 400px; width: 100%; min-width: 0; display: flex; flex-direction: column; gap: 1rem; }
+  .form { max-width: 100%; width: 100%; min-width: 0; display: flex; flex-direction: column; gap: 1rem; }
   .form-group label { display: block; font-size: 0.875rem; font-weight: 500; color: var(--gray-700); margin-bottom: 0.25rem; }
   .avatar-section { }
-  .avatar-row { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+  .avatar-row { display: flex; flex-direction: column; gap: 1rem; }
+  .avatar-with-upload {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-shrink: 0;
+  }
+  .avatar-upload-block { display: flex; flex-direction: column; gap: 0.35rem; }
+  .avatar-actions { width: 100%; min-width: 0; }
   @media (max-width: 480px) {
-    .avatar-row { flex-direction: column; align-items: flex-start; }
-    .avatar-actions { width: 100%; }
+    .avatar-with-upload { flex-direction: column; align-items: flex-start; }
   }
   /* Preview: container shapes, image fills it (no background so no black/gray around image) */
   .avatar-preview-clip {
@@ -576,9 +587,49 @@
   .avatar-shape-squircle.avatar-placeholder { border-radius: 25%; }
   .avatar-shape-label { display: block; font-size: 0.8125rem; font-weight: 500; color: var(--gray-600); margin: 0.75rem 0 0.35rem; }
   .avatar-shape-options { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; }
-  .avatar-shape-option { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.9375rem; cursor: pointer; }
+  .avatar-shape-option { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.9375rem; cursor: pointer; }
   .avatar-shape-option input { cursor: pointer; }
+  .avatar-shape-option input[type="radio"],
+  .frame-type-options input[type="radio"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 1.125rem;
+    height: 1.125rem;
+    border: 2px solid var(--border-medium);
+    border-radius: 2px;
+    background: var(--bg-card);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .avatar-shape-option input[type="radio"]:checked,
+  .frame-type-options input[type="radio"]:checked {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    box-shadow: inset 0 0 0 2px var(--bg-card);
+  }
   .frame-type-options { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; margin-top: 0.35rem; }
+  .frame-check { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; margin-top: 0.5rem; margin-right: 1rem; cursor: pointer; }
+  .frame-check input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 1.125rem;
+    height: 1.125rem;
+    border: 2px solid var(--border-medium);
+    border-radius: 2px;
+    background: var(--bg-card);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .frame-check input[type="checkbox"]:checked {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 6l3 3 5-6'/%3E%3C/svg%3E");
+    background-size: 0.75rem 0.75rem;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
   .frame-colors { margin-top: 0.5rem; }
   .frame-colors .frame-label { margin-bottom: 0.25rem; }
   .frame-color-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.5rem; }
@@ -798,8 +849,6 @@
   .frame-label { font-size: 0.8125rem; font-weight: 500; color: var(--gray-600); min-width: 4rem; }
   .frame-slider { flex: 1; min-width: 80px; max-width: 160px; }
   .frame-value { font-size: 0.8125rem; color: var(--gray-600); }
-  .frame-check { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.875rem; margin-top: 0.5rem; margin-right: 1rem; cursor: pointer; }
-  .frame-check input { cursor: pointer; }
   .frame-select {
     display: block;
     width: 100%;

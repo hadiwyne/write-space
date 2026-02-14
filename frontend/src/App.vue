@@ -1028,6 +1028,413 @@ html.ui-theme-dark-void .dark-void-main .collections-page .modal-actions .btn-pr
   border-radius: 0;
 }
 
+/* Dark Void: settings page */
+html.ui-theme-dark-void .dark-void-main .settings-page {
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+}
+html.ui-theme-dark-void .dark-void-main .settings-page h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .form {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0 !important;
+  padding: clamp(1rem, 4vw, 2rem);
+  box-shadow: none;
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .form-group label {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .input,
+html.ui-theme-dark-void .dark-void-main .settings-page .textarea {
+  background: var(--dark-void-bg);
+  border: 1px solid var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .input::placeholder,
+html.ui-theme-dark-void .dark-void-main .settings-page .textarea::placeholder {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .input:focus,
+html.ui-theme-dark-void .dark-void-main .settings-page .textarea:focus {
+  outline: none;
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .hint {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .btn-primary {
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--dark-void-text);
+  border-color: var(--dark-void-text);
+  color: var(--dark-void-bg);
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .btn-primary:hover:not(:disabled) {
+  background: var(--dark-void-text-muted);
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .error {
+  color: #f87171;
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .success {
+  color: #86efac;
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .avatar-shape-label {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .avatar-shape-options,
+html.ui-theme-dark-void .dark-void-main .settings-page .frame-type-options {
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .avatar-shape-option span {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .frame-label,
+html.ui-theme-dark-void .dark-void-main .settings-page .frame-color-label {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .frame-value {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .frame-check {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .frame-select {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .frame-select:focus {
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .color-picker {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .color-adjust-btn {
+  border-color: var(--dark-void-border);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .color-hex {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .frame-slider {
+  accent-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .avatar-row {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .avatar-shape-option input[type="radio"],
+html.ui-theme-dark-void .dark-void-main .settings-page .frame-type-options input[type="radio"] {
+  border-radius: 0 !important;
+  border-color: var(--dark-void-border);
+  background: var(--dark-void-bg);
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .avatar-shape-option input[type="radio"]:checked,
+html.ui-theme-dark-void .dark-void-main .settings-page .frame-type-options input[type="radio"]:checked {
+  background: var(--dark-void-text-muted);
+  border-color: var(--dark-void-text-muted);
+  box-shadow: inset 0 0 0 2px var(--dark-void-card);
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .frame-check input[type="checkbox"] {
+  border-radius: 0 !important;
+  border-color: var(--dark-void-border);
+  background: var(--dark-void-bg);
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .frame-check input[type="checkbox"]:checked {
+  background: var(--dark-void-text-muted);
+  border-color: var(--dark-void-text-muted);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 6l3 3 5-6'/%3E%3C/svg%3E");
+  background-size: 0.75rem 0.75rem;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Dark Void: customization page – sections as cards, centered, sharp corners */
+html.ui-theme-dark-void .dark-void-main .customization-page {
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .intro {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .theme-section {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0 !important;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.25rem;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .section-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: var(--dark-void-text);
+  border-bottom-color: var(--dark-void-border);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .section-hint {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .ui-theme-options {
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .ui-theme-option span {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .subsection-title {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .template-card {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .template-card:hover {
+  border-color: var(--dark-void-text-muted);
+  background: rgba(255, 255, 255, 0.06);
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .template-name {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .template-delete {
+  background: var(--dark-void-card);
+  color: var(--dark-void-text-muted);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .template-delete:hover {
+  color: var(--dark-void-text);
+  background: rgba(255, 255, 255, 0.08);
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .bg-image-preview {
+  border-color: var(--dark-void-border);
+  border-radius: 0 !important;
+  background: var(--dark-void-bg);
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .bg-arrange-label,
+html.ui-theme-dark-void .dark-void-main .customization-page .bg-zoom-label {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .bg-position-btn {
+  border-color: var(--dark-void-border);
+  background: var(--dark-void-bg);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .bg-position-btn:hover {
+  border-color: var(--dark-void-text-muted);
+  background: rgba(255, 255, 255, 0.06);
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .bg-position-btn.active {
+  border-color: var(--dark-void-text-muted);
+  background: rgba(255, 255, 255, 0.12);
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .bg-position-dot {
+  background: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .bg-size-option,
+html.ui-theme-dark-void .dark-void-main .customization-page .bg-repeat-options .bg-size-option {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .bg-zoom-slider {
+  accent-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .bg-crop-hint,
+html.ui-theme-dark-void .dark-void-main .customization-page .bg-crop-active {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .bg-image-url-input {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .bg-image-url-input::placeholder {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .bg-image-or {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .color-label {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .color-picker {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .color-adjust-btn {
+  border-color: var(--dark-void-border);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .color-hex {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .btn-icon-small {
+  color: var(--dark-void-text-muted);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .btn-icon-small:hover {
+  color: var(--dark-void-text);
+  background: rgba(255, 255, 255, 0.06);
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .actions {
+  border-top-color: var(--dark-void-border);
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .btn {
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .btn-primary {
+  background: var(--dark-void-text);
+  border-color: var(--dark-void-text);
+  color: var(--dark-void-bg);
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .btn-primary:hover:not(:disabled) {
+  background: var(--dark-void-text-muted);
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .btn-outline {
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text-muted);
+  background: transparent;
+}
+html.ui-theme-dark-void .dark-void-main .customization-page .btn-outline:hover:not(:disabled) {
+  border-color: var(--dark-void-text-muted);
+  color: var(--dark-void-text);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Dark Void: teleported modals (color editor, save theme) */
+html.ui-theme-dark-void .color-editor-backdrop {
+  background: rgba(0, 0, 0, 0.7);
+}
+html.ui-theme-dark-void .color-editor-modal {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0 !important;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .color-editor-modal .modal-heading {
+  font-family: 'Space Grotesk', sans-serif;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .color-editor-modal .modal-hint {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .color-editor-modal .color-editor-preview {
+  border-color: var(--dark-void-border);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .color-editor-modal .color-editor-hex {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .color-editor-modal .color-editor-slider-label {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .color-editor-modal .color-editor-value {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .color-editor-modal .btn-primary {
+  background: var(--dark-void-text);
+  border-color: var(--dark-void-text);
+  color: var(--dark-void-bg);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .color-editor-modal .btn-primary:hover:not(:disabled) {
+  background: var(--dark-void-text-muted);
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .color-editor-modal .color-editor-range::-webkit-slider-runnable-track {
+  background: var(--dark-void-border);
+}
+html.ui-theme-dark-void .color-editor-modal .color-editor-range::-webkit-slider-thumb {
+  background: var(--dark-void-text-muted);
+  border-color: var(--dark-void-card);
+}
+html.ui-theme-dark-void .save-theme-modal {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .save-theme-modal .modal-heading {
+  font-family: 'Space Grotesk', sans-serif;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .save-theme-modal .modal-hint {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .save-theme-modal .save-theme-preview {
+  border-color: var(--dark-void-border);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .save-theme-modal .save-theme-input {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .save-theme-modal .save-theme-input::placeholder {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .save-theme-modal .btn-primary {
+  background: var(--dark-void-text);
+  border-color: var(--dark-void-text);
+  color: var(--dark-void-bg);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .save-theme-modal .btn-outline {
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text-muted);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
 /* Dark Void: single collection page */
 html.ui-theme-dark-void .dark-void-main .collection-page {
   max-width: 640px;
