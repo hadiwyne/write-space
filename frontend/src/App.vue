@@ -536,6 +536,16 @@ html.ui-theme-dark-void .dark-void-main .feed .view-btn.active {
     justify-content: center;
   }
 }
+@media (max-width: 768px) {
+  html.ui-theme-dark-void .dark-void-main .feed .filter-tag-and-view {
+    align-items: center;
+  }
+  html.ui-theme-dark-void .dark-void-main .feed .filter-tag-and-view .filter-tag {
+    width: fit-content;
+    max-width: 100%;
+    flex: 0 0 auto;
+  }
+}
 
 /* Dark Void: profile page – same aesthetic as feed (sharp corners, dark cards, Space Grotesk) */
 html.ui-theme-dark-void .dark-void-main .profile-page .profile-header,
