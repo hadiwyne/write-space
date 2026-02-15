@@ -14,6 +14,7 @@
               :style="{ width: optionPercent(opt) + '%' }"
             ></div>
             <span class="poll-option-label">{{ opt.text }}</span>
+            <span class="poll-option-percent">{{ optionPercent(opt) }}%</span>
           </div>
           <span class="poll-option-count">{{ voteCount(opt) }} {{ voteCount(opt) === 1 ? 'vote' : 'votes' }}</span>
         </div>
@@ -183,7 +184,7 @@ async function addOption() {
 .poll-option-label {
   position: absolute;
   left: 0.5rem;
-  right: 3rem;
+  right: 3.25rem;
   top: 50%;
   transform: translateY(-50%);
   font-size: 0.875rem;
@@ -193,6 +194,18 @@ async function addOption() {
   overflow: hidden;
   text-overflow: ellipsis;
   z-index: 1;
+}
+.poll-option-percent {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  z-index: 1;
+  min-width: 2.5rem;
+  text-align: right;
 }
 .poll-option-count {
   font-size: 0.75rem;

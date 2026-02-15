@@ -566,8 +566,12 @@ html.ui-theme-dark-void .dark-void-main .poll-block .poll-option--voted .poll-op
 html.ui-theme-dark-void .dark-void-main .poll-block .poll-option-label {
   color: var(--dark-void-text);
 }
-html.ui-theme-dark-void .dark-void-main .poll-block .poll-option--voted .poll-option-label {
+html.ui-theme-dark-void .dark-void-main .poll-block .poll-option--voted .poll-option-label,
+html.ui-theme-dark-void .dark-void-main .poll-block .poll-option--voted .poll-option-percent {
   color: var(--dark-void-bg);
+}
+html.ui-theme-dark-void .dark-void-main .poll-block .poll-option-percent {
+  color: var(--dark-void-text);
 }
 html.ui-theme-dark-void .dark-void-main .poll-block .poll-option-count,
 html.ui-theme-dark-void .dark-void-main .poll-block .poll-total,
