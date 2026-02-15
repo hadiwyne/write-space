@@ -6,10 +6,12 @@
     <ul v-else class="notification-list">
       <li v-for="n in notifications" :key="notifId(n)" class="notification-item" :class="{ unread: !n.readAt }">
         <router-link :to="notificationLink(n)" class="notification-link" @click="markRead(notifId(n))">
-          <AvatarFrame :frame="n.actor?.avatarFrame ?? null" :shape-class="avatarShapeClass(n.actor?.avatarShape)" :badge-url="actorBadgeUrl(n.actor)">
-            <img v-if="n.actor?.avatarUrl" :src="actorAvatarSrc(n.actor)" alt="" class="notif-avatar" :class="avatarShapeClass(n.actor?.avatarShape)" />
-            <span v-else class="notif-avatar-placeholder" :class="avatarShapeClass(n.actor?.avatarShape)">{{ (n.actor?.displayName || n.actor?.username || '?')[0] }}</span>
-          </AvatarFrame>
+          <div class="notif-avatar-wrap">
+            <AvatarFrame :frame="n.actor?.avatarFrame ?? null" :shape-class="avatarShapeClass(n.actor?.avatarShape)" :badge-url="actorBadgeUrl(n.actor)">
+              <img v-if="n.actor?.avatarUrl" :src="actorAvatarSrc(n.actor)" alt="" class="notif-avatar" :class="avatarShapeClass(n.actor?.avatarShape)" />
+              <span v-else class="notif-avatar-placeholder" :class="avatarShapeClass(n.actor?.avatarShape)">{{ (n.actor?.displayName || n.actor?.username || '?')[0] }}</span>
+            </AvatarFrame>
+          </div>
           <div class="notif-body">
             <span class="notif-text">{{ notificationText(n) }}</span>
             <span class="notif-date">{{ formatDate(n.createdAt) }}</span>
@@ -128,7 +130,28 @@ async function markAllRead() {
 .notification-item.unread { background: var(--gray-50); }
 .notification-link { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; color: inherit; text-decoration: none; }
 .notification-link:hover { background: var(--gray-50); }
-.notif-avatar, .notif-avatar-placeholder { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: var(--gray-200); flex-shrink: 0; display: block; line-height: 40px; text-align: center; font-size: 1rem; }
+.notif-avatar-wrap {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  position: relative;
+}
+.notif-avatar-wrap :deep(.avatar-frame-root),
+.notif-avatar-wrap :deep(.avatar-frame) {
+  width: 100%;
+  height: 100%;
+  max-width: 40px;
+  max-height: 40px;
+  min-width: 0;
+  min-height: 0;
+}
+.notif-avatar-wrap :deep(.avatar-frame > *) {
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+}
+.notif-avatar, .notif-avatar-placeholder { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; background: var(--gray-200); display: block; line-height: 40px; text-align: center; font-size: 1rem; box-sizing: border-box; }
 .notif-avatar.avatar-shape-rounded, .notif-avatar-placeholder.avatar-shape-rounded { border-radius: 12%; }
 .notif-avatar.avatar-shape-square, .notif-avatar-placeholder.avatar-shape-square { border-radius: 0; }
 .notif-avatar.avatar-shape-squircle, .notif-avatar-placeholder.avatar-shape-squircle { border-radius: 25%; }
@@ -139,7 +162,10 @@ async function markAllRead() {
 .mark-all:hover { background: var(--gray-100); }
 @media (max-width: 480px) {
   .notification-link { padding: 0.625rem; gap: 0.5rem; }
-  .notif-avatar, .notif-avatar-placeholder { width: 36px; height: 36px; line-height: 36px; font-size: 0.875rem; }
+  .notif-avatar-wrap { width: 36px; height: 36px; }
+  .notif-avatar-wrap :deep(.avatar-frame-root),
+  .notif-avatar-wrap :deep(.avatar-frame) { max-width: 36px; max-height: 36px; }
+  .notif-avatar, .notif-avatar-placeholder { line-height: 36px; font-size: 0.875rem; }
   .notif-text { font-size: 0.875rem; }
 }
 </style>

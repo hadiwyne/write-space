@@ -49,10 +49,12 @@
                   @click="onNotifClick(n)"
                 >
                   <span class="notif-dot" :class="{ unread: !n.readAt }" aria-hidden="true"></span>
-                  <AvatarFrame :frame="actorFrame(n.actor)" :shape-class="avatarShapeClass(n.actor?.avatarShape)" :badge-url="actorBadgeUrl(n.actor)">
-                    <img v-if="n.actor?.avatarUrl" :src="avatarSrc(n.actor.avatarUrl, n.actor?.id === auth.user?.id ? auth.avatarVersion : undefined)" alt="" class="notif-avatar" :class="avatarShapeClass(n.actor?.avatarShape)" />
-                    <span v-else class="notif-avatar-placeholder" :class="avatarShapeClass(n.actor?.avatarShape)">{{ (n.actor?.displayName || n.actor?.username || '?')[0] }}</span>
-                  </AvatarFrame>
+                  <div class="notif-avatar-wrap">
+                    <AvatarFrame :frame="actorFrame(n.actor)" :shape-class="avatarShapeClass(n.actor?.avatarShape)" :badge-url="actorBadgeUrl(n.actor)">
+                      <img v-if="n.actor?.avatarUrl" :src="avatarSrc(n.actor.avatarUrl, n.actor?.id === auth.user?.id ? auth.avatarVersion : undefined)" alt="" class="notif-avatar" :class="avatarShapeClass(n.actor?.avatarShape)" />
+                      <span v-else class="notif-avatar-placeholder" :class="avatarShapeClass(n.actor?.avatarShape)">{{ (n.actor?.displayName || n.actor?.username || '?')[0] }}</span>
+                    </AvatarFrame>
+                  </div>
                   <div class="notif-body">
                     <span class="notif-text">{{ notifText(n) }}</span>
                     <span class="notif-time">{{ notifTime(n.createdAt) }}</span>
@@ -498,7 +500,33 @@ onUnmounted(() => {
 .notif-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; color: inherit; text-decoration: none; }
 .notif-item:hover { background: var(--bg-primary); }
 .notif-item.unread { background: rgba(139, 69, 19, 0.05); }
-.notif-avatar, .notif-avatar-placeholder { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: var(--border-light); flex-shrink: 0; display: block; line-height: 36px; text-align: center; font-size: 0.875rem; }
+.notif-avatar-wrap {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+.notif-avatar-wrap :deep(.avatar-frame-root),
+.notif-avatar-wrap :deep(.avatar-frame) {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 36px !important;
+  max-height: 36px !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  box-sizing: border-box;
+  animation: none !important;
+  transform: none !important;
+}
+.notif-avatar-wrap :deep(.avatar-frame > *) {
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  object-fit: cover;
+}
+.notif-avatar, .notif-avatar-placeholder { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; background: var(--border-light); display: block; line-height: 36px; text-align: center; font-size: 0.875rem; box-sizing: border-box; }
 .notif-avatar.avatar-shape-rounded, .notif-avatar-placeholder.avatar-shape-rounded { border-radius: 12%; }
 .notif-avatar.avatar-shape-square, .notif-avatar-placeholder.avatar-shape-square { border-radius: 0; }
 .notif-avatar.avatar-shape-squircle, .notif-avatar-placeholder.avatar-shape-squircle { border-radius: 25%; }
