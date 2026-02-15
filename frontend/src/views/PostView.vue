@@ -15,6 +15,11 @@
         <div v-if="(post.tags?.length || 0) > 0" class="post-tags">
           <router-link v-for="t in post.tags" :key="t" :to="`/feed?tag=${t}`" class="tag">#{{ t }}</router-link>
         </div>
+        <PollBlock
+          v-if="post.poll && post.poll.options?.length"
+          :post="post"
+          @update="post = $event"
+        />
         <footer class="post-actions">
           <button type="button" class="action action-like" :class="{ active: liked }" @click="toggleLike" v-tooltip.bottom="liked ? 'Unlike' : 'Like'">
             <i :class="liked ? 'pi pi-heart-fill' : 'pi pi-heart'"></i>
@@ -136,6 +141,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useLikedPostsStore } from '@/stores/likedPosts'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import CommentThread from '@/components/CommentThread.vue'
+import PollBlock from '@/components/PollBlock.vue'
 
 function collectionId(c: { id: string; title: string }) {
   return c.id
@@ -157,6 +163,13 @@ const post = ref<{
   author?: { id?: string; username?: string; displayName?: string | null }
   isAnonymous?: boolean
   anonymousAlias?: string | null
+  poll?: {
+    id: string
+    isOpen: boolean
+    resultsVisible: boolean
+    options: Array<{ id: string; text: string; order?: number; _count?: { votes: number } }>
+    votes?: Array<{ pollOptionId: string }>
+  }
   _count?: { likes: number; comments: number }
 } | null>(null)
 
@@ -217,6 +230,14 @@ async function load() {
     post.value = postRes.data
     comments.value = commentsRes.data
     likeCount.value = post.value?._count?.likes ?? 0
+    try {
+      const { data: pollData } = await api.get(`/posts/${id}/poll`)
+      if (pollData && Array.isArray(pollData.options)) {
+        post.value = { ...post.value!, poll: { ...(post.value?.poll ?? {}), ...pollData, options: pollData.options } }
+      }
+    } catch {
+      // No poll or not found – keep post as-is
+    }
     if (auth.token) {
       const [likeRes, bookmarkRes, repostRes] = await Promise.all([
         api.get(`/posts/${id}/likes/me`).catch(() => ({ data: { liked: false } })),
