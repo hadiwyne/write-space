@@ -5,6 +5,15 @@ function postInclude(userId: string | null) {
   return {
     author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
     _count: { select: { likes: true, comments: true, reposts: true } },
+    poll: {
+      include: {
+        options: {
+          orderBy: { order: 'asc' as const },
+          include: { _count: { select: { votes: true } } },
+        },
+        ...(userId ? { votes: { where: { userId }, take: 1, select: { pollOptionId: true } } } : {}),
+      },
+    },
     ...(userId ? { likes: { where: { userId }, take: 1, select: { id: true } } } : {}),
   };
 }

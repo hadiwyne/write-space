@@ -66,6 +66,18 @@ export class PostsService {
     }
   }
 
+  private pollInclude(userId?: string | null) {
+    return {
+      include: {
+        options: {
+          orderBy: { order: 'asc' as const },
+          include: { _count: { select: { votes: true } } },
+        },
+        ...(userId ? { votes: { where: { userId }, take: 1, select: { pollOptionId: true } } } : {}),
+      },
+    };
+  }
+
   async create(authorId: string, dto: CreatePostDto) {
     const count = countImagesInContent(dto.content, dto.contentType);
     if (count > MAX_IMAGES_PER_POST) {
@@ -74,6 +86,50 @@ export class PostsService {
     const renderedHTML = this.renderContent(dto.content, dto.contentType);
     const isAnonymous = !!dto.isAnonymous;
     const anonymousAlias = isAnonymous ? pickAnonymousAlias() : null;
+    const hasPoll = dto.poll && Array.isArray(dto.poll.options) && dto.poll.options.length > 0;
+
+    if (hasPoll) {
+      const pollOptions = (dto.poll!.options as string[]).map((t) => t.trim()).filter(Boolean);
+      if (pollOptions.length === 0) throw new BadRequestException('Poll must have at least one option');
+      const post = await this.prisma.$transaction(async (tx) => {
+        const created = await tx.post.create({
+          data: {
+            authorId,
+            title: dto.title,
+            content: dto.content,
+            contentType: dto.contentType,
+            renderedHTML,
+            tags: (dto.tags ?? []).map((t) => t.trim().toLowerCase()).filter(Boolean),
+            imageUrls: dto.imageUrls ?? [],
+            isPublished: dto.isPublished ?? false,
+            publishedAt: dto.isPublished ? new Date() : null,
+            visibility: dto.visibility ?? 'PUBLIC',
+            isAnonymous,
+            anonymousAlias,
+          },
+        });
+        await tx.poll.create({
+          data: {
+            postId: created.id,
+            isOpen: !!dto.poll!.isOpen,
+            resultsVisible: dto.poll!.resultsVisible !== false,
+            options: {
+              create: pollOptions.map((text, order) => ({ text, order })),
+            },
+          },
+        });
+        return tx.post.findUnique({
+          where: { id: created.id },
+          include: {
+            author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
+            poll: this.pollInclude(authorId),
+          },
+        });
+      });
+      this.refreshLinkPreview(post!.id, dto.content).catch(() => {});
+      return post!;
+    }
+
     const post = await this.prisma.post.create({
       data: {
         authorId,
@@ -115,17 +171,19 @@ export class PostsService {
       include: {
         author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
         _count: { select: { likes: true, comments: true, reposts: true } },
+        poll: this.pollInclude(userId ?? null),
         ...(userId ? { likes: { where: { userId }, take: 1, select: { id: true } } } : {}),
       },
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, userId?: string | null) {
     const post = await this.prisma.post.findUnique({
       where: { id },
       include: {
         author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
         _count: { select: { likes: true, comments: true, reposts: true } },
+        poll: this.pollInclude(userId ?? null),
       },
     });
     if (!post) throw new NotFoundException('Post not found');
@@ -133,7 +191,7 @@ export class PostsService {
   }
 
   async findOnePublic(id: string, userId?: string, isSuperadmin = false) {
-    const post = await this.findOne(id);
+    const post = await this.findOne(id, userId ?? null);
     if (isSuperadmin) {
       await this.prisma.post.update({ where: { id }, data: { viewCount: { increment: 1 } } });
       return this.findOne(id);
@@ -150,7 +208,44 @@ export class PostsService {
       if (!follows) throw new NotFoundException('Post not found');
     }
     await this.prisma.post.update({ where: { id }, data: { viewCount: { increment: 1 } } });
-    return this.findOne(id);
+    return this.findOne(id, userId ?? null);
+  }
+
+  /** Fetch poll with options for a post (same visibility as findOnePublic). Use when post view needs poll options. */
+  async getPollForPost(postId: string, userId?: string | null) {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      select: {
+        id: true,
+        authorId: true,
+        isPublished: true,
+        archivedAt: true,
+        visibility: true,
+        poll: {
+          include: {
+            options: {
+              orderBy: { order: 'asc' as const },
+              include: { _count: { select: { votes: true } } },
+            },
+            ...(userId ? { votes: { where: { userId }, take: 1, select: { pollOptionId: true } } } : {}),
+          },
+        },
+      },
+    });
+    if (!post) throw new NotFoundException('Post not found');
+    if (!post.isPublished) throw new NotFoundException('Post not found');
+    const isAuthor = userId && post.authorId === userId;
+    if (post.archivedAt && !isAuthor) throw new NotFoundException('Post not found');
+    if ((post as { visibility?: string }).visibility === 'FOLLOWERS_ONLY' && !isAuthor) {
+      const follows = userId
+        ? await this.prisma.follow.findUnique({
+            where: { followerId_followingId: { followerId: userId, followingId: post.authorId } },
+          })
+        : null;
+      if (!follows) throw new NotFoundException('Post not found');
+    }
+    if (!post.poll) throw new NotFoundException('Poll not found');
+    return post.poll;
   }
 
   async update(id: string, userId: string, dto: UpdatePostDto) {
@@ -262,6 +357,7 @@ export class PostsService {
       include: {
         author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
         _count: { select: { likes: true, comments: true, reposts: true } },
+        poll: this.pollInclude(viewerUserId ?? null),
         ...(viewerUserId ? { likes: { where: { userId: viewerUserId }, take: 1, select: { id: true } } } : {}),
       },
     });
@@ -335,6 +431,42 @@ export class PostsService {
     } catch {
       return { buffer, mimeType };
     }
+  }
+
+  /** Vote on a poll (one vote per user per poll; can change vote by voting again). */
+  async votePoll(postId: string, userId: string, optionId: string) {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      include: { poll: { include: { options: true } } },
+    });
+    if (!post || !post.poll) throw new NotFoundException('Post or poll not found');
+    const option = post.poll.options.find((o) => o.id === optionId);
+    if (!option) throw new BadRequestException('Invalid poll option');
+    await this.prisma.pollVote.upsert({
+      where: { userId_pollId: { userId, pollId: post.poll.id } },
+      create: { pollId: post.poll.id, pollOptionId: optionId, userId },
+      update: { pollOptionId: optionId },
+    });
+    return this.findOne(postId, userId);
+  }
+
+  /** Add an option to an open poll (only when poll.isOpen or user is author). */
+  async addPollOption(postId: string, userId: string, text: string) {
+    const trimmed = text.trim();
+    if (!trimmed) throw new BadRequestException('Option text is required');
+    if (trimmed.length > 500) throw new BadRequestException('Option text too long');
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      include: { poll: { include: { options: true } } },
+    });
+    if (!post || !post.poll) throw new NotFoundException('Post or poll not found');
+    const isAuthor = post.authorId === userId;
+    if (!post.poll.isOpen && !isAuthor) throw new ForbiddenException('This poll is closed to new options');
+    const nextOrder = post.poll.options.length > 0 ? Math.max(...post.poll.options.map((o) => o.order)) + 1 : 0;
+    await this.prisma.pollOption.create({
+      data: { pollId: post.poll.id, text: trimmed, order: nextOrder },
+    });
+    return this.findOne(postId, userId);
   }
 
   /** Save post image to database (persists on ephemeral hosts; no external storage). Compresses image. Returns URL for embedding in content. */

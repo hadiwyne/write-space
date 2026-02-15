@@ -100,6 +100,7 @@
                 @archive="archivePostFromList"
                 @delete="deletePostFromList"
                 @like="handleLike"
+                @poll-update="handlePollUpdate"
               />
             </div>
           </div>
@@ -117,6 +118,7 @@
               @archive="archivePostFromList"
               @delete="deletePostFromList"
               @like="handleLike"
+              @poll-update="handlePollUpdate"
             />
           </div>
         </div>
@@ -131,6 +133,7 @@
               :show-repost="!!auth.token"
               :style="{ animationDelay: `${0.05 * i}s` }"
               @like="handleLike"
+              @poll-update="handlePollUpdate"
             />
           </div>
         </div>
@@ -495,6 +498,18 @@ function handleLike(_postId: string, isLiked: boolean) {
       ...profile.value._count,
       likes: Math.max(0, currentLikes + (isLiked ? 1 : -1)),
     }
+  }
+}
+
+function handlePollUpdate(updatedPost: Record<string, unknown>) {
+  const id = updatedPost.id as string | undefined
+  if (!id) return
+  if (posts.value.some((p) => (p as { id?: string }).id === id)) {
+    posts.value = posts.value.map((p) => ((p as { id: string }).id === id ? updatedPost : p))
+  } else if (likedPosts.value.some((p) => p.id === id)) {
+    likedPosts.value = likedPosts.value.map((p) => (p.id === id ? (updatedPost as typeof p) : p))
+  } else if (anonymousPosts.value.some((p) => (p as { id: string }).id === id)) {
+    anonymousPosts.value = anonymousPosts.value.map((p) => ((p as { id: string }).id === id ? updatedPost : p))
   }
 }
 

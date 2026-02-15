@@ -534,6 +534,65 @@ html.ui-theme-dark-void .dark-void-main .feed .view-btn.active {
   border-color: var(--dark-void-text-muted);
   color: var(--dark-void-text);
 }
+
+/* Dark Void: poll block (feed, profile, post view) */
+html.ui-theme-dark-void .dark-void-main .poll-block {
+  background: var(--dark-void-bg);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .poll-block .poll-option--btn {
+  background: var(--dark-void-card);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .poll-block .poll-option--btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .poll-block .poll-option-bar-wrap {
+  background: var(--dark-void-card);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .poll-block .poll-option-bar {
+  background: rgba(255, 255, 255, 0.2);
+}
+html.ui-theme-dark-void .dark-void-main .poll-block .poll-option--voted .poll-option-bar {
+  background: var(--dark-void-text);
+}
+/* Label on unvoted bar: light text; on voted (light) bar: dark text for contrast */
+html.ui-theme-dark-void .dark-void-main .poll-block .poll-option-label {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .poll-block .poll-option--voted .poll-option-label {
+  color: var(--dark-void-bg);
+}
+html.ui-theme-dark-void .dark-void-main .poll-block .poll-option-count,
+html.ui-theme-dark-void .dark-void-main .poll-block .poll-total,
+html.ui-theme-dark-void .dark-void-main .poll-block .poll-open-hint {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .poll-block .poll-add-input {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .poll-block .poll-add-input::placeholder {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .poll-block .poll-add-btn {
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text-muted);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .poll-block .poll-add-btn:hover:not(:disabled) {
+  border-color: var(--dark-void-text-muted);
+  color: var(--dark-void-text);
+}
+
 @media (max-width: 1024px) {
   html.ui-theme-dark-void .dark-void-main .feed .feed-filters {
     justify-content: center;
@@ -1728,6 +1787,90 @@ html.ui-theme-dark-void .dark-void-main .edit-page .tags-input {
 html.ui-theme-dark-void .dark-void-main .write-page .tags-input::placeholder,
 html.ui-theme-dark-void .dark-void-main .edit-page .tags-input::placeholder {
   color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .post-type-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .post-type-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--dark-void-border);
+  background: var(--dark-void-card);
+  color: var(--dark-void-text-muted);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .post-type-btn:hover {
+  border-color: var(--dark-void-text-muted);
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .post-type-btn.active {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--dark-void-text-muted);
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .poll-desc-label,
+html.ui-theme-dark-void .dark-void-main .write-page .poll-options-label {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .poll-desc-input {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .poll-desc-input::placeholder {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .poll-option-input {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .poll-option-input::placeholder {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .poll-option-remove {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .poll-option-remove:hover:not(:disabled) {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .poll-option-add,
+html.ui-theme-dark-void .dark-void-main .write-page .poll-settings .poll-check-wrap {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .poll-settings .poll-check-wrap span {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .poll-settings input[type="checkbox"],
+html.ui-theme-dark-void .dark-void-main .write-page .poll-settings .poll-check {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 2px solid var(--dark-void-border);
+  border-radius: 0 !important;
+  background: var(--dark-void-bg);
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .poll-settings input[type="checkbox"]:checked,
+html.ui-theme-dark-void .dark-void-main .write-page .poll-settings .poll-check:checked {
+  background: var(--dark-void-text-muted);
+  border-color: var(--dark-void-text-muted);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 6l3 3 5-6'/%3E%3C/svg%3E");
+  background-size: 0.75rem 0.75rem;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 html.ui-theme-dark-void .dark-void-main .write-page .actions,
 html.ui-theme-dark-void .dark-void-main .edit-page .actions {

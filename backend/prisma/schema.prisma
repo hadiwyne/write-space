@@ -53,6 +53,7 @@ model User {
   reposts       Repost[]
   postImages    PostImage[]
   themes        UserTheme[]
+  pollVotes     PollVote[]
 
   isSuperadmin  Boolean   @default(false) @map("is_superadmin")
   createdAt     DateTime  @default(now()) @map("created_at")
@@ -86,6 +87,7 @@ model Post {
   collectionPosts CollectionPost[]
   reposts       Repost[]
   viewCount     Int       @default(0) @map("view_count")
+  poll          Poll?
 
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -98,6 +100,47 @@ model Post {
   @@index([archivedAt])
   @@index([tags])
   @@map("posts")
+}
+
+model Poll {
+  id             String       @id @default(uuid())
+  postId         String       @unique @map("post_id")
+  post           Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  isOpen         Boolean      @default(false) @map("is_open")
+  resultsVisible Boolean      @default(true) @map("results_visible")
+  options        PollOption[]
+  votes          PollVote[]
+
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  @@map("polls")
+}
+
+model PollOption {
+  id        String     @id @default(uuid())
+  pollId    String     @map("poll_id")
+  poll      Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  text      String     @db.VarChar(500)
+  order     Int        @default(0)
+  votes     PollVote[]
+
+  @@index([pollId])
+  @@map("poll_options")
+}
+
+model PollVote {
+  id           String     @id @default(uuid())
+  pollId       String     @map("poll_id")
+  poll         Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  pollOptionId String     @map("poll_option_id")
+  pollOption   PollOption @relation(fields: [pollOptionId], references: [id], onDelete: Cascade)
+  userId       String     @map("user_id")
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, pollId])
+  @@index([pollId])
+  @@map("poll_votes")
 }
 
 model Draft {

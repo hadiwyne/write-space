@@ -99,6 +99,7 @@
         @like="handleLike"
         @archive="handleArchive"
         @delete="handleDelete"
+        @poll-update="handlePollUpdate"
       />
       </div>
     </div>
@@ -190,6 +191,12 @@ async function handleDelete(postId: string) {
   } catch {
     // ignore
   }
+}
+
+function handlePollUpdate(updatedPost: FeedPost) {
+  const id = updatedPost.id
+  if (!id) return
+  posts.value = posts.value.map((p) => (p.id === id ? updatedPost : p))
 }
 
 async function load() {
