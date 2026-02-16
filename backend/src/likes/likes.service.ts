@@ -50,7 +50,7 @@ export class LikesService {
     });
     if (!user) throw new NotFoundException('User not found');
     const who = (user as { whoCanSeeLikes?: string }).whoCanSeeLikes ?? 'PUBLIC';
-    if (who === 'NO_ONE') return [];
+    if (who === 'NO_ONE' && viewerId !== user.id) return [];
     if (who === 'FOLLOWERS' && viewerId !== user.id) {
       if (!viewerId) return [];
       const isFollower = await this.prisma.follow.findUnique({
