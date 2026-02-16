@@ -84,13 +84,14 @@
           #{{ t }}
         </router-link>
       </div>
+    </router-link>
+    <div v-if="post.poll && post.poll.options?.length" class="card-poll-wrap">
       <PollBlock
-        v-if="post.poll && post.poll.options?.length"
         :post="postForPollBlock"
         compact
         @update="onPollUpdate"
       />
-    </router-link>
+    </div>
 
     <footer class="card-footer">
       <button
@@ -437,6 +438,11 @@ function formatDate(s: string | undefined) {
   text-decoration: none;
 }
 .card-body:hover { text-decoration: none; color: inherit; }
+.card-poll-wrap {
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
+}
 .card-title {
   font-size: clamp(1.25rem, 4vw, 1.75rem);
   font-weight: 800;
