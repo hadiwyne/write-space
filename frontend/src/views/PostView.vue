@@ -107,11 +107,15 @@
             :reply-content="replyContent"
             :is-logged-in="!!auth.isLoggedIn"
             :can-delete-fn="canDeleteComment"
+            :can-edit-fn="canEditComment"
             :avatar-src="(url, userId) => avatarSrc(url, userId === auth.user?.id ? auth.avatarVersion : undefined)"
             @reply="replyToId = replyToId === $event ? null : $event"
             @update:reply-content="replyContent = $event"
             @submit-reply="addComment($event)"
             @cancel-reply="replyToId = null; replyContent = ''"
+            @like="likeComment"
+            @dislike="dislikeComment"
+            @update-comment="updateComment"
             @delete="deleteComment"
           />
         </div>
@@ -188,13 +192,23 @@ const comments = ref<CommentNode[]>([])
 type CommentNode = {
   id: string
   content: string
-  author?: { id?: string; username?: string; displayName?: string | null; avatarUrl?: string | null }
+  createdAt?: string
+  editedAt?: string | null
+  author?: { id?: string; username?: string; displayName?: string | null; avatarUrl?: string | null; avatarShape?: string | null; avatarFrame?: unknown; badgeUrl?: string | null }
   replies?: CommentNode[]
+  likeCount?: number
+  dislikeCount?: number
+  myReaction?: 'LIKE' | 'DISLIKE' | null
 }
 function canDeleteComment(c: CommentNode): boolean {
   const u = auth.user
   if (!u?.id) return false
   return (c.author?.id && c.author.id === u.id) || !!u.isSuperadmin
+}
+function canEditComment(c: CommentNode): boolean {
+  const u = auth.user
+  if (!u?.id) return false
+  return !!(c.author?.id && c.author.id === u.id)
 }
 const loading = ref(true)
 const liked = ref(false)
@@ -376,6 +390,61 @@ async function addComment(parentId?: string) {
       comments.value.push(data)
       newComment.value = ''
     }
+  } catch {
+    // ignore
+  }
+}
+
+function patchCommentInTree(tree: CommentNode[], commentId: string, patch: Partial<CommentNode>) {
+  for (const c of tree) {
+    if (c.id === commentId) {
+      Object.assign(c, patch)
+      return true
+    }
+    if (c.replies && patchCommentInTree(c.replies, commentId, patch)) return true
+  }
+  return false
+}
+
+async function likeComment(commentId: string) {
+  const postId = route.params.id as string
+  if (!postId || !auth.isLoggedIn) return
+  try {
+    const { data } = await api.post(`/posts/${postId}/comments/${commentId}/like`)
+    patchCommentInTree(comments.value, commentId, {
+      likeCount: data.likeCount,
+      dislikeCount: data.dislikeCount,
+      myReaction: data.myReaction,
+    })
+  } catch {
+    // ignore
+  }
+}
+
+async function dislikeComment(commentId: string) {
+  const postId = route.params.id as string
+  if (!postId || !auth.isLoggedIn) return
+  try {
+    const { data } = await api.post(`/posts/${postId}/comments/${commentId}/dislike`)
+    patchCommentInTree(comments.value, commentId, {
+      likeCount: data.likeCount,
+      dislikeCount: data.dislikeCount,
+      myReaction: data.myReaction,
+    })
+  } catch {
+    // ignore
+  }
+}
+
+async function updateComment(payload: { id: string; content: string }) {
+  const postId = route.params.id as string
+  if (!postId) return
+  try {
+    const { data } = await api.patch(`/posts/${postId}/comments/${payload.id}`, { content: payload.content })
+    patchCommentInTree(comments.value, payload.id, {
+      content: data.content,
+      editedAt: data.editedAt ?? new Date().toISOString(),
+    })
   } catch {
     // ignore
   }
