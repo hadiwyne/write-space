@@ -143,7 +143,7 @@ import { useRoute } from 'vue-router'
 import { api, avatarSrc } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import { useLikedPostsStore } from '@/stores/likedPosts'
-import { getCachedPost, setCachedPost } from '@/utils/postCache'
+import { getCachedPost, setCachedPost } from '@/utils/indexedDBCache'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import CommentThread from '@/components/CommentThread.vue'
 import PollBlock from '@/components/PollBlock.vue'
@@ -242,7 +242,7 @@ const confirmMessage = computed(() =>
 async function load() {
   const id = route.params.id as string
   loading.value = true
-  const cached = getCachedPost(id)
+  const cached = await getCachedPost(id)
   if (cached && typeof cached === 'object' && (cached as { id?: string }).id === id) {
     post.value = cached as typeof post.value
     likeCount.value = (cached as { _count?: { likes?: number } })?._count?.likes ?? 0
@@ -296,41 +296,69 @@ function formatDate(s: string | null | undefined) {
 async function toggleLike() {
   if (!auth.isLoggedIn) return
   const postId = route.params.id as string
+  
+  // Optimistic Update
+  const originalLiked = liked.value
+  const originalCount = likeCount.value
+  liked.value = !originalLiked
+  likeCount.value = originalLiked ? originalCount - 1 : originalCount + 1
+  likedStore.setLiked(postId, liked.value)
+  
   try {
     const { data } = await api.post(`/posts/${postId}/likes`)
+    // Sync with server response if possible
     liked.value = data.liked
     likeCount.value = data.count ?? likeCount.value
     likedStore.setLiked(postId, data.liked)
+    
     if (post.value) {
-      const prev = post.value._count
       post.value = {
         ...post.value,
-        _count: { likes: likeCount.value, comments: prev?.comments ?? 0 }
+        _count: { ...post.value._count, likes: likeCount.value }
       }
       setCachedPost(postId, post.value)
     }
-  } catch {
-    // ignore
+  } catch (err) {
+    // Rollback on error
+    liked.value = originalLiked
+    likeCount.value = originalCount
+    likedStore.setLiked(postId, originalLiked)
+    console.warn('Like failed, rolled back state:', err)
   }
 }
 
 async function toggleBookmark() {
   if (!auth.isLoggedIn) return
+  const originalBookmarked = bookmarked.value
+  
+  // Optimistic Update
+  bookmarked.value = !originalBookmarked
+  
   try {
     const { data } = await api.post(`/posts/${route.params.id}/bookmarks`)
     bookmarked.value = data.bookmarked
-  } catch {
-    // ignore
+  } catch (err) {
+    // Rollback on error
+    bookmarked.value = originalBookmarked
+    console.warn('Bookmark failed, rolled back state:', err)
   }
 }
 
 async function toggleRepost() {
   if (!auth.isLoggedIn) return
   const postId = route.params.id as string
+  
+  // Optimistic Update
+  const originalReposted = reposted.value
+  const originalCount = repostCount.value
+  reposted.value = !originalReposted
+  repostCount.value = originalReposted ? originalCount - 1 : originalCount + 1
+  
   try {
     const { data } = await api.post(`/posts/${postId}/reposts`)
     reposted.value = data.reposted
     repostCount.value = data.count ?? repostCount.value
+    
     if (post.value) {
       post.value = {
         ...post.value,
@@ -338,8 +366,11 @@ async function toggleRepost() {
       } as typeof post.value
       setCachedPost(postId, post.value)
     }
-  } catch {
-    // ignore
+  } catch (err) {
+    // Rollback on error
+    reposted.value = originalReposted
+    repostCount.value = originalCount
+    console.warn('Repost failed, rolled back state:', err)
   }
 }
 
@@ -405,23 +436,67 @@ function findCommentInTree(tree: CommentNode[], id: string): CommentNode | null 
 async function addComment(parentId?: string) {
   const text = parentId ? replyContent.value.trim() : newComment.value.trim()
   if (!text || !auth.isLoggedIn) return
+  
+  // Create an optimistic comment object
+  const tempId = `temp-${Date.now()}`
+  const optimisticComment: CommentNode = {
+    id: tempId,
+    content: text,
+    createdAt: new Date().toISOString(),
+    author: {
+      id: auth.user?.id,
+      username: auth.user?.username,
+      displayName: auth.user?.displayName,
+      avatarUrl: auth.user?.avatarUrl,
+      avatarFrame: (auth.user as any)?.avatarFrame,
+      badgeUrl: (auth.user as any)?.badgeUrl,
+    },
+    replies: [],
+    likeCount: 0,
+    dislikeCount: 0,
+    myReaction: null
+  }
+
+  // Optimistic Update
+  if (parentId) {
+    const parent = findCommentInTree(comments.value, parentId)
+    if (parent) {
+      if (!parent.replies) parent.replies = []
+      parent.replies.push(optimisticComment)
+    }
+    replyToId.value = null
+    replyContent.value = ''
+  } else {
+    comments.value.unshift(optimisticComment)
+    newComment.value = ''
+  }
+
   try {
     const body = parentId ? { content: text, parentId } : { content: text }
     const { data } = await api.post(`/posts/${route.params.id}/comments`, body)
+    
+    // Replace optimistic comment with real one
     if (parentId) {
       const parent = findCommentInTree(comments.value, parentId)
-      if (parent) {
-        if (!parent.replies) parent.replies = []
-        parent.replies.push(data)
+      if (parent && parent.replies) {
+        const idx = parent.replies.findIndex(c => c.id === tempId)
+        if (idx !== -1) parent.replies[idx] = data
       }
-      replyToId.value = null
-      replyContent.value = ''
     } else {
-      comments.value.push(data)
-      newComment.value = ''
+      const idx = comments.value.findIndex(c => c.id === tempId)
+      if (idx !== -1) comments.value[idx] = data
     }
-  } catch {
-    // ignore
+  } catch (err) {
+    // Rollback
+    if (parentId) {
+      const parent = findCommentInTree(comments.value, parentId)
+      if (parent && parent.replies) {
+        parent.replies = parent.replies.filter(c => c.id !== tempId)
+      }
+    } else {
+      comments.value = comments.value.filter(c => c.id !== tempId)
+    }
+    console.warn('Comment submission failed, rolled back state:', err)
   }
 }
 
