@@ -84,6 +84,12 @@
           #{{ t }}
         </router-link>
       </div>
+      <PollBlock
+        v-if="post.poll && post.poll.options?.length"
+        :post="postForPollBlock"
+        compact
+        @update="onPollUpdate"
+      />
     </router-link>
 
     <footer class="card-footer">
@@ -149,6 +155,7 @@ import { ref, computed, watch } from 'vue'
 import { api, avatarSrc } from '@/api/client'
 import { avatarShapeClass } from '@/utils/avatar'
 import AvatarFrame from '@/components/AvatarFrame.vue'
+import PollBlock from '@/components/PollBlock.vue'
 import type { AvatarFrame as AvatarFrameType } from '@/types/avatarFrame'
 import { useAuthStore } from '@/stores/auth'
 import { useLikedPostsStore } from '@/stores/likedPosts'
@@ -209,13 +216,30 @@ watch(
   { deep: true, immediate: true }
 )
 
+type PollBlockPost = {
+  id: string
+  poll?: {
+    id: string
+    isOpen: boolean
+    resultsVisible: boolean
+    options: Array<{ id: string; text: string; order?: number; _count?: { votes: number } }>
+    votes?: Array<{ pollOptionId: string }>
+  }
+}
+const postForPollBlock = computed(() => props.post as PollBlockPost)
+
 const emit = defineEmits<{
   (e: 'archive', postId: string): void
   (e: 'delete', postId: string): void
   (e: 'unarchive', postId: string): void
   (e: 'repost', postId: string): void
   (e: 'like', postId: string, liked: boolean): void
+  (e: 'poll-update', updatedPost: Record<string, unknown>): void
 }>()
+
+function onPollUpdate(updatedPost: Record<string, unknown>) {
+  emit('poll-update', updatedPost)
+}
 
 async function toggleLike() {
   if (!auth.token || !props.post.id) return

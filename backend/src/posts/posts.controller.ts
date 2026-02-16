@@ -26,6 +26,8 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { Public } from '../auth/public.decorator';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
+import { VotePollDto } from './dto/vote-poll.dto';
+import { AddPollOptionDto } from './dto/add-poll-option.dto';
 import { BookmarksService } from '../bookmarks/bookmarks.service';
 import { RepostsService } from '../reposts/reposts.service';
 
@@ -155,6 +157,25 @@ export class PostsController {
   async repostMe(@Param('id') id: string, @CurrentUser() user: { id: string }) {
     const reposted = await this.repostsService.userReposted(id, user.id);
     return { reposted };
+  }
+
+  @Post(':id/poll/vote')
+  @UseGuards(JwtAuthGuard)
+  votePoll(@Param('id') id: string, @CurrentUser() user: { id: string }, @Body() dto: VotePollDto) {
+    return this.postsService.votePoll(id, user.id, dto.optionId);
+  }
+
+  @Post(':id/poll/options')
+  @UseGuards(JwtAuthGuard)
+  addPollOption(@Param('id') id: string, @CurrentUser() user: { id: string }, @Body() dto: AddPollOptionDto) {
+    return this.postsService.addPollOption(id, user.id, dto.text);
+  }
+
+  @Public()
+  @Get(':id/poll')
+  @UseGuards(OptionalJwtAuthGuard)
+  getPostPoll(@Param('id') id: string, @CurrentUser() user?: { id: string } | null) {
+    return this.postsService.getPollForPost(id, user?.id ?? null);
   }
 
   @Get(':id')

@@ -178,7 +178,7 @@ const avatarWrapRef = ref<HTMLElement | null>(null)
 const trendingTags = ref<{ tag: string; count: number }[]>([])
 
 /** Configurable status bar text via env: VITE_DARK_VOID_STATUS_LEFT, VITE_DARK_VOID_STATUS_RIGHT */
-const statusLeft = computed(() => import.meta.env.VITE_DARK_VOID_STATUS_LEFT ?? 'SERVER STATUS: HAUNTING – CURRENT MOOD: MELANCHOLY')
+const statusLeft = computed(() => import.meta.env.VITE_DARK_VOID_STATUS_LEFT ?? 'SERVER STATUS: NOGGING THE JOGGING – CURRENT MOOD: JOLLY')
 const statusRight = computed(() => import.meta.env.VITE_DARK_VOID_STATUS_RIGHT ?? 'JOIN THE SWARM')
 
 const profileStats = computed(() => {

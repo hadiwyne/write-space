@@ -13,7 +13,15 @@
         />
         <p v-if="titleWarningReason" class="title-warning">{{ titleWarningMessage }}</p>
       </div>
-      <div class="form-group editor-toolbar">
+      <div class="form-group post-type-row">
+        <button type="button" class="post-type-btn" :class="{ active: postType === 'post' }" @click="postType = 'post'">
+          <i class="pi pi-file-edit" aria-hidden="true"></i> Post
+        </button>
+        <button type="button" class="post-type-btn" :class="{ active: postType === 'poll' }" @click="postType = 'poll'">
+          <i class="pi pi-list" aria-hidden="true"></i> Poll
+        </button>
+      </div>
+      <div v-if="postType === 'post'" class="form-group editor-toolbar">
         <div class="dropdown-wrap" ref="formatDropdownRef">
           <button type="button" class="dropdown-trigger" :aria-expanded="formatDropdownOpen" @click="formatDropdownOpen = !formatDropdownOpen">
             <i :class="contentTypeIcon" aria-hidden="true"></i>
@@ -65,7 +73,7 @@
         <p v-else>No past versions.</p>
         <button type="button" class="btn btn-sm btn-ghost" @click="versionsOpen = false">Close</button>
       </div>
-      <div class="form-group editor-row">
+      <div v-if="postType === 'post'" class="form-group editor-row">
         <div class="editor-pane">
           <RichTextEditor
             v-if="contentType === 'WYSIWYG'"
@@ -88,9 +96,39 @@
           <div class="preview-content" v-html="previewHtml"></div>
         </div>
       </div>
+      <div v-if="postType === 'poll'" class="form-group poll-description">
+        <label class="poll-desc-label">Description</label>
+        <textarea v-model="content" placeholder="Add context or details about the poll" class="poll-desc-input" rows="3"></textarea>
+      </div>
+      <template v-if="postType === 'post'">
       <div class="form-group">
         <input v-model="tagsStr" type="text" placeholder="Tags (comma-separated)" class="tags-input" />
       </div>
+      </template>
+      <template v-if="postType === 'poll'">
+      <div class="form-group poll-options-group">
+        <label class="poll-options-label">Options (add at least two)</label>
+        <div v-for="(_opt, idx) in pollOptions" :key="idx" class="poll-option-row">
+          <input v-model="pollOptions[idx]" type="text" :placeholder="'Option ' + (idx + 1)" class="poll-option-input" maxlength="500" />
+          <button type="button" class="btn btn-sm btn-ghost poll-option-remove" aria-label="Remove option" :disabled="pollOptions.length <= 2" @click="removePollOption(idx)">
+            <i class="pi pi-times" aria-hidden="true"></i>
+          </button>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline poll-option-add" @click="addPollOption">
+          <i class="pi pi-plus" aria-hidden="true"></i> Add option
+        </button>
+      </div>
+      <div class="form-group poll-settings">
+        <label class="poll-check-wrap">
+          <input v-model="pollIsOpen" type="checkbox" class="poll-check" />
+          <span>Open poll: voters can add options</span>
+        </label>
+        <label class="poll-check-wrap">
+          <input v-model="pollResultsVisible" type="checkbox" class="poll-check" />
+          <span>Results always visible (uncheck to show results only after voting)</span>
+        </label>
+      </div>
+      </template>
       <div class="form-group visibility-row">
         <div class="dropdown-wrap" ref="visibilityDropdownRef">
           <button type="button" class="dropdown-trigger" :aria-expanded="visibilityDropdownOpen" @click="visibilityDropdownOpen = !visibilityDropdownOpen">
@@ -185,6 +223,10 @@ const content = ref('')
 const contentType = ref<ContentType>('MARKDOWN')
 const tagsStr = ref('')
 const visibility = ref<'PUBLIC' | 'FOLLOWERS_ONLY'>('PUBLIC')
+const postType = ref<'post' | 'poll'>('post')
+const pollOptions = ref<string[]>(['', ''])
+const pollIsOpen = ref(false)
+const pollResultsVisible = ref(true)
 const formatDropdownOpen = ref(false)
 const visibilityDropdownOpen = ref(false)
 const formatDropdownRef = ref<HTMLElement | null>(null)
@@ -234,6 +276,15 @@ const imageCountInContent = computed(() => countImagesInContent(content.value, c
 
 function tags(): string[] {
   return tagsStr.value.split(',').map((t) => t.trim()).filter(Boolean)
+}
+
+function addPollOption() {
+  pollOptions.value = [...pollOptions.value, '']
+}
+
+function removePollOption(idx: number) {
+  if (pollOptions.value.length <= 2) return
+  pollOptions.value = pollOptions.value.filter((_, i) => i !== idx)
 }
 
 let autoSaveTimer: ReturnType<typeof setTimeout> | null = null
@@ -298,18 +349,33 @@ function useServer() {
 
 async function doPublish(anonymous: boolean) {
   error.value = ''
+  if (postType.value === 'poll') {
+    const opts = pollOptions.value.map((t) => t.trim()).filter(Boolean)
+    if (opts.length < 2) {
+      error.value = 'Poll must have at least two options.'
+      return
+    }
+  }
   if (anonymous) publishAnonymousLoading.value = true
   else publishLoading.value = true
   try {
-    const { data } = await api.post('/posts', {
+    const payload: Record<string, unknown> = {
       title: title.value,
-      content: content.value,
+      content: postType.value === 'poll' ? content.value : content.value,
       contentType: contentType.value,
-      tags: tags(),
+      tags: postType.value === 'post' ? tags() : [],
       isPublished: true,
       visibility: visibility.value,
       isAnonymous: anonymous,
-    })
+    }
+    if (postType.value === 'poll') {
+      payload.poll = {
+        options: pollOptions.value.map((t) => t.trim()).filter(Boolean),
+        isOpen: pollIsOpen.value,
+        resultsVisible: pollResultsVisible.value,
+      }
+    }
+    const { data } = await api.post('/posts', payload)
     router.push(`/posts/${data.id}`)
   } catch (e: unknown) {
     error.value = (e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to publish'
@@ -447,6 +513,41 @@ async function onRichEditorImageUpload(file: File) {
 .form-group:first-of-type { margin-bottom: 0.25rem; }
 .title-input { width: 100%; min-width: 0; font-size: clamp(1.125rem, 4vw, 1.5rem); padding: 0.5rem 0; border: none; border-bottom: 1px solid var(--gray-200); background: transparent; }
 .title-warning { font-size: 0.8125rem; color: var(--accent-burgundy, #6b2c3e); margin: 0.25rem 0 0; }
+.post-type-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.post-type-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border-light, #e5e7eb);
+  border-radius: var(--radius-md, 8px);
+  background: var(--bg-card, #fff);
+  color: var(--text-secondary, #4b5563);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+}
+.post-type-btn:hover {
+  border-color: var(--border-medium, #d1d5db);
+  color: var(--text-primary, #111);
+}
+.post-type-btn.active {
+  border-color: var(--accent-primary, #8b4513);
+  background: rgba(139, 69, 19, 0.08);
+  color: var(--accent-primary, #8b4513);
+}
+.poll-desc-label,
+.poll-options-label { display: block; font-size: 0.875rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.35rem; }
+.poll-desc-input { width: 100%; min-width: 0; padding: 0.5rem 0.75rem; border: 1px solid var(--gray-300); border-radius: var(--radius); font-family: inherit; font-size: 0.9375rem; resize: vertical; box-sizing: border-box; }
+.poll-options-group { min-width: 0; }
+.poll-option-row { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; }
+.poll-option-input { flex: 1; min-width: 0; padding: 0.5rem 0.75rem; border: 1px solid var(--gray-300); border-radius: var(--radius); font-size: 0.9375rem; }
+.poll-option-remove { flex-shrink: 0; padding: 0.35rem; }
+.poll-option-add { margin-top: 0.25rem; }
+.poll-settings { display: flex; flex-direction: column; gap: 0.5rem; }
+.poll-check-wrap { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9375rem; cursor: pointer; }
+.poll-check { width: 1rem; height: 1rem; }
 .editor-toolbar { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
 .dropdown-wrap { position: relative; }
 .dropdown-trigger {
@@ -517,6 +618,11 @@ async function onRichEditorImageUpload(file: File) {
 .saved-hint { font-size: 0.75rem; color: var(--gray-700); }
 .editor-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; min-height: 420px; }
 @media (max-width: 768px) { .editor-row { grid-template-columns: 1fr; min-height: 340px; } }
+@media (max-width: 640px) {
+  .post-type-btn { padding: 0.5rem 0.75rem; font-size: 0.875rem; }
+  .poll-option-row { flex-wrap: wrap; }
+  .poll-option-input { width: 100%; }
+}
 .editor-pane { min-height: 0; min-width: 0; }
 .editor { width: 100%; height: 100%; min-height: 380px; padding: 1rem; border: 1px solid var(--gray-300); border-radius: var(--radius); font-family: inherit; resize: vertical; box-sizing: border-box; font-size: 0.9375rem; line-height: 1.6; }
 @media (max-width: 480px) {

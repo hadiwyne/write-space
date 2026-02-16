@@ -1,5 +1,7 @@
-import { IsString, IsOptional, IsBoolean, IsArray, IsEnum, MinLength, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsArray, IsEnum, MinLength, MaxLength, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 import { ContentType, PostVisibility } from '@prisma/client';
+import { CreatePostPollDto } from './create-post-poll.dto';
 
 export class CreatePostDto {
   @IsString()
@@ -34,4 +36,9 @@ export class CreatePostDto {
   @IsOptional()
   @IsBoolean()
   isAnonymous?: boolean;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreatePostPollDto)
+  poll?: CreatePostPollDto;
 }
