@@ -661,21 +661,29 @@ html.ui-theme-dark-void .dark-void-main .poll-block .poll-open-hint {
 }
 html.ui-theme-dark-void .dark-void-main .poll-block .poll-add-input {
   background: var(--dark-void-bg);
-  border-color: var(--dark-void-border);
+  border: 1px solid var(--dark-void-border);
   color: var(--dark-void-text);
   border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
 }
 html.ui-theme-dark-void .dark-void-main .poll-block .poll-add-input::placeholder {
   color: var(--dark-void-text-muted);
 }
+html.ui-theme-dark-void .dark-void-main .poll-block .poll-add-input:focus {
+  outline: none;
+  border-color: var(--dark-void-text-muted);
+}
 html.ui-theme-dark-void .dark-void-main .poll-block .poll-add-btn {
-  border-color: var(--dark-void-border);
+  background: transparent;
+  border: 1px solid var(--dark-void-border);
   color: var(--dark-void-text-muted);
   border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
 }
 html.ui-theme-dark-void .dark-void-main .poll-block .poll-add-btn:hover:not(:disabled) {
   border-color: var(--dark-void-text-muted);
   color: var(--dark-void-text);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 @media (max-width: 1024px) {
@@ -1397,6 +1405,34 @@ html.ui-theme-dark-void .dark-void-main .settings-page .btn-primary {
 html.ui-theme-dark-void .dark-void-main .settings-page .btn-primary:hover:not(:disabled) {
   background: var(--dark-void-text-muted);
   border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .btn-outline {
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+  background: transparent;
+  border: 1px solid var(--dark-void-border);
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .btn-outline:hover:not(:disabled) {
+  border-color: var(--dark-void-text-muted);
+  color: var(--dark-void-text);
+  background: rgba(255, 255, 255, 0.06);
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .btn-ghost {
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+  background: transparent;
+  border: 1px solid var(--dark-void-border);
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .btn-ghost:hover {
+  border-color: var(--dark-void-text-muted);
+  color: var(--dark-void-text);
+  background: rgba(255, 255, 255, 0.06);
+}
+html.ui-theme-dark-void .dark-void-main .settings-page .badge-upload-hint {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
 }
 html.ui-theme-dark-void .dark-void-main .settings-page .error {
   color: #f87171;
