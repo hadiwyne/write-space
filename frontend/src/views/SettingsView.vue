@@ -570,7 +570,7 @@
     badgeUploading.value = true
     try {
       await api.delete('/users/me/badge')
-      auth.user = { ...auth.user, badgeUrl: null }
+      await auth.fetchUser()
       auth.bumpAvatarVersion()
       success.value = 'Badge removed.'
     } catch (err: unknown) {
