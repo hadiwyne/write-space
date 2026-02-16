@@ -220,6 +220,13 @@ a:hover { text-decoration: underline; color: var(--accent-burgundy); }
 .avatar-frame.avatar-shape-rounded { border-radius: 12% !important; }
 .avatar-frame.avatar-shape-square { border-radius: 0 !important; }
 .avatar-frame.avatar-shape-squircle { border-radius: 25% !important; }
+/* Badge inherits avatar shape so it fits the corner; badge image keeps contain */
+.avatar-frame-badge.avatar-shape-circle img,
+.avatar-frame-badge.avatar-shape-rounded img,
+.avatar-frame-badge.avatar-shape-square img,
+.avatar-frame-badge.avatar-shape-squircle img {
+  object-fit: contain !important;
+}
 .avatar-frame--gradient.avatar-frame--animated {
   background-size: 200% 200% !important;
   animation: avatar-frame-linear var(--frame-speed, 3s) linear infinite;

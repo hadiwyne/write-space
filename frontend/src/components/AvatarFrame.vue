@@ -7,7 +7,7 @@
       :style="frameStyle"
     >
       <slot />
-      <span v-if="showBadge" class="avatar-frame-badge" :class="['avatar-frame-badge--' + badgePosition]" aria-hidden="true">
+      <span v-if="showBadge" class="avatar-frame-badge" :class="['avatar-frame-badge--' + badgePosition, props.shapeClass]" aria-hidden="true">
         <img v-if="(badgeKey as string) === 'custom' && badgeUrl" :src="badgeSrc" alt="" class="avatar-frame-badge-img" />
         <template v-else>{{ badgeEmoji }}</template>
       </span>
