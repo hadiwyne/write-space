@@ -15,4 +15,12 @@ export class CreatePostPollDto {
   @IsOptional()
   @IsBoolean()
   resultsVisible?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  allowMultiple?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  allowChangeVote?: boolean;
 }

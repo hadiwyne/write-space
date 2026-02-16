@@ -73,7 +73,7 @@ export class PostsService {
           orderBy: { order: 'asc' as const },
           include: { _count: { select: { votes: true } } },
         },
-        ...(userId ? { votes: { where: { userId }, take: 1, select: { pollOptionId: true } } } : {}),
+        ...(userId ? { votes: { where: { userId }, select: { pollOptionId: true } } } : {}),
       },
     };
   }
@@ -113,6 +113,8 @@ export class PostsService {
             postId: created.id,
             isOpen: !!dto.poll!.isOpen,
             resultsVisible: dto.poll!.resultsVisible !== false,
+            allowMultiple: !!dto.poll!.allowMultiple,
+            allowChangeVote: !!dto.poll!.allowChangeVote,
             options: {
               create: pollOptions.map((text, order) => ({ text, order })),
             },
@@ -433,21 +435,91 @@ export class PostsService {
     }
   }
 
-  /** Vote on a poll (one vote per user per poll; can change vote by voting again). */
+  /** Vote on a poll. Supports allowMultiple (toggle option) and allowChangeVote (unvote by clicking same option). */
   async votePoll(postId: string, userId: string, optionId: string) {
     const post = await this.prisma.post.findUnique({
       where: { id: postId },
-      include: { poll: { include: { options: true } } },
+      include: {
+        poll: {
+          include: {
+            options: true,
+          },
+        },
+      },
     });
     if (!post || !post.poll) throw new NotFoundException('Post or poll not found');
-    const option = post.poll.options.find((o) => o.id === optionId);
+    const poll = post.poll as { id: string; allowMultiple?: boolean; allowChangeVote?: boolean; options: { id: string }[] };
+    const option = poll.options.find((o) => o.id === optionId);
     if (!option) throw new BadRequestException('Invalid poll option');
-    await this.prisma.pollVote.upsert({
-      where: { userId_pollId: { userId, pollId: post.poll.id } },
-      create: { pollId: post.poll.id, pollOptionId: optionId, userId },
-      update: { pollOptionId: optionId },
+
+    const existing = await this.prisma.pollVote.findMany({
+      where: { userId, pollId: poll.id },
+      select: { pollOptionId: true },
     });
+    const votedOptionIds = existing.map((v) => v.pollOptionId);
+    const alreadyVotedThis = votedOptionIds.includes(optionId);
+
+    if (poll.allowMultiple) {
+      if (alreadyVotedThis) {
+        await this.prisma.pollVote.deleteMany({
+          where: { userId, pollId: poll.id, pollOptionId: optionId },
+        });
+      } else {
+        await this.prisma.pollVote.create({
+          data: { userId, pollId: poll.id, pollOptionId: optionId },
+        });
+      }
+    } else {
+      if (alreadyVotedThis && poll.allowChangeVote) {
+        await this.prisma.pollVote.deleteMany({
+          where: { userId, pollId: poll.id },
+        });
+      } else if (!alreadyVotedThis || !poll.allowChangeVote) {
+        await this.prisma.pollVote.deleteMany({ where: { userId, pollId: poll.id } });
+        await this.prisma.pollVote.create({
+          data: { userId, pollId: poll.id, pollOptionId: optionId },
+        });
+      }
+    }
     return this.findOne(postId, userId);
+  }
+
+  /** List voters for a poll (author only). Returns users who voted and their chosen option(s). */
+  async getPollVoters(postId: string, userId: string) {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      include: { poll: { select: { id: true } } },
+    });
+    if (!post || !post.poll) throw new NotFoundException('Post or poll not found');
+    if (post.authorId !== userId) throw new ForbiddenException('Only the poll author can view voters');
+    const votes = await this.prisma.pollVote.findMany({
+      where: { pollId: post.poll.id },
+      include: {
+        user: {
+          select: { id: true, username: true, displayName: true, avatarUrl: true },
+        },
+        pollOption: { select: { id: true, text: true } },
+      },
+      orderBy: [{ userId: 'asc' }, { pollOptionId: 'asc' }],
+    });
+    const byUser = new Map<
+      string,
+      { id: string; username: string; displayName: string | null; avatarUrl: string | null; options: { id: string; text: string }[] }
+    >();
+    for (const v of votes) {
+      const u = v.user;
+      if (!byUser.has(u.id)) {
+        byUser.set(u.id, {
+          id: u.id,
+          username: u.username,
+          displayName: u.displayName,
+          avatarUrl: u.avatarUrl,
+          options: [],
+        });
+      }
+      byUser.get(u.id)!.options.push({ id: v.pollOption.id, text: v.pollOption.text });
+    }
+    return { voters: Array.from(byUser.values()) };
   }
 
   /** Add an option to an open poll (only when poll.isOpen or user is author). */
