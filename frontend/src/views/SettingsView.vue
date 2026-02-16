@@ -8,21 +8,21 @@
             <div class="avatar-with-upload">
               <AvatarFrame
                 :frame="avatarFrame"
-                :shape-class="avatarShapeClass(auth.user?.avatarShape)"
+                :shape-class="avatarShapeClass(avatarShape)"
                 :badge-url="authUserBadgeUrl"
                 :badge-cache-bust="auth.avatarVersion"
               >
                 <div
                   v-if="avatarPreview || auth.user?.avatarUrl"
                   class="avatar-preview-clip"
-                  :class="avatarShapeClass(auth.user?.avatarShape)"
+                  :class="avatarShapeClass(avatarShape)"
                 >
                   <img :src="avatarPreview || avatarSrc(auth.user?.avatarUrl, auth.avatarVersion)" alt="" class="avatar-preview-img" />
                 </div>
                 <span
                   v-else
                   class="avatar-placeholder"
-                  :class="avatarShapeClass(auth.user?.avatarShape)"
+                  :class="avatarShapeClass(avatarShape)"
                 >{{ (auth.user?.displayName || auth.user?.username || '?')[0] }}</span>
               </AvatarFrame>
               <div class="avatar-upload-block">
