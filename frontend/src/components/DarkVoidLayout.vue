@@ -1,12 +1,30 @@
 <template>
-  <div class="dark-void-layout" :class="{ 'left-nav-open': leftNavOpen }">
-    <!-- Mobile-only: fixed trigger to open left nav (visible at any scroll position) -->
+  <div
+    class="dark-void-layout"
+    :class="{
+      'left-nav-open': leftNavOpen,
+      'hamburgers-hidden': leftNavOpen || sidebarOpen,
+      'hamburgers-extended': hamburgersExtended
+    }"
+  >
+    <!-- Mobile-only: fixed trigger to open left nav (peeks from left edge; pop out on hover/touch) -->
     <button
       type="button"
       class="dark-void-nav-trigger"
       aria-label="Open navigation"
       :aria-expanded="leftNavOpen"
-      @click="leftNavOpen = !leftNavOpen"
+      @click="onOpenLeftNav"
+    >
+      <i class="pi pi-bars" aria-hidden="true"></i>
+    </button>
+
+    <!-- Mobile-only: fixed trigger on right to open sidebar (peeks from right edge; pop out on hover/touch) -->
+    <button
+      type="button"
+      class="dark-void-sidebar-trigger"
+      aria-label="Open menu"
+      :aria-expanded="sidebarOpen"
+      @click="onOpenSidebar"
     >
       <i class="pi pi-bars" aria-hidden="true"></i>
     </button>
@@ -37,6 +55,7 @@
         <router-link v-if="auth.user" :to="`/u/${auth.user.username}`" class="dark-void-nav-btn" aria-label="Profile" @click="leftNavOpen = false">
           <i class="pi pi-user" aria-hidden="true"></i>
         </router-link>
+        <!-- Desktop: sidebar toggle at bottom of left nav (hidden on mobile; use right-side trigger instead) -->
         <button
           type="button"
           class="dark-void-sidebar-toggle"
@@ -154,7 +173,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, inject, onMounted, onUnmounted } from 'vue'
+import { ref, computed, inject, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, avatarSrc } from '@/api/client'
 import { avatarShapeClass } from '@/utils/avatar'
@@ -170,6 +189,9 @@ const onlineCount = ref(0)
 const dropdownOpen = ref(false)
 const sidebarOpen = ref(false)
 const leftNavOpen = ref(false)
+const hamburgersExtended = ref(false)
+const HAMBURGERS_EXTEND_DURATION = 1500
+let extendTimeoutId: ReturnType<typeof setTimeout> | null = null
 const mainRef = ref<HTMLElement | null>(null)
 const statusBarState = inject<{ hidden: boolean }>('statusBarState', { hidden: false })
 const lastScrollTop = ref(0)
@@ -202,6 +224,30 @@ function closeDropdownAndSidebar() {
   dropdownOpen.value = false
   sidebarOpen.value = false
 }
+
+function onOpenLeftNav() {
+  const opening = !leftNavOpen.value
+  if (opening) sidebarOpen.value = false
+  leftNavOpen.value = !leftNavOpen.value
+}
+
+function onOpenSidebar() {
+  leftNavOpen.value = false
+  sidebarOpen.value = true
+}
+
+watch([leftNavOpen, sidebarOpen], ([left, right], [prevLeft, prevRight]) => {
+  const wasOpen = prevLeft === true || prevRight === true
+  const bothClosed = !left && !right
+  if (wasOpen && bothClosed) {
+    hamburgersExtended.value = true
+    if (extendTimeoutId != null) clearTimeout(extendTimeoutId)
+    extendTimeoutId = setTimeout(() => {
+      hamburgersExtended.value = false
+      extendTimeoutId = null
+    }, HAMBURGERS_EXTEND_DURATION)
+  }
+})
 
 function onLogout() {
   sidebarOpen.value = false
@@ -271,6 +317,7 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('click', onDocumentClick)
   if (onlineInterval) clearInterval(onlineInterval)
+  if (extendTimeoutId != null) clearTimeout(extendTimeoutId)
 })
 </script>
 
@@ -636,10 +683,11 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 
+/* Hamburger triggers: default peeking (only a tab visible), pop out on hover/extended, hide when panel open */
 .dark-void-nav-trigger {
   display: none;
   position: fixed;
-  left: 0;
+  left: calc(-2.25rem + 12px);
   top: 50%;
   transform: translateY(-50%);
   z-index: 21;
@@ -655,13 +703,57 @@ onUnmounted(() => {
   border-right: 1px solid var(--dark-void-border);
   box-shadow: 2px 0 12px rgba(0, 0, 0, 0.3);
   cursor: pointer;
-  transition: background 0.2s, box-shadow 0.2s;
+  transition: left 0.25s ease-out, background 0.2s, box-shadow 0.2s;
+}
+.dark-void-layout:not(.hamburgers-hidden) .dark-void-nav-trigger:hover,
+.dark-void-layout:not(.hamburgers-hidden).hamburgers-extended .dark-void-nav-trigger {
+  left: 0;
 }
 .dark-void-nav-trigger:hover {
   background: rgba(255, 255, 255, 0.08);
 }
 .dark-void-nav-trigger .pi {
   font-size: 1.15rem;
+}
+.dark-void-layout.hamburgers-hidden .dark-void-nav-trigger {
+  left: -3rem;
+  pointer-events: none;
+}
+
+.dark-void-sidebar-trigger {
+  display: none;
+  position: fixed;
+  right: calc(-2.25rem + 12px);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 21;
+  width: 2.25rem;
+  height: 3rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 6px 0 0 6px;
+  background: var(--dark-void-bg);
+  color: var(--dark-void-text);
+  border-left: 1px solid var(--dark-void-border);
+  box-shadow: -2px 0 12px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: right 0.25s ease-out, background 0.2s, box-shadow 0.2s;
+}
+.dark-void-layout:not(.hamburgers-hidden) .dark-void-sidebar-trigger:hover,
+.dark-void-layout:not(.hamburgers-hidden).hamburgers-extended .dark-void-sidebar-trigger {
+  right: 0;
+}
+.dark-void-sidebar-trigger:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.dark-void-sidebar-trigger .pi {
+  font-size: 1.15rem;
+}
+.dark-void-layout.hamburgers-hidden .dark-void-sidebar-trigger {
+  right: -3rem;
+  pointer-events: none;
 }
 .dark-void-nav-backdrop {
   position: fixed;
@@ -704,8 +796,11 @@ onUnmounted(() => {
     margin-left: 0;
     margin-right: 0;
   }
-  .dark-void-sidebar-toggle {
+  .dark-void-sidebar-trigger {
     display: flex;
+  }
+  .dark-void-sidebar-toggle {
+    display: none;
   }
   .dark-void-sidebar {
     transform: translateX(100%);
