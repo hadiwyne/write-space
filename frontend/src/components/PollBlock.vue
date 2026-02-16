@@ -1,18 +1,17 @@
 <template>
   <div class="poll-block">
     <div class="poll-options">
-      <!-- Single bar per option: shows result fill when visible, and is clickable to vote when user hasn't voted -->
       <div
         v-for="opt in poll.options"
         :key="opt.id"
         class="poll-option poll-option--bar"
         :class="{
-          'poll-option--voted': userVotedOptionId === opt.id,
-          'poll-option--clickable': !userVotedOptionId && !voteLoading,
+          'poll-option--voted': userVotedOptionIds.includes(opt.id),
+          'poll-option--clickable': isOptionClickable && !voteLoading,
           'poll-option--loading': voteLoading,
         }"
-        :role="!userVotedOptionId ? 'button' : undefined"
-        :tabindex="!userVotedOptionId ? 0 : undefined"
+        :role="isOptionClickable ? 'button' : undefined"
+        :tabindex="isOptionClickable ? 0 : undefined"
         :aria-disabled="voteLoading || undefined"
         @click.stop="maybeVote(opt.id)"
         @keydown.enter.prevent="maybeVote(opt.id)"
@@ -26,7 +25,7 @@
           <span class="poll-option-label">{{ opt.text }}</span>
           <span v-if="showResults" class="poll-option-percent">{{ optionPercent(opt) }}%</span>
           <i
-            v-if="userVotedOptionId === opt.id"
+            v-if="userVotedOptionIds.includes(opt.id)"
             class="pi pi-check poll-option-voted-icon"
             aria-hidden="true"
           ></i>
@@ -34,7 +33,39 @@
         <span v-if="showResults" class="poll-option-count">{{ voteCount(opt) }} {{ voteCount(opt) === 1 ? 'vote' : 'votes' }}</span>
       </div>
     </div>
-    <p v-if="showResults" class="poll-total">{{ totalVotes }} {{ totalVotes === 1 ? 'vote' : 'votes' }} total</p>
+    <p v-if="showResults" class="poll-total">
+      <button
+        v-if="isPollAuthor"
+        type="button"
+        class="poll-total-btn"
+        @click="openVotersModal"
+      >
+        {{ totalVotes }} {{ totalVotes === 1 ? 'vote' : 'votes' }} total
+      </button>
+      <template v-else>{{ totalVotes }} {{ totalVotes === 1 ? 'vote' : 'votes' }} total</template>
+    </p>
+    <Teleport to="body">
+      <div v-if="votersModalOpen" class="poll-voters-backdrop" @click.self="votersModalOpen = false">
+        <div class="poll-voters-modal">
+          <div class="poll-voters-header">
+            <h3 class="poll-voters-title">Voters</h3>
+            <button type="button" class="poll-voters-close" aria-label="Close" @click="votersModalOpen = false">×</button>
+          </div>
+          <div class="poll-voters-body">
+            <p v-if="votersLoading" class="poll-voters-loading">Loading…</p>
+            <template v-else-if="voters.length === 0">
+              <p class="poll-voters-empty">No votes yet.</p>
+            </template>
+            <ul v-else class="poll-voters-list">
+              <li v-for="v in voters" :key="v.id" class="poll-voters-item">
+                <span class="poll-voters-name">{{ v.displayName || v.username }}</span>
+                <span class="poll-voters-options">{{ v.options.map((o) => o.text).join(', ') }}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </Teleport>
     <div v-if="canAddOption && !compact" class="poll-add-option">
       <input
         v-model="newOptionText"
@@ -61,10 +92,14 @@ const props = withDefaults(
   defineProps<{
     post: {
       id: string
+      author?: { id?: string } | null
+      authorId?: string
       poll?: {
         id: string
         isOpen: boolean
         resultsVisible: boolean
+        allowMultiple?: boolean
+        allowChangeVote?: boolean
         options: Array<{ id: string; text: string; order?: number; _count?: { votes: number } }>
         votes?: Array<{ pollOptionId: string }>
       }
@@ -79,21 +114,37 @@ const auth = useAuthStore()
 const voteLoading = ref(false)
 const addOptionLoading = ref(false)
 const newOptionText = ref('')
+const votersModalOpen = ref(false)
+const votersLoading = ref(false)
+const voters = ref<Array<{ id: string; username: string; displayName: string | null; avatarUrl: string | null; options: Array<{ id: string; text: string }> }>>([])
 
 const poll = computed(() => props.post.poll!)
 const totalVotes = computed(() => {
   const opts = poll.value?.options ?? []
   return opts.reduce((sum, o) => sum + (o._count?.votes ?? 0), 0)
 })
-const userVotedOptionId = computed(() => {
-  const votes = poll.value?.votes
-  if (!votes?.length) return null
-  return votes[0].pollOptionId
+const userVotedOptionIds = computed(() => {
+  const votes = poll.value?.votes ?? []
+  return votes.map((v) => v.pollOptionId)
 })
+const hasVoted = computed(() => userVotedOptionIds.value.length > 0)
 const showResults = computed(() => {
   const p = poll.value
   if (!p) return false
-  return p.resultsVisible || !!userVotedOptionId.value
+  return p.resultsVisible || hasVoted.value
+})
+const allowMultiple = computed(() => !!poll.value?.allowMultiple)
+const allowChangeVote = computed(() => !!poll.value?.allowChangeVote)
+const isOptionClickable = computed(() => {
+  if (allowMultiple.value) return true
+  if (allowChangeVote.value) return true
+  return !hasVoted.value
+})
+const isPollAuthor = computed(() => {
+  const uid = auth.user?.id
+  if (!uid) return false
+  const post = props.post as { authorId?: string; author?: { id?: string } }
+  return post.authorId === uid || post.author?.id === uid
 })
 const canAddOption = computed(() => {
   const p = poll.value
@@ -122,14 +173,24 @@ async function vote(optionId: string) {
   }
 }
 
-function handleVoteClick(optionId: string) {
+function maybeVote(optionId: string) {
   if (voteLoading.value) return
+  if (!isOptionClickable.value) return
   vote(optionId)
 }
 
-function maybeVote(optionId: string) {
-  if (userVotedOptionId.value || voteLoading.value) return
-  handleVoteClick(optionId)
+async function openVotersModal() {
+  votersModalOpen.value = true
+  votersLoading.value = true
+  voters.value = []
+  try {
+    const { data } = await api.get<{ voters: typeof voters.value }>(`/posts/${props.post.id}/poll/voters`)
+    voters.value = data.voters ?? []
+  } catch {
+    voters.value = []
+  } finally {
+    votersLoading.value = false
+  }
 }
 
 async function addOption() {
@@ -243,6 +304,71 @@ async function addOption() {
   color: var(--text-tertiary);
 }
 .poll-total { margin: 0.5rem 0 0; font-size: 0.8125rem; color: var(--text-tertiary); }
+.poll-total-btn {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.poll-total-btn:hover { opacity: 0.9; }
+.poll-voters-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1rem;
+}
+.poll-voters-modal {
+  background: var(--bg-primary, #fff);
+  border: 1px solid var(--border-light, #e5e7eb);
+  border-radius: var(--radius-md, 8px);
+  max-width: 24rem;
+  width: 100%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+.poll-voters-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-light, #e5e7eb);
+}
+.poll-voters-title { margin: 0; font-size: 1rem; font-weight: 600; color: var(--text-primary); }
+.poll-voters-close {
+  margin: 0;
+  padding: 0.25rem;
+  border: none;
+  background: none;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+.poll-voters-close:hover { color: var(--text-primary); }
+.poll-voters-body { padding: 1rem; overflow: auto; }
+.poll-voters-loading,
+.poll-voters-empty { margin: 0; font-size: 0.875rem; color: var(--text-tertiary); }
+.poll-voters-list { margin: 0; padding: 0; list-style: none; }
+.poll-voters-item {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-light, #e5e7eb);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.poll-voters-item:last-child { border-bottom: none; }
+.poll-voters-name { font-weight: 600; font-size: 0.9375rem; color: var(--text-primary); }
+.poll-voters-options { font-size: 0.8125rem; color: var(--text-tertiary); }
 .poll-add-option { display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; }
 .poll-add-input {
   flex: 1;

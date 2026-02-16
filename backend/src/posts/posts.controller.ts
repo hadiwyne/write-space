@@ -171,6 +171,12 @@ export class PostsController {
     return this.postsService.addPollOption(id, user.id, dto.text);
   }
 
+  @Get(':id/poll/voters')
+  @UseGuards(JwtAuthGuard)
+  getPollVoters(@Param('id') id: string, @CurrentUser() user: { id: string }) {
+    return this.postsService.getPollVoters(id, user.id);
+  }
+
   @Public()
   @Get(':id/poll')
   @UseGuards(OptionalJwtAuthGuard)

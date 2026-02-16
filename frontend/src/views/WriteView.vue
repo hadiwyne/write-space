@@ -127,6 +127,14 @@
           <input v-model="pollResultsVisible" type="checkbox" class="poll-check" />
           <span>Results always visible (uncheck to show results only after voting)</span>
         </label>
+        <label class="poll-check-wrap">
+          <input v-model="pollAllowMultiple" type="checkbox" class="poll-check" />
+          <span>Allow voters to select multiple options</span>
+        </label>
+        <label class="poll-check-wrap">
+          <input v-model="pollAllowChangeVote" type="checkbox" class="poll-check" />
+          <span>Allow voters to change their vote (click choice again to unvote)</span>
+        </label>
       </div>
       </template>
       <div class="form-group visibility-row">
@@ -227,6 +235,8 @@ const postType = ref<'post' | 'poll'>('post')
 const pollOptions = ref<string[]>(['', ''])
 const pollIsOpen = ref(false)
 const pollResultsVisible = ref(true)
+const pollAllowMultiple = ref(false)
+const pollAllowChangeVote = ref(false)
 const formatDropdownOpen = ref(false)
 const visibilityDropdownOpen = ref(false)
 const formatDropdownRef = ref<HTMLElement | null>(null)
@@ -373,6 +383,8 @@ async function doPublish(anonymous: boolean) {
         options: pollOptions.value.map((t) => t.trim()).filter(Boolean),
         isOpen: pollIsOpen.value,
         resultsVisible: pollResultsVisible.value,
+        allowMultiple: pollAllowMultiple.value,
+        allowChangeVote: pollAllowChangeVote.value,
       }
     }
     const { data } = await api.post('/posts', payload)
