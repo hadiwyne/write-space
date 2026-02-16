@@ -2,7 +2,9 @@ import { Injectable, ConflictException, NotFoundException, BadRequestException }
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import sharp from 'sharp';
+// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
+const sharp = require('sharp') as typeof import('sharp');
+import type { SharpOptions } from 'sharp';
 // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
 const DOMPurify = require('isomorphic-dompurify') as { sanitize: (html: string, options?: object) => string };
 import { PrismaService } from '../prisma/prisma.service';
@@ -274,18 +276,52 @@ export class UsersService {
     if (mimeType === 'image/x-icon' || mimeType === 'image/vnd.microsoft.icon') {
       throw new BadRequestException('ICO favicons are not supported. Please export or save your icon as PNG or WebP (e.g. use "Export as PNG" in your editor or a favicon-to-PNG converter).');
     }
+    const inputBuffer = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+    const sharpOptions: SharpOptions = {
+      failOnError: true,
+      limitInputPixels: 4096 * 4096,
+    };
     let pngBuffer: Buffer;
     try {
-      pngBuffer = await sharp(buffer, { failOnError: true })
+      const pipeline = sharp(inputBuffer, sharpOptions);
+      pngBuffer = await pipeline
+        .ensureAlpha()
         .resize(BADGE_TARGET_SIZE, BADGE_TARGET_SIZE, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-        .png()
+        .png({ compressionLevel: 6 })
         .toBuffer();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : '';
-      if (msg && (msg.includes('Vips') || msg.includes('load') || msg.includes('decode') || msg.includes('buffer'))) {
-        throw new BadRequestException('Image could not be read. If this is an ICO favicon, export it as PNG or WebP first. Otherwise try a different PNG/WebP file (max 100 KB).');
+      const msg = err instanceof Error ? err.message : String(err);
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('[saveBadge] sharp error:', msg);
       }
-      throw new BadRequestException('Invalid or corrupted image. Try a PNG or WebP file, max 100 KB, with transparent background.');
+      const lower = msg.toLowerCase();
+      const knownSharp =
+        lower.includes('vips') ||
+        lower.includes('load') ||
+        lower.includes('decode') ||
+        lower.includes('buffer') ||
+        lower.includes('corrupt') ||
+        lower.includes('header') ||
+        lower.includes('invalid') ||
+        lower.includes('unsupported') ||
+        lower.includes('format') ||
+        lower.includes('expected') ||
+        lower.includes('width') ||
+        lower.includes('height') ||
+        lower.includes('pixel') ||
+        lower.includes('limit') ||
+        lower.includes('exceed') ||
+        lower.includes('png') ||
+        lower.includes('write') ||
+        lower.includes('target') ||
+        lower.includes('truncat') ||
+        lower.includes('eof') ||
+        lower.includes('process');
+      const friendly =
+        knownSharp
+          ? 'Image could not be read. Try opening it in an image editor and re-saving as PNG or WebP (max 100 KB). Avoid ICO/favicon files.'
+          : 'Image could not be processed. Try a different PNG or WebP file under 100 KB, or re-save it in an image editor.';
+      throw new BadRequestException(friendly);
     }
     const badgeUrl = `/users/badge/${userId}`;
     await this.prisma.user.update({
