@@ -28,13 +28,15 @@ app.directive('tooltip', Tooltip)
 app.mount('#app')
 
 // Register Service Worker for PWA
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch((err) => {
-            console.warn('Service Worker registration failed:', err)
-        })
-    })
-}
+import { registerSW } from 'virtual:pwa-register'
+registerSW({
+    onNeedRefresh() {
+        console.info('New content available, please refresh.')
+    },
+    onOfflineReady() {
+        console.info('App ready to work offline.')
+    },
+})
 
 // Cleanup old IndexedDB entries on app mount
 cleanupOldEntries().catch((err) => {

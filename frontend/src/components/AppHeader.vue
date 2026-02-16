@@ -188,12 +188,12 @@ function onSearch() {
   else router.push('/search')
 }
 
-function logout() {
+async function logout() {
   dropdownOpen.value = false
   notifOpen.value = false
   notifications.disconnectSocket()
   theme.clearUserThemes()
-  auth.logout()
+  await auth.logout()
   router.push('/')
 }
 

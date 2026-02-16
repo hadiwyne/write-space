@@ -240,3 +240,21 @@ export async function cleanupOldEntries(): Promise<void> {
         console.warn('IndexedDB cleanup error:', err)
     }
 }
+
+/**
+ * Clears ALL data from IndexedDB. Use on logout.
+ */
+export async function clearAllCaches(): Promise<void> {
+    try {
+        const db = await getDB()
+        const tx = db.transaction(['posts', 'profiles', 'feeds'], 'readwrite')
+        await Promise.all([
+            tx.objectStore('posts').clear(),
+            tx.objectStore('profiles').clear(),
+            tx.objectStore('feeds').clear(),
+        ])
+        await tx.done
+    } catch (err) {
+        console.warn('IndexedDB clearAllCaches error:', err)
+    }
+}

@@ -165,6 +165,10 @@ export default defineConfig({
           },
         ],
       },
+      devOptions: {
+        enabled: true,
+        type: 'module', // Better dev experience
+      },
     }),
     // Brotli compression
     viteCompression({

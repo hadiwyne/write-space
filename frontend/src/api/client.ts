@@ -35,6 +35,11 @@ export const api = setupCache(axiosInstance, {
   modifiedSince: true, // Support Last-Modified validation
 })
 
+/** Clears all cached API responses. Use on logout. */
+export async function clearApiCache() {
+  await api.storage.remove('all')
+}
+
 // Add auth token to requests
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('writespace_token')

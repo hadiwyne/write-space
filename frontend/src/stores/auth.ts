@@ -51,9 +51,19 @@ export const useAuthStore = defineStore('auth', () => {
     setToken(data.accessToken)
     await fetchUser()
   }
-  function logout() {
+  async function logout() {
+    const { clearApiCache } = await import('@/api/client')
+    const { clearAllCaches } = await import('@/utils/indexedDBCache')
+
+    // Clear state
     useLikedPostsStore().clear()
     clear()
+
+    // Clear all client-side caches to avoid session sync issues
+    await Promise.allSettled([
+      clearApiCache(),
+      clearAllCaches()
+    ])
   }
   function bumpAvatarVersion() {
     avatarVersion.value = Date.now()
