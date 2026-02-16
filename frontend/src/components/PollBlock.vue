@@ -1,36 +1,38 @@
 <template>
-  <div class="poll-block" @click.stop>
+  <div class="poll-block">
     <div class="poll-options">
-      <template v-if="showResults">
-        <div
-          v-for="opt in poll.options"
-          :key="opt.id"
-          class="poll-option poll-option--result"
-          :class="{ 'poll-option--voted': userVotedOptionId === opt.id }"
-        >
-          <div class="poll-option-bar-wrap">
-            <div
-              class="poll-option-bar"
-              :style="{ width: optionPercent(opt) + '%' }"
-            ></div>
-            <span class="poll-option-label">{{ opt.text }}</span>
-            <span class="poll-option-percent">{{ optionPercent(opt) }}%</span>
-          </div>
-          <span class="poll-option-count">{{ voteCount(opt) }} {{ voteCount(opt) === 1 ? 'vote' : 'votes' }}</span>
+      <!-- Single bar per option: shows result fill when visible, and is clickable to vote when user hasn't voted -->
+      <div
+        v-for="opt in poll.options"
+        :key="opt.id"
+        class="poll-option poll-option--bar"
+        :class="{
+          'poll-option--voted': userVotedOptionId === opt.id,
+          'poll-option--clickable': !userVotedOptionId && !voteLoading,
+          'poll-option--loading': voteLoading,
+        }"
+        :role="!userVotedOptionId ? 'button' : undefined"
+        :tabindex="!userVotedOptionId ? 0 : undefined"
+        :aria-disabled="voteLoading || undefined"
+        @click.stop="maybeVote(opt.id)"
+        @keydown.enter.prevent="maybeVote(opt.id)"
+        @keydown.space.prevent="maybeVote(opt.id)"
+      >
+        <div class="poll-option-bar-wrap">
+          <div
+            class="poll-option-bar"
+            :style="{ width: (showResults ? optionPercent(opt) : 0) + '%' }"
+          ></div>
+          <span class="poll-option-label">{{ opt.text }}</span>
+          <span v-if="showResults" class="poll-option-percent">{{ optionPercent(opt) }}%</span>
+          <i
+            v-if="userVotedOptionId === opt.id"
+            class="pi pi-check poll-option-voted-icon"
+            aria-hidden="true"
+          ></i>
         </div>
-      </template>
-      <template v-else>
-        <button
-          v-for="opt in poll.options"
-          :key="opt.id"
-          type="button"
-          class="poll-option poll-option--btn"
-          :disabled="voteLoading"
-          @click="vote(opt.id)"
-        >
-          {{ opt.text }}
-        </button>
-      </template>
+        <span v-if="showResults" class="poll-option-count">{{ voteCount(opt) }} {{ voteCount(opt) === 1 ? 'vote' : 'votes' }}</span>
+      </div>
     </div>
     <p v-if="showResults" class="poll-total">{{ totalVotes }} {{ totalVotes === 1 ? 'vote' : 'votes' }} total</p>
     <div v-if="canAddOption && !compact" class="poll-add-option">
@@ -120,6 +122,16 @@ async function vote(optionId: string) {
   }
 }
 
+function handleVoteClick(optionId: string) {
+  if (voteLoading.value) return
+  vote(optionId)
+}
+
+function maybeVote(optionId: string) {
+  if (userVotedOptionId.value || voteLoading.value) return
+  handleVoteClick(optionId)
+}
+
 async function addOption() {
   const text = newOptionText.value.trim()
   if (!text || addOptionLoading.value || !auth.token) return
@@ -136,34 +148,44 @@ async function addOption() {
 
 <style scoped>
 .poll-block {
+  position: relative;
+  z-index: 2;
   margin-top: 0.75rem;
   padding: 0.75rem;
   background: var(--bg-card, #f9fafb);
   border: 1px solid var(--border-light, #e5e7eb);
   border-radius: var(--radius-md, 8px);
+  touch-action: manipulation;
+  pointer-events: auto;
 }
 .poll-options { display: flex; flex-direction: column; gap: 0.5rem; }
-.poll-option--btn {
-  display: block;
-  width: 100%;
-  padding: 0.5rem 0.75rem;
-  text-align: left;
-  font-size: 0.9375rem;
-  font-family: inherit;
-  color: var(--text-primary);
-  background: var(--bg-primary);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+.poll-option--bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  touch-action: manipulation;
 }
-.poll-option--btn:hover:not(:disabled) {
-  background: var(--gray-50, #f3f4f6);
-  border-color: var(--accent-primary, #8b4513);
+.poll-option--bar.poll-option--clickable {
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  -webkit-tap-highlight-color: transparent;
 }
-.poll-option--btn:disabled { opacity: 0.8; cursor: wait; }
-
-.poll-option--result { display: flex; flex-direction: column; gap: 0.25rem; }
+.poll-option--bar.poll-option--clickable:hover .poll-option-bar-wrap {
+  outline: 2px solid var(--accent-primary, #8b4513);
+  outline-offset: 1px;
+}
+.poll-option--bar.poll-option--clickable:focus {
+  outline: none;
+}
+.poll-option--bar.poll-option--clickable:focus .poll-option-bar-wrap {
+  outline: 2px solid var(--accent-primary, #8b4513);
+  outline-offset: 2px;
+}
+.poll-option--bar.poll-option--loading {
+  opacity: 0.8;
+  cursor: wait;
+  pointer-events: none;
+}
 .poll-option-bar-wrap {
   position: relative;
   height: 2rem;
@@ -206,6 +228,15 @@ async function addOption() {
   z-index: 1;
   min-width: 2.5rem;
   text-align: right;
+}
+.poll-option-voted-icon {
+  position: absolute;
+  right: 2.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  z-index: 1;
 }
 .poll-option-count {
   font-size: 0.75rem;

@@ -542,15 +542,8 @@ html.ui-theme-dark-void .dark-void-main .poll-block {
   border-radius: 0 !important;
   font-family: 'Space Grotesk', sans-serif;
 }
-html.ui-theme-dark-void .dark-void-main .poll-block .poll-option--btn {
-  background: var(--dark-void-card);
-  border-color: var(--dark-void-border);
-  color: var(--dark-void-text);
-  border-radius: 0 !important;
-}
-html.ui-theme-dark-void .dark-void-main .poll-block .poll-option--btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: var(--dark-void-text-muted);
+html.ui-theme-dark-void .dark-void-main .poll-block .poll-option--bar.poll-option--clickable:hover .poll-option-bar-wrap {
+  background: rgba(255, 255, 255, 0.06);
 }
 html.ui-theme-dark-void .dark-void-main .poll-block .poll-option-bar-wrap {
   background: var(--dark-void-card);
@@ -567,10 +560,14 @@ html.ui-theme-dark-void .dark-void-main .poll-block .poll-option-label {
   color: var(--dark-void-text);
 }
 html.ui-theme-dark-void .dark-void-main .poll-block .poll-option--voted .poll-option-label,
-html.ui-theme-dark-void .dark-void-main .poll-block .poll-option--voted .poll-option-percent {
+html.ui-theme-dark-void .dark-void-main .poll-block .poll-option--voted .poll-option-percent,
+html.ui-theme-dark-void .dark-void-main .poll-block .poll-option--voted .poll-option-voted-icon {
   color: var(--dark-void-bg);
 }
 html.ui-theme-dark-void .dark-void-main .poll-block .poll-option-percent {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .poll-block .poll-option-voted-icon {
   color: var(--dark-void-text);
 }
 html.ui-theme-dark-void .dark-void-main .poll-block .poll-option-count,
