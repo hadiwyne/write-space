@@ -52,6 +52,9 @@
         <router-link to="/notifications" class="dark-void-nav-btn" aria-label="Notifications" @click="leftNavOpen = false">
           <i class="pi pi-bell" aria-hidden="true"></i>
         </router-link>
+        <router-link to="/follow-requests" class="dark-void-nav-btn" aria-label="Follow requests" @click="leftNavOpen = false">
+          <i class="pi pi-user-plus" aria-hidden="true"></i>
+        </router-link>
         <router-link v-if="auth.user" :to="`/u/${auth.user.username}`" class="dark-void-nav-btn" aria-label="Profile" @click="leftNavOpen = false">
           <i class="pi pi-user" aria-hidden="true"></i>
         </router-link>
@@ -123,6 +126,9 @@
               </router-link>
               <router-link to="/customization" class="dark-void-dropdown-item" role="menuitem" @click="closeDropdownAndSidebar">
                 <i class="pi pi-palette"></i> Customization
+              </router-link>
+              <router-link to="/privacy" class="dark-void-dropdown-item" role="menuitem" @click="closeDropdownAndSidebar">
+                <i class="pi pi-shield"></i> Privacy Settings
               </router-link>
               <div class="dark-void-dropdown-divider"></div>
               <button type="button" class="dark-void-dropdown-item dark-void-dropdown-item-danger" role="menuitem" @click="onLogout">

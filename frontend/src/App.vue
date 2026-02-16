@@ -1527,6 +1527,101 @@ html.ui-theme-dark-void .dark-void-main .settings-page .frame-check input[type="
   background-repeat: no-repeat;
 }
 
+/* Dark Void: privacy settings page – dropdowns, save button, follow-request actions */
+html.ui-theme-dark-void .dark-void-main .privacy-page h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .privacy-page .intro {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .privacy-page .label {
+  color: var(--dark-void-text);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .privacy-page .select {
+  background: var(--dark-void-bg);
+  border: 1px solid var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .privacy-page .select:focus {
+  outline: none;
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .privacy-page .hint {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .privacy-page .btn-primary {
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--dark-void-text);
+  border: 2px solid var(--dark-void-text);
+  color: var(--dark-void-bg);
+}
+html.ui-theme-dark-void .dark-void-main .privacy-page .btn-primary:hover:not(:disabled) {
+  background: var(--dark-void-text-muted);
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .privacy-page .error {
+  color: #f87171;
+}
+html.ui-theme-dark-void .dark-void-main .privacy-page .success {
+  color: #86efac;
+}
+
+/* Dark Void: follow requests page */
+html.ui-theme-dark-void .dark-void-main .follow-requests-page h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .follow-requests-page .intro,
+html.ui-theme-dark-void .dark-void-main .follow-requests-page .loading,
+html.ui-theme-dark-void .dark-void-main .follow-requests-page .empty {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .follow-requests-page .follow-request-item {
+  border-bottom-color: var(--dark-void-border);
+}
+html.ui-theme-dark-void .dark-void-main .follow-requests-page .follow-request-user:hover {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .follow-requests-page .follow-request-name {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .follow-requests-page .follow-request-handle {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .follow-requests-page .btn-primary {
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--dark-void-text);
+  border: 2px solid var(--dark-void-text);
+  color: var(--dark-void-bg);
+}
+html.ui-theme-dark-void .dark-void-main .follow-requests-page .btn-primary:hover:not(:disabled) {
+  background: var(--dark-void-text-muted);
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .follow-requests-page .btn-ghost {
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+  background: transparent;
+  border: 1px solid var(--dark-void-border);
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .follow-requests-page .btn-ghost:hover:not(:disabled) {
+  border-color: var(--dark-void-text-muted);
+  color: var(--dark-void-text);
+  background: rgba(255, 255, 255, 0.06);
+}
+
 /* Dark Void: customization page – sections as cards, centered, sharp corners */
 html.ui-theme-dark-void .dark-void-main .customization-page {
   max-width: 640px;

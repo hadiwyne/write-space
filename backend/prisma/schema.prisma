@@ -57,6 +57,15 @@ model User {
   commentReactions CommentReaction[]
 
   isSuperadmin  Boolean   @default(false) @map("is_superadmin")
+
+  whoCanSeeLikes     String   @default("PUBLIC") @map("who_can_see_likes")
+  whoCanSeeFollowing String   @default("PUBLIC") @map("who_can_see_following")
+  whoCanSeeFollowers String   @default("PUBLIC") @map("who_can_see_followers")
+  whoCanFollowMe     String   @default("PUBLIC") @map("who_can_follow_me")
+
+  followRequestsSent     FollowRequest[] @relation("FollowRequestFrom")
+  followRequestsReceived FollowRequest[] @relation("FollowRequestTo")
+
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
@@ -259,6 +268,20 @@ model Follow {
   @@index([followerId])
   @@index([followingId])
   @@map("follows")
+}
+
+model FollowRequest {
+  id          String   @id @default(uuid())
+  fromUserId  String   @map("from_user_id")
+  fromUser    User     @relation("FollowRequestFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUserId    String   @map("to_user_id")
+  toUser      User     @relation("FollowRequestTo", fields: [toUserId], references: [id], onDelete: Cascade)
+  status      String   @default("PENDING") // PENDING | APPROVED | DENIED
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([fromUserId, toUserId])
+  @@index([toUserId])
+  @@map("follow_requests")
 }
 
 model Bookmark {

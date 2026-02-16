@@ -153,6 +153,23 @@ onMounted(() => {
 .user-item { border-bottom: 1px solid var(--gray-100); }
 .user-link { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0; color: inherit; text-decoration: none; min-width: 0; }
 .user-link:hover { color: var(--primary); }
+.user-link :deep(.avatar-frame-root) {
+  width: 48px;
+  height: 48px;
+  max-width: 48px;
+  max-height: 48px;
+  flex-shrink: 0;
+}
+.user-link :deep(.avatar-frame-root .avatar-frame) {
+  width: 100%;
+  height: 100%;
+}
+.user-link :deep(.avatar-frame-root > *),
+.user-link :deep(.avatar-frame > *) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 .user-avatar, .user-avatar-placeholder { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); flex-shrink: 0; display: block; line-height: 48px; text-align: center; font-size: 1.25rem; font-weight: 700; color: white; }
 .user-avatar.avatar-shape-rounded, .user-avatar-placeholder.avatar-shape-rounded { border-radius: 12%; }
 .user-avatar.avatar-shape-square, .user-avatar-placeholder.avatar-shape-square { border-radius: 0; }
@@ -181,5 +198,6 @@ onMounted(() => {
   .search-tabs { justify-content: center; }
   .tab { flex: 1; min-width: 0; padding: 0.5rem; font-size: 0.875rem; }
   .user-avatar, .user-avatar-placeholder { width: 40px; height: 40px; font-size: 1rem; line-height: 40px; }
+  .user-link :deep(.avatar-frame-root) { width: 40px; height: 40px; max-width: 40px; max-height: 40px; }
 }
 </style>

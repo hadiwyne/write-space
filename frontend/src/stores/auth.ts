@@ -13,6 +13,10 @@ export interface AuthUser {
   avatarFrame?: AvatarFrame
   badgeUrl?: string | null
   isSuperadmin?: boolean
+  whoCanSeeLikes?: string
+  whoCanSeeFollowing?: string
+  whoCanSeeFollowers?: string
+  whoCanFollowMe?: string
 }
 
 export const useAuthStore = defineStore('auth', () => {

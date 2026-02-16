@@ -195,10 +195,6 @@ export class PostsService {
 
   async findOnePublic(id: string, userId?: string, isSuperadmin = false) {
     const post = await this.findOne(id, userId ?? null);
-    if (isSuperadmin) {
-      await this.prisma.post.update({ where: { id }, data: { viewCount: { increment: 1 } } });
-      return this.findOne(id);
-    }
     const isAuthor = userId && post.authorId === userId;
     if (!post.isPublished) throw new NotFoundException('Post not found');
     if (post.archivedAt && !isAuthor) throw new NotFoundException('Post not found');
@@ -210,8 +206,9 @@ export class PostsService {
         : null;
       if (!follows) throw new NotFoundException('Post not found');
     }
-    await this.prisma.post.update({ where: { id }, data: { viewCount: { increment: 1 } } });
-    return this.findOne(id, userId ?? null);
+    // Increment view count in background so we don't wait; return the post we already have (avoids second findOne).
+    this.prisma.post.update({ where: { id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
+    return post;
   }
 
   /** Fetch poll with options for a post (same visibility as findOnePublic). Use when post view needs poll options. */

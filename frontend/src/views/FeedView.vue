@@ -111,6 +111,9 @@ import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
+import { getCachedFeed, setCachedFeed } from '@/utils/feedCache'
+import { setCachedPosts } from '@/utils/postCache'
+import { setCachedProfiles } from '@/utils/profileCache'
 import PostCard from '@/components/PostCard.vue'
 
 type FeedPost = { id: string; _count?: { likes?: number; reposts?: number; comments?: number }; likes?: unknown[]; [key: string]: unknown }
@@ -200,14 +203,25 @@ function handlePollUpdate(updatedPost: Record<string, unknown>) {
 }
 
 async function load() {
-  loading.value = true
+  const tag = tagFilter.value.trim()
+  const cached = getCachedFeed(sort.value, tag)
+  if (cached && Array.isArray(cached)) {
+    posts.value = cached as FeedPost[]
+    loading.value = false
+  } else {
+    loading.value = true
+  }
   try {
     const params = new URLSearchParams()
     if (sort.value === 'popular') params.set('sort', 'popular')
     if (sort.value === 'friends') params.set('sort', 'friends')
-    if (tagFilter.value.trim()) params.set('tag', tagFilter.value.trim())
+    if (tag) params.set('tag', tag)
     const { data } = await api.get(`/feed?${params.toString()}`)
     posts.value = Array.isArray(data) ? data : []
+    setCachedFeed(sort.value, tag, posts.value)
+    setCachedPosts(posts.value)
+    const authors = posts.value.map((p) => (p as { author?: unknown }).author).filter(Boolean)
+    setCachedProfiles(authors)
   } finally {
     loading.value = false
   }
