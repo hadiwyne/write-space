@@ -11,6 +11,17 @@
       <i class="pi pi-bars" aria-hidden="true"></i>
     </button>
 
+    <!-- Mobile-only: fixed trigger on right to open sidebar (mirrors left nav trigger) -->
+    <button
+      type="button"
+      class="dark-void-sidebar-trigger"
+      aria-label="Open menu"
+      :aria-expanded="sidebarOpen"
+      @click="sidebarOpen = true"
+    >
+      <i class="pi pi-bars" aria-hidden="true"></i>
+    </button>
+
     <Transition name="dark-void-fade">
       <div
         v-if="leftNavOpen"
@@ -37,6 +48,7 @@
         <router-link v-if="auth.user" :to="`/u/${auth.user.username}`" class="dark-void-nav-btn" aria-label="Profile" @click="leftNavOpen = false">
           <i class="pi pi-user" aria-hidden="true"></i>
         </router-link>
+        <!-- Desktop: sidebar toggle at bottom of left nav (hidden on mobile; use right-side trigger instead) -->
         <button
           type="button"
           class="dark-void-sidebar-toggle"
@@ -663,6 +675,33 @@ onUnmounted(() => {
 .dark-void-nav-trigger .pi {
   font-size: 1.15rem;
 }
+.dark-void-sidebar-trigger {
+  display: none;
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 21;
+  width: 2.25rem;
+  height: 3rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 6px 0 0 6px;
+  background: var(--dark-void-bg);
+  color: var(--dark-void-text);
+  border-left: 1px solid var(--dark-void-border);
+  box-shadow: -2px 0 12px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.dark-void-sidebar-trigger:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.dark-void-sidebar-trigger .pi {
+  font-size: 1.15rem;
+}
 .dark-void-nav-backdrop {
   position: fixed;
   inset: 0;
@@ -704,8 +743,11 @@ onUnmounted(() => {
     margin-left: 0;
     margin-right: 0;
   }
-  .dark-void-sidebar-toggle {
+  .dark-void-sidebar-trigger {
     display: flex;
+  }
+  .dark-void-sidebar-toggle {
+    display: none;
   }
   .dark-void-sidebar {
     transform: translateX(100%);
