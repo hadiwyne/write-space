@@ -15,10 +15,10 @@
         </span>
         <p v-if="!editing" class="comment-body">{{ comment.content }}</p>
         <div v-else class="comment-edit-wrap">
-          <textarea v-model="editContent" class="comment-edit-textarea" rows="3"></textarea>
+          <textarea v-model="editContent" class="comment-edit-textarea" rows="3" placeholder="Edit your comment…"></textarea>
           <div class="comment-edit-actions">
-            <button type="button" class="btn btn-sm btn-primary" @click="saveEdit">Save</button>
-            <button type="button" class="btn btn-sm btn-ghost" @click="editing = false; editContent = comment.content">Cancel</button>
+            <button type="button" class="btn-reply btn-reply-primary" @click="saveEdit">Save</button>
+            <button type="button" class="btn-reply btn-reply-ghost" @click="editing = false; editContent = comment.content">Cancel</button>
           </div>
         </div>
         <span v-if="isLoggedIn && !editing" class="comment-reactions">
@@ -299,20 +299,35 @@ function onReplyContentInput(e: Event) {
 }
 .comment-react-btn:hover { color: var(--text-primary); background: var(--bg-card); }
 .comment-react-btn.active { color: var(--accent-primary); }
-.comment-edit-wrap { margin-top: 0.25rem; }
+.comment-edit-wrap {
+  margin-top: 0.5rem;
+  background: var(--bg-primary);
+  border: 2px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  box-shadow: var(--shadow-sm);
+}
 .comment-edit-textarea {
   width: 100%;
-  padding: 0.5rem;
+  padding: 0.75rem;
   font-size: 0.9375rem;
   font-family: inherit;
-  border: 1px solid var(--border-light);
+  border: 2px solid var(--border-light);
   border-radius: var(--radius-sm);
   resize: vertical;
-  min-height: 4rem;
+  min-height: 4.5rem;
+  margin-bottom: 0.75rem;
   background: var(--bg-card);
   color: var(--text-primary);
+  transition: border-color 0.2s ease;
 }
-.comment-edit-actions { margin-top: 0.5rem; display: flex; gap: 0.5rem; }
+.comment-edit-textarea::placeholder { color: var(--text-tertiary); }
+.comment-edit-textarea:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 4px rgba(139, 69, 19, 0.1);
+}
+.comment-edit-actions { display: flex; gap: 0.5rem; align-items: center; }
 .comment-actions { margin-top: 0.25rem; display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
 .comment-reply-btn,
 .comment-edit-btn,

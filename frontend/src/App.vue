@@ -951,6 +951,25 @@ html.ui-theme-dark-void .dark-void-main .post-page .reply-textarea {
   border-radius: 0 !important;
   font-family: 'Space Grotesk', sans-serif;
 }
+html.ui-theme-dark-void .dark-void-main .post-page .comment-edit-wrap {
+  background: var(--dark-void-bg);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .post-page .comment-edit-textarea {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .post-page .comment-edit-textarea::placeholder {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .post-page .comment-edit-textarea:focus {
+  border-color: var(--dark-void-text-muted);
+  box-shadow: none;
+}
 html.ui-theme-dark-void .dark-void-main .post-page .btn-reply-primary {
   border-radius: 0 !important;
   font-family: 'Space Grotesk', sans-serif;
