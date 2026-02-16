@@ -11,11 +11,42 @@
         <span class="comment-meta">
           <router-link :to="`/u/${comment.author?.username}`" class="comment-author">{{ comment.author?.displayName || comment.author?.username }}</router-link>
           <time v-if="comment.createdAt" :datetime="comment.createdAt" class="comment-time">{{ formatCommentDate(comment.createdAt) }}</time>
+          <span v-if="comment.editedAt" class="comment-edited">(Edited)</span>
         </span>
-        <p class="comment-body">{{ comment.content }}</p>
+        <p v-if="!editing" class="comment-body">{{ comment.content }}</p>
+        <div v-else class="comment-edit-wrap">
+          <textarea v-model="editContent" class="comment-edit-textarea" rows="3" placeholder="Edit your comment…"></textarea>
+          <div class="comment-edit-actions">
+            <button type="button" class="btn-reply btn-reply-primary" @click="saveEdit">Save</button>
+            <button type="button" class="btn-reply btn-reply-ghost" @click="editing = false; editContent = comment.content">Cancel</button>
+          </div>
+        </div>
+        <span v-if="isLoggedIn && !editing" class="comment-reactions">
+          <button
+            type="button"
+            class="comment-react-btn"
+            :class="{ active: comment.myReaction === 'LIKE' }"
+            :aria-pressed="comment.myReaction === 'LIKE'"
+            @click="$emit('like', comment.id)"
+          >
+            <i class="pi pi-thumbs-up" aria-hidden="true"></i>
+            {{ comment.likeCount ?? 0 }}
+          </button>
+          <button
+            type="button"
+            class="comment-react-btn"
+            :class="{ active: comment.myReaction === 'DISLIKE' }"
+            :aria-pressed="comment.myReaction === 'DISLIKE'"
+            @click="$emit('dislike', comment.id)"
+          >
+            <i class="pi pi-thumbs-down" aria-hidden="true"></i>
+            {{ comment.dislikeCount ?? 0 }}
+          </button>
+        </span>
         <span class="comment-actions">
-          <button v-if="isLoggedIn" type="button" class="comment-reply-btn" @click="$emit('reply', comment.id)">Reply</button>
-          <button v-if="canDelete" type="button" class="comment-delete-btn" @click="$emit('delete', comment.id)">Delete</button>
+          <button v-if="isLoggedIn && !editing" type="button" class="comment-reply-btn" @click="$emit('reply', comment.id)">Reply</button>
+          <button v-if="canEdit && !editing" type="button" class="comment-edit-btn" @click="startEdit">Edit</button>
+          <button v-if="canDelete && !editing" type="button" class="comment-delete-btn" @click="$emit('delete', comment.id)">Delete</button>
         </span>
       </div>
     </div>
@@ -44,11 +75,15 @@
         :reply-content="replyContent"
         :is-logged-in="isLoggedIn"
         :can-delete-fn="canDeleteFn"
+        :can-edit-fn="canEditFn"
         :avatar-src="avatarSrc"
         @reply="$emit('reply', $event)"
         @update:reply-content="$emit('update:replyContent', $event)"
         @submit-reply="$emit('submitReply', $event)"
         @cancel-reply="$emit('cancelReply')"
+        @like="$emit('like', $event)"
+        @dislike="$emit('dislike', $event)"
+        @update-comment="$emit('updateComment', $event)"
         @delete="$emit('delete', $event)"
       />
     </div>
@@ -56,7 +91,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { avatarShapeClass } from '@/utils/avatar'
 import AvatarFrame from '@/components/AvatarFrame.vue'
 defineOptions({ name: 'CommentThread' })
@@ -65,8 +100,12 @@ export type CommentNode = {
   id: string
   content: string
   createdAt?: string
+  editedAt?: string | null
   author?: { id?: string; username?: string; displayName?: string | null; avatarUrl?: string | null; avatarShape?: string | null; avatarFrame?: unknown; badgeUrl?: string | null }
   replies?: CommentNode[]
+  likeCount?: number
+  dislikeCount?: number
+  myReaction?: 'LIKE' | 'DISLIKE' | null
 }
 
 function formatCommentDate(iso: string): string {
@@ -95,18 +134,36 @@ const props = defineProps<{
   replyToId: string | null
   replyContent: string
   isLoggedIn: boolean
-  /** When provided, each thread uses this to decide delete visibility for its own comment (avoids inheriting parent's). */
   canDeleteFn?: (c: CommentNode) => boolean
+  canEditFn?: (c: CommentNode) => boolean
   avatarSrc: (url: string | null | undefined, userId?: string) => string
 }>()
 
 const canDelete = computed(() => (props.canDeleteFn ? props.canDeleteFn(props.comment) : false))
+const canEdit = computed(() => (props.canEditFn ? props.canEditFn(props.comment) : false))
+
+const editing = ref(false)
+const editContent = ref(props.comment.content)
+
+function startEdit() {
+  editing.value = true
+  editContent.value = props.comment.content
+}
+function saveEdit() {
+  const trimmed = editContent.value.trim()
+  if (!trimmed) return
+  emit('updateComment', { id: props.comment.id, content: trimmed })
+  editing.value = false
+}
 
 const emit = defineEmits<{
   reply: [id: string]
   'update:replyContent': [value: string]
   submitReply: [parentId: string]
   cancelReply: []
+  like: [commentId: string]
+  dislike: [commentId: string]
+  updateComment: [payload: { id: string; content: string }]
   delete: [commentId: string]
 }>()
 
@@ -215,10 +272,65 @@ function onReplyContentInput(e: Event) {
   font-weight: 400;
 }
 .comment-reply .comment-time { font-size: 0.75rem; }
+.comment-edited {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
 .comment-body { margin: 0.25rem 0 0; font-size: 0.9375rem; color: var(--text-secondary); }
 .comment-reply .comment-body { font-size: 0.8125rem; }
+.comment-reactions {
+  display: inline-flex;
+  gap: 0.25rem;
+  margin-right: 0.5rem;
+}
+.comment-react-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.4rem;
+  font-size: 0.8125rem;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text-tertiary);
+  font-family: inherit;
+}
+.comment-react-btn:hover { color: var(--text-primary); background: var(--bg-card); }
+.comment-react-btn.active { color: var(--accent-primary); }
+.comment-edit-wrap {
+  margin-top: 0.5rem;
+  background: var(--bg-primary);
+  border: 2px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  box-shadow: var(--shadow-sm);
+}
+.comment-edit-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 0.9375rem;
+  font-family: inherit;
+  border: 2px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  resize: vertical;
+  min-height: 4.5rem;
+  margin-bottom: 0.75rem;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  transition: border-color 0.2s ease;
+}
+.comment-edit-textarea::placeholder { color: var(--text-tertiary); }
+.comment-edit-textarea:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 4px rgba(139, 69, 19, 0.1);
+}
+.comment-edit-actions { display: flex; gap: 0.5rem; align-items: center; }
 .comment-actions { margin-top: 0.25rem; display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
 .comment-reply-btn,
+.comment-edit-btn,
 .comment-delete-btn {
   padding: 0;
   background: none;
@@ -230,6 +342,8 @@ function onReplyContentInput(e: Event) {
 }
 .comment-reply-btn { color: var(--accent-primary); }
 .comment-reply-btn:hover { text-decoration: underline; }
+.comment-edit-btn { color: var(--text-tertiary); }
+.comment-edit-btn:hover { color: var(--accent-primary); text-decoration: underline; }
 .comment-delete-btn { color: var(--text-tertiary); }
 .comment-delete-btn:hover { color: var(--like-color); text-decoration: underline; }
 

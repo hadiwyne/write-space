@@ -53,7 +53,8 @@ model User {
   reposts       Repost[]
   postImages    PostImage[]
   themes        UserTheme[]
-  pollVotes     PollVote[]
+  pollVotes        PollVote[]
+  commentReactions CommentReaction[]
 
   isSuperadmin  Boolean   @default(false) @map("is_superadmin")
   createdAt     DateTime  @default(now()) @map("created_at")
@@ -181,7 +182,9 @@ model Comment {
   replies       Comment[] @relation("CommentReplies")
 
   content       String    @db.Text
+  editedAt      DateTime? @map("edited_at")
   notifications Notification[]
+  reactions     CommentReaction[]
 
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -190,6 +193,19 @@ model Comment {
   @@index([authorId])
   @@index([parentId])
   @@map("comments")
+}
+
+model CommentReaction {
+  id         String   @id @default(uuid())
+  commentId String   @map("comment_id")
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // LIKE | DISLIKE
+
+  @@unique([commentId, userId])
+  @@index([commentId])
+  @@map("comment_reactions")
 }
 
 model Notification {
