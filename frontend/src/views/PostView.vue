@@ -143,6 +143,7 @@ import { useRoute } from 'vue-router'
 import { api, avatarSrc } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import { useLikedPostsStore } from '@/stores/likedPosts'
+import { getCachedPost, setCachedPost } from '@/utils/postCache'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import CommentThread from '@/components/CommentThread.vue'
 import PollBlock from '@/components/PollBlock.vue'
@@ -240,21 +241,33 @@ const confirmMessage = computed(() =>
 
 async function load() {
   const id = route.params.id as string
+  loading.value = true
+  const cached = getCachedPost(id)
+  if (cached && typeof cached === 'object' && (cached as { id?: string }).id === id) {
+    post.value = cached as typeof post.value
+    likeCount.value = (cached as { _count?: { likes?: number } })?._count?.likes ?? 0
+    loading.value = false
+  }
   try {
     const [postRes, commentsRes] = await Promise.all([
       api.get(`/posts/${id}`),
       api.get(`/posts/${id}/comments`),
     ])
     post.value = postRes.data
+    setCachedPost(id, postRes.data)
     comments.value = commentsRes.data
     likeCount.value = post.value?._count?.likes ?? 0
-    try {
-      const { data: pollData } = await api.get(`/posts/${id}/poll`)
-      if (pollData && Array.isArray(pollData.options)) {
-        post.value = { ...post.value!, poll: { ...(post.value?.poll ?? {}), ...pollData, options: pollData.options } }
+    // Poll is already included in the post response; only fetch if we have a poll but options are missing.
+    const hasPollWithOptions = post.value?.poll && Array.isArray((post.value.poll as { options?: unknown[] })?.options) && (post.value.poll as { options: unknown[] }).options.length > 0
+    if (post.value?.poll && !hasPollWithOptions) {
+      try {
+        const { data: pollData } = await api.get(`/posts/${id}/poll`)
+        if (pollData && Array.isArray(pollData.options)) {
+          post.value = { ...post.value!, poll: { ...(post.value?.poll ?? {}), ...pollData, options: pollData.options } }
+        }
+      } catch {
+        // No poll or not found – keep post as-is
       }
-    } catch {
-      // No poll or not found – keep post as-is
     }
     if (auth.token) {
       const [likeRes, bookmarkRes, repostRes] = await Promise.all([
@@ -272,6 +285,7 @@ async function load() {
   } finally {
     loading.value = false
   }
+  if (post.value) setCachedPost(id, post.value)
 }
 
 function formatDate(s: string | null | undefined) {
@@ -287,6 +301,14 @@ async function toggleLike() {
     liked.value = data.liked
     likeCount.value = data.count ?? likeCount.value
     likedStore.setLiked(postId, data.liked)
+    if (post.value) {
+      const prev = post.value._count
+      post.value = {
+        ...post.value,
+        _count: { likes: likeCount.value, comments: prev?.comments ?? 0 }
+      }
+      setCachedPost(postId, post.value)
+    }
   } catch {
     // ignore
   }
@@ -304,10 +326,18 @@ async function toggleBookmark() {
 
 async function toggleRepost() {
   if (!auth.isLoggedIn) return
+  const postId = route.params.id as string
   try {
-    const { data } = await api.post(`/posts/${route.params.id}/reposts`)
+    const { data } = await api.post(`/posts/${postId}/reposts`)
     reposted.value = data.reposted
     repostCount.value = data.count ?? repostCount.value
+    if (post.value) {
+      post.value = {
+        ...post.value,
+        _count: { ...post.value._count, reposts: repostCount.value }
+      } as typeof post.value
+      setCachedPost(postId, post.value)
+    }
   } catch {
     // ignore
   }

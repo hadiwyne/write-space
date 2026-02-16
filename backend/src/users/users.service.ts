@@ -9,7 +9,7 @@ import type { SharpOptions } from 'sharp';
 const DOMPurify = require('isomorphic-dompurify') as { sanitize: (html: string, options?: object) => string };
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from '../auth/dto/register.dto';
-import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UpdateProfileDto, PRIVACY_VISIBILITY, WHO_CAN_FOLLOW_ME } from './dto/update-profile.dto';
 
 const MAX_AVATAR_FRAME_BYTES = 2048;
 
@@ -76,6 +76,10 @@ const userSelectWithoutPassword = {
   avatarFrame: true,
   badgeUrl: true,
   isSuperadmin: true,
+  whoCanSeeLikes: true,
+  whoCanSeeFollowing: true,
+  whoCanSeeFollowers: true,
+  whoCanFollowMe: true,
   createdAt: true,
   updatedAt: true,
 } as const;
@@ -117,6 +121,10 @@ export class UsersService {
         avatarFrame: true,
         badgeUrl: true,
         isSuperadmin: true,
+        whoCanSeeLikes: true,
+        whoCanSeeFollowing: true,
+        whoCanSeeFollowers: true,
+        whoCanFollowMe: true,
         createdAt: true,
         updatedAt: true,
         _count: { select: { likes: true } },
@@ -152,6 +160,10 @@ export class UsersService {
         isSuperadmin: true,
         createdAt: true,
         updatedAt: true,
+        whoCanSeeLikes: true,
+        whoCanSeeFollowing: true,
+        whoCanSeeFollowers: true,
+        whoCanFollowMe: true,
         _count: { select: { followers: true, following: true, reposts: true, likes: true } },
       },
     });
@@ -225,6 +237,11 @@ export class UsersService {
         : avatarFrame === null
           ? Prisma.DbNull
           : (avatarFrame as Prisma.InputJsonValue);
+    const privacy: Record<string, string> = {};
+    if (dto.whoCanSeeLikes != null && (PRIVACY_VISIBILITY as readonly string[]).includes(dto.whoCanSeeLikes)) privacy.whoCanSeeLikes = dto.whoCanSeeLikes;
+    if (dto.whoCanSeeFollowing != null && (PRIVACY_VISIBILITY as readonly string[]).includes(dto.whoCanSeeFollowing)) privacy.whoCanSeeFollowing = dto.whoCanSeeFollowing;
+    if (dto.whoCanSeeFollowers != null && (PRIVACY_VISIBILITY as readonly string[]).includes(dto.whoCanSeeFollowers)) privacy.whoCanSeeFollowers = dto.whoCanSeeFollowers;
+    if (dto.whoCanFollowMe != null && (WHO_CAN_FOLLOW_ME as readonly string[]).includes(dto.whoCanFollowMe)) privacy.whoCanFollowMe = dto.whoCanFollowMe;
     return this.prisma.user.update({
       where: { id: userId },
       data: {
@@ -234,12 +251,13 @@ export class UsersService {
         ...(profileHTML !== undefined && { profileHTML }),
         ...(avatarShape !== undefined && { avatarShape }),
         ...(avatarFrameData !== undefined && { avatarFrame: avatarFrameData }),
+        ...privacy,
       },
       select: userSelectWithoutPassword,
     });
   }
 
-  /** Save avatar to database (persists on ephemeral hosts like Koyeb; no R2/credit card needed). */
+  /** Save avatar to database */
   async saveAvatar(userId: string, buffer: Buffer, mimeType: string) {
     const avatarUrl = `/users/avatar/${userId}`;
     await this.prisma.user.update({

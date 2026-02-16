@@ -38,11 +38,11 @@
           <button
             type="button"
             class="btn btn-follow"
-            :class="{ 'btn-following': isFollowing }"
-            :disabled="followLoading"
+            :class="{ 'btn-following': isFollowing, 'btn-requested': isRequested }"
+            :disabled="followLoading || isRequested"
             @click="toggleFollow"
           >
-            {{ isFollowing ? 'Following' : 'Follow' }}
+            {{ isFollowing ? 'Following' : isRequested ? 'Requested' : 'Follow' }}
           </button>
         </template>
       </div>
@@ -57,7 +57,7 @@
             Posts {{ totalPosts }}
           </button>
           <button
-            v-if="isOwnProfile"
+            v-if="isOwnProfile || canSeeLikes"
             type="button"
             class="profile-tab"
             :class="{ active: profileTab === 'liked' }"
@@ -124,7 +124,12 @@
         </div>
         <div v-else>
           <div v-if="likedLoading" class="empty">Loading…</div>
-          <div v-else-if="likedPosts.length === 0" class="empty">No liked posts yet.</div>
+          <div v-else-if="likedPosts.length === 0" class="empty">
+            <template v-if="isOwnProfile">No liked posts yet.</template>
+            <template v-else-if="(profile?.whoCanSeeLikes ?? 'PUBLIC') === 'NO_ONE'">This user has hidden their likes.</template>
+            <template v-else-if="(profile?.whoCanSeeLikes ?? 'PUBLIC') === 'FOLLOWERS' && !isFollowing">This user's likes are only visible to their followers.</template>
+            <template v-else>No liked posts yet.</template>
+          </div>
           <div v-else class="post-list">
             <PostCard
               v-for="(p, i) in likedPosts"
@@ -151,7 +156,11 @@
           </div>
           <div class="modal-body">
             <div v-if="modalLoading" class="modal-loading">Loading…</div>
-            <div v-else-if="modalList.length === 0" class="modal-empty">No one yet.</div>
+            <div v-else-if="modalList.length === 0" class="modal-empty">
+              <template v-if="modalEmptyReason === 'hidden'">This list is hidden.</template>
+              <template v-else-if="modalEmptyReason === 'followers_only'">Only visible to followers.</template>
+              <template v-else>No one yet.</template>
+            </div>
             <ul v-else class="modal-list">
               <li v-for="u in modalList" :key="u.id" class="modal-list-item">
                 <router-link :to="`/u/${u.username}`" class="modal-user" @click="modalOpen = false">
@@ -210,6 +219,7 @@ import { avatarShapeClass } from '@/utils/avatar'
 import AvatarFrame from '@/components/AvatarFrame.vue'
 import type { AvatarFrame as AvatarFrameType } from '@/types/avatarFrame'
 import { useAuthStore } from '@/stores/auth'
+import { getCachedProfile, setCachedProfile, setCachedProfiles } from '@/utils/profileCache'
 import PostCard from '@/components/PostCard.vue'
 import RepostCard from '@/components/RepostCard.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
@@ -223,6 +233,9 @@ const profile = ref<{
   avatarUrl: string | null
   avatarShape?: string | null
   profileHTML?: string | null
+  whoCanSeeLikes?: string
+  whoCanSeeFollowing?: string
+  whoCanSeeFollowers?: string
   _count?: { posts: number; followers: number; following: number; reposts?: number; likes?: number; anonymousPosts?: number }
 } | null>(null)
 const posts = ref<Record<string, unknown>[]>([])
@@ -291,6 +304,7 @@ const combinedFeed = computed<FeedItem[]>(() => {
 })
 const loading = ref(true)
 const isFollowing = ref(false)
+const isRequested = ref(false)
 const followLoading = ref(false)
 const modalOpen = ref(false)
 const modalMode = ref<'followers' | 'following'>('followers')
@@ -309,6 +323,15 @@ const confirmMessage = computed(() =>
     : 'Archive this post? It will be hidden from the feed and your profile. You can restore it later.'
 )
 const isOwnProfile = computed(() => auth.user && profile.value && auth.user.username === profile.value.username)
+const canSeeLikes = computed(() => {
+  const p = profile.value
+  if (!p) return false
+  if (isOwnProfile.value) return true
+  const who = p.whoCanSeeLikes ?? 'PUBLIC'
+  if (who === 'PUBLIC') return true
+  if (who === 'NO_ONE') return false
+  return who === 'FOLLOWERS' && isFollowing.value
+})
 const totalPosts = computed(() => {
   const p = profile.value?._count
   const postsCount = p?.posts ?? 0
@@ -316,14 +339,32 @@ const totalPosts = computed(() => {
   return postsCount + repostsCount
 })
 
+/** Why the followers/following modal list is empty: 'empty' | 'hidden' | 'followers_only' when not loading and list length 0; null otherwise */
+const modalEmptyReason = computed(() => {
+  if (modalLoading.value || modalList.value.length > 0) return null
+  const p = profile.value
+  if (!p) return 'empty'
+  const who = modalMode.value === 'followers' ? (p.whoCanSeeFollowers ?? 'PUBLIC') : (p.whoCanSeeFollowing ?? 'PUBLIC')
+  if (isOwnProfile.value) return 'empty'
+  if (who === 'PUBLIC') return 'empty'
+  if (who === 'NO_ONE') return 'hidden'
+  return isFollowing.value ? 'empty' : 'followers_only'
+})
+
 async function load() {
   const username = route.params.username as string
   profileTab.value = 'posts'
   loading.value = true
   isFollowing.value = false
+  isRequested.value = false
   reposts.value = []
   likedPosts.value = []
   anonymousPosts.value = []
+  const cached = getCachedProfile(username)
+  if (cached) {
+    profile.value = cached as typeof profile.value
+    loading.value = false
+  }
   try {
     const [profileRes, postsRes, repostsRes] = await Promise.all([
       api.get(`/users/${username}`),
@@ -331,6 +372,7 @@ async function load() {
       api.get(`/users/${username}/reposts`).catch(() => ({ data: [] })),
     ])
     profile.value = profileRes.data
+    setCachedProfile(username, profileRes.data)
     posts.value = Array.isArray(postsRes.data) ? postsRes.data : []
     reposts.value = Array.isArray(repostsRes.data) ? repostsRes.data : []
     if (Array.isArray(postsRes.data) && postsRes.data.length === 0 && username) {
@@ -339,8 +381,9 @@ async function load() {
       posts.value = byUser
     }
     if (auth.isLoggedIn && profile.value && auth.user?.username !== profile.value.username) {
-      const statusRes = await api.get(`/users/${username}/follow/status`).catch(() => ({ data: { isFollowing: false } }))
-      isFollowing.value = statusRes.data?.isFollowing ?? false
+      const statusRes = await api.get(`/users/${username}/follow/status`).catch(() => ({ data: { following: false, requested: false } }))
+      isFollowing.value = statusRes.data?.following ?? false
+      isRequested.value = statusRes.data?.requested ?? false
     }
   } catch {
     profile.value = null
@@ -359,16 +402,26 @@ async function toggleFollow() {
     if (isFollowing.value) {
       await api.delete(`/users/${username}/follow`)
       isFollowing.value = false
+      isRequested.value = false
+      if (profile.value?._count != null) {
+        profile.value._count = {
+          ...profile.value._count,
+          followers: Math.max(0, (profile.value._count.followers ?? 0) - 1),
+        }
+      }
+      if (profile.value) setCachedProfile(profile.value.username, profile.value)
     } else {
-      await api.post(`/users/${username}/follow`)
-      isFollowing.value = true
-    }
-    if (profile.value?._count != null) {
-      profile.value._count = {
-        ...profile.value._count,
-        followers: (profile.value._count.followers ?? 0) + (isFollowing.value ? 1 : -1),
+      const { data } = await api.post<{ following?: boolean; requested?: boolean }>(`/users/${username}/follow`)
+      isFollowing.value = data?.following ?? false
+      isRequested.value = data?.requested ?? false
+      if (isFollowing.value && profile.value?._count != null) {
+        profile.value._count = {
+          ...profile.value._count,
+          followers: (profile.value._count.followers ?? 0) + 1,
+        }
       }
     }
+    if (profile.value) setCachedProfile(profile.value.username, profile.value)
   } finally {
     followLoading.value = false
   }
@@ -420,6 +473,7 @@ async function openModal(mode: 'followers' | 'following') {
     const path = mode === 'followers' ? `/users/${username}/followers` : `/users/${username}/following`
     const { data } = await api.get(path)
     modalList.value = data
+    setCachedProfiles(Array.isArray(data) ? data : [])
   } finally {
     modalLoading.value = false
   }
@@ -432,6 +486,7 @@ async function removeFollower(userId: string) {
     modalList.value = modalList.value.filter((u) => u.id !== userId)
     if (profile.value?._count != null)
       profile.value._count = { ...profile.value._count, followers: Math.max(0, (profile.value._count.followers ?? 0) - 1) }
+    if (profile.value) setCachedProfile(profile.value.username, profile.value)
   } finally {
     modalActionLoading.value = null
   }
@@ -446,6 +501,7 @@ async function unfollowUser(username: string) {
     modalList.value = modalList.value.filter((x) => x.id !== u.id)
     if (profile.value?._count != null)
       profile.value._count = { ...profile.value._count, following: Math.max(0, (profile.value._count.following ?? 0) - 1) }
+    if (profile.value) setCachedProfile(profile.value.username, profile.value)
   } finally {
     modalActionLoading.value = null
   }
@@ -785,6 +841,23 @@ onUnmounted(() => {
 .modal-list-item:last-child { border-bottom: none; }
 .modal-user { display: flex; align-items: center; gap: 0.75rem; flex: 1; min-width: 0; color: inherit; text-decoration: none; }
 .modal-user:hover { color: var(--accent-primary); }
+.modal-user :deep(.avatar-frame-root) {
+  width: 40px;
+  height: 40px;
+  max-width: 40px;
+  max-height: 40px;
+  flex-shrink: 0;
+}
+.modal-user :deep(.avatar-frame-root .avatar-frame) {
+  width: 100%;
+  height: 100%;
+}
+.modal-user :deep(.avatar-frame-root > *),
+.modal-user :deep(.avatar-frame > *) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 .modal-avatar, .modal-avatar-placeholder {
   width: 40px; height: 40px;
   border-radius: 50%;

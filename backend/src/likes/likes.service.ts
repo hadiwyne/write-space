@@ -42,9 +42,22 @@ export class LikesService {
     return !!like;
   }
 
-  async findByUser(username: string, limit = 50, offset = 0) {
-    const user = await this.prisma.user.findUnique({ where: { username } });
+  /** Returns liked posts for a user. Respects whoCanSeeLikes: NO_ONE (empty), FOLLOWERS (viewer must follow), PUBLIC. */
+  async findByUser(username: string, limit = 50, offset = 0, viewerId?: string | null) {
+    const user = await this.prisma.user.findUnique({
+      where: { username },
+      select: { id: true, whoCanSeeLikes: true },
+    });
     if (!user) throw new NotFoundException('User not found');
+    const who = (user as { whoCanSeeLikes?: string }).whoCanSeeLikes ?? 'PUBLIC';
+    if (who === 'NO_ONE') return [];
+    if (who === 'FOLLOWERS' && viewerId !== user.id) {
+      if (!viewerId) return [];
+      const isFollower = await this.prisma.follow.findUnique({
+        where: { followerId_followingId: { followerId: viewerId, followingId: user.id } },
+      });
+      if (!isFollower) return [];
+    }
     const items = await this.prisma.like.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: 'desc' },

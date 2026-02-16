@@ -127,8 +127,7 @@ export class UsersController {
   @Get(':username/follow/status')
   @UseGuards(JwtAuthGuard)
   async getFollowStatus(@Param('username') username: string, @CurrentUser() user: { id: string }) {
-    const isFollowing = await this.followService.isFollowing(user.id, username);
-    return { isFollowing };
+    return this.followService.getFollowStatus(user.id, username);
   }
 
   @Post(':username/follow')
@@ -144,21 +143,49 @@ export class UsersController {
   }
 
   @Get(':username/followers')
-  @Public()
-  getFollowers(@Param('username') username: string, @Query('limit') limit?: string, @Query('offset') offset?: string) {
-    return this.followService.getFollowers(username, Number(limit) || 50, Number(offset) || 0);
+  @UseGuards(OptionalJwtAuthGuard)
+  getFollowers(
+    @Param('username') username: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+    @CurrentUser() user?: { id: string } | null,
+  ) {
+    return this.followService.getFollowers(username, Number(limit) || 50, Number(offset) || 0, user?.id);
   }
 
   @Get(':username/following')
-  @Public()
-  getFollowing(@Param('username') username: string, @Query('limit') limit?: string, @Query('offset') offset?: string) {
-    return this.followService.getFollowing(username, Number(limit) || 50, Number(offset) || 0);
+  @UseGuards(OptionalJwtAuthGuard)
+  getFollowing(
+    @Param('username') username: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+    @CurrentUser() user?: { id: string } | null,
+  ) {
+    return this.followService.getFollowing(username, Number(limit) || 50, Number(offset) || 0, user?.id);
   }
 
   @Delete('me/followers/:userId')
   @UseGuards(JwtAuthGuard)
   async removeFollower(@Param('userId') userId: string, @CurrentUser() user: { id: string }) {
     return this.followService.removeFollower(user.id, userId);
+  }
+
+  @Get('me/follow-requests')
+  @UseGuards(JwtAuthGuard)
+  listFollowRequests(@CurrentUser() user: { id: string }) {
+    return this.followService.listPendingFollowRequests(user.id);
+  }
+
+  @Post('me/follow-requests/:fromUserId/approve')
+  @UseGuards(JwtAuthGuard)
+  approveFollowRequest(@Param('fromUserId') fromUserId: string, @CurrentUser() user: { id: string }) {
+    return this.followService.approveFollowRequest(user.id, fromUserId);
+  }
+
+  @Post('me/follow-requests/:fromUserId/deny')
+  @UseGuards(JwtAuthGuard)
+  denyFollowRequest(@Param('fromUserId') fromUserId: string, @CurrentUser() user: { id: string }) {
+    return this.followService.denyFollowRequest(user.id, fromUserId);
   }
 
   @Public()
@@ -171,14 +198,15 @@ export class UsersController {
     return this.repostsService.findByUser(username, Number(limit) || 50, Number(offset) || 0);
   }
 
-  @Public()
   @Get(':username/likes')
+  @UseGuards(OptionalJwtAuthGuard)
   getLikedPosts(
     @Param('username') username: string,
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
+    @CurrentUser() user?: { id: string } | null,
   ) {
-    return this.likesService.findByUser(username, Number(limit) || 50, Number(offset) || 0);
+    return this.likesService.findByUser(username, Number(limit) || 50, Number(offset) || 0, user?.id);
   }
 
   @Public()

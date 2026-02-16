@@ -80,12 +80,15 @@ function notificationText(n: NotifRecord) {
       return `${actor} replied to your comment`
     case 'FOLLOW':
       return `${actor} started following you`
+    case 'FOLLOW_REQUEST':
+      return `${actor} requested to follow you`
     default:
       return `${actor} notified you`
   }
 }
 
 function notificationLink(n: NotifRecord) {
+  if (n.type === 'FOLLOW_REQUEST') return '/follow-requests'
   const postId = n.postId as string | undefined
   if (postId) return `/posts/${postId}`
   const username = n.actor?.username
