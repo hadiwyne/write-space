@@ -39,51 +39,60 @@ export class FollowService {
   async follow(followerId: string, username: string) {
     const target = await this.prisma.user.findUnique({
       where: { username },
-      select: { id: true, isSuperadmin: true, whoCanFollowMe: true },
+      select: { id: true, isSuperadmin: true },
     });
     if (!target) throw new NotFoundException('User not found');
     if ((target as { isSuperadmin?: boolean }).isSuperadmin) throw new NotFoundException('User not found');
     if (target.id === followerId) throw new BadRequestException('You cannot follow yourself');
-    const raw = (target as { whoCanFollowMe?: string | null }).whoCanFollowMe;
-    const whoCanFollowMe = typeof raw === 'string' ? raw.trim().toUpperCase() : 'PUBLIC';
-    if (whoCanFollowMe === 'APPROVAL') {
-      const existing = await this.prisma.followRequest.findUnique({
-        where: { fromUserId_toUserId: { fromUserId: followerId, toUserId: target.id } },
-      });
-      if (existing) {
-        if (existing.status === 'PENDING') return { requested: true };
-        if (existing.status === 'APPROVED') {
-          await this.prisma.follow.upsert({
-            where: { followerId_followingId: { followerId, followingId: target.id } },
-            create: { followerId, followingId: target.id },
-            update: {},
-          });
-          return { following: true };
-        }
-      }
-      await this.prisma.followRequest.upsert({
-        where: { fromUserId_toUserId: { fromUserId: followerId, toUserId: target.id } },
-        create: { fromUserId: followerId, toUserId: target.id, status: 'PENDING' },
-        update: { status: 'PENDING' },
+
+    const settings = await this.prisma.user.findUnique({
+      where: { id: target.id },
+      select: { whoCanFollowMe: true },
+    });
+    const raw = (settings as { whoCanFollowMe?: string } | null)?.whoCanFollowMe;
+    const whoCanFollowMe = typeof raw === 'string' ? raw.trim().toUpperCase() : null;
+    const allowDirectFollow = whoCanFollowMe === 'PUBLIC';
+
+    if (allowDirectFollow) {
+      await this.prisma.follow.upsert({
+        where: { followerId_followingId: { followerId, followingId: target.id } },
+        create: { followerId, followingId: target.id },
+        update: {},
       });
       await this.notifications.create({
         userId: target.id,
-        type: 'FOLLOW_REQUEST',
+        type: 'FOLLOW',
         actorId: followerId,
       });
-      return { requested: true };
+      return { following: true };
     }
-    await this.prisma.follow.upsert({
-      where: { followerId_followingId: { followerId, followingId: target.id } },
-      create: { followerId, followingId: target.id },
-      update: {},
+
+    // APPROVAL or any other value: require follow request
+    const existing = await this.prisma.followRequest.findUnique({
+      where: { fromUserId_toUserId: { fromUserId: followerId, toUserId: target.id } },
+    });
+    if (existing) {
+      if (existing.status === 'PENDING') return { requested: true };
+      if (existing.status === 'APPROVED') {
+        await this.prisma.follow.upsert({
+          where: { followerId_followingId: { followerId, followingId: target.id } },
+          create: { followerId, followingId: target.id },
+          update: {},
+        });
+        return { following: true };
+      }
+    }
+    await this.prisma.followRequest.upsert({
+      where: { fromUserId_toUserId: { fromUserId: followerId, toUserId: target.id } },
+      create: { fromUserId: followerId, toUserId: target.id, status: 'PENDING' },
+      update: { status: 'PENDING' },
     });
     await this.notifications.create({
       userId: target.id,
-      type: 'FOLLOW',
+      type: 'FOLLOW_REQUEST',
       actorId: followerId,
     });
-    return { following: true };
+    return { requested: true };
   }
 
   async unfollow(followerId: string, username: string) {
@@ -92,6 +101,11 @@ export class FollowService {
     if ((target as { isSuperadmin?: boolean }).isSuperadmin) throw new NotFoundException('User not found');
     await this.prisma.follow.deleteMany({
       where: { followerId, followingId: target.id },
+    });
+    // So they must send a new follow request next time (approval is not permanent after unfollow)
+    await this.prisma.followRequest.updateMany({
+      where: { fromUserId: followerId, toUserId: target.id, status: 'APPROVED' },
+      data: { status: 'DENIED' },
     });
     return { following: false };
   }
@@ -158,6 +172,11 @@ export class FollowService {
   async removeFollower(profileUserId: string, followerUserId: string) {
     await this.prisma.follow.deleteMany({
       where: { followingId: profileUserId, followerId: followerUserId },
+    });
+    // So they must send a new follow request next time (approval is not permanent after removal)
+    await this.prisma.followRequest.updateMany({
+      where: { fromUserId: followerUserId, toUserId: profileUserId, status: 'APPROVED' },
+      data: { status: 'DENIED' },
     });
     return { removed: true };
   }

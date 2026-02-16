@@ -238,10 +238,23 @@ export class UsersService {
           ? Prisma.DbNull
           : (avatarFrame as Prisma.InputJsonValue);
     const privacy: Record<string, string> = {};
-    if (dto.whoCanSeeLikes != null && (PRIVACY_VISIBILITY as readonly string[]).includes(dto.whoCanSeeLikes)) privacy.whoCanSeeLikes = dto.whoCanSeeLikes;
-    if (dto.whoCanSeeFollowing != null && (PRIVACY_VISIBILITY as readonly string[]).includes(dto.whoCanSeeFollowing)) privacy.whoCanSeeFollowing = dto.whoCanSeeFollowing;
-    if (dto.whoCanSeeFollowers != null && (PRIVACY_VISIBILITY as readonly string[]).includes(dto.whoCanSeeFollowers)) privacy.whoCanSeeFollowers = dto.whoCanSeeFollowers;
-    if (dto.whoCanFollowMe != null && (WHO_CAN_FOLLOW_ME as readonly string[]).includes(dto.whoCanFollowMe)) privacy.whoCanFollowMe = dto.whoCanFollowMe;
+    const whoSee = (v: string | undefined) => (typeof v === 'string' ? v.trim().toUpperCase() : undefined);
+    if (dto.whoCanSeeLikes != null) {
+      const n = whoSee(dto.whoCanSeeLikes);
+      if (n && (PRIVACY_VISIBILITY as readonly string[]).includes(n)) privacy.whoCanSeeLikes = n;
+    }
+    if (dto.whoCanSeeFollowing != null) {
+      const n = whoSee(dto.whoCanSeeFollowing);
+      if (n && (PRIVACY_VISIBILITY as readonly string[]).includes(n)) privacy.whoCanSeeFollowing = n;
+    }
+    if (dto.whoCanSeeFollowers != null) {
+      const n = whoSee(dto.whoCanSeeFollowers);
+      if (n && (PRIVACY_VISIBILITY as readonly string[]).includes(n)) privacy.whoCanSeeFollowers = n;
+    }
+    if (dto.whoCanFollowMe != null) {
+      const n = whoSee(dto.whoCanFollowMe);
+      if (n && (WHO_CAN_FOLLOW_ME as readonly string[]).includes(n)) privacy.whoCanFollowMe = n;
+    }
     return this.prisma.user.update({
       where: { id: userId },
       data: {
