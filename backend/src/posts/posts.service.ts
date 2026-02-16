@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ContentType, Prisma } from '@prisma/client';
-import sharp from 'sharp';
+// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
+const sharp = require('sharp') as typeof import('sharp');
 import { PrismaService } from '../prisma/prisma.service';
 import { MarkdownRenderer } from './renderers/markdown.renderer';
 import { HtmlRenderer } from './renderers/html.renderer';

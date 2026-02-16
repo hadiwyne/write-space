@@ -6,7 +6,12 @@
           <label>Avatar</label>
           <div class="avatar-row">
             <div class="avatar-with-upload">
-              <AvatarFrame :frame="avatarFrame" :shape-class="avatarShapeClass(auth.user?.avatarShape)">
+              <AvatarFrame
+                :frame="avatarFrame"
+                :shape-class="avatarShapeClass(auth.user?.avatarShape)"
+                :badge-url="authUserBadgeUrl"
+                :badge-cache-bust="auth.avatarVersion"
+              >
                 <div
                   v-if="avatarPreview || auth.user?.avatarUrl"
                   class="avatar-preview-clip"
@@ -166,6 +171,26 @@
               <select v-model="badge" class="frame-select">
                 <option v-for="(label, key) in BADGE_LABELS" :key="key" :value="key">{{ label }}</option>
               </select>
+              <template v-if="badge === 'custom'">
+                <div class="badge-upload-block">
+                  <input
+                    ref="badgeFileInputRef"
+                    type="file"
+                    accept="image/png,image/webp"
+                    class="badge-file-input"
+                    aria-label="Choose badge image"
+                    @change="onBadgeFileChange"
+                  />
+                  <button type="button" class="btn btn-outline btn-sm" :disabled="badgeUploading" @click="triggerBadgeFileInput">Upload badge</button>
+                  <span class="badge-upload-hint">PNG or WebP, max 100 KB. Transparent background recommended.</span>
+                  <button
+                    v-if="authUserBadgeUrl"
+                    type="button"
+                    class="btn btn-outline btn-sm badge-remove-btn"
+                    @click="removeBadge"
+                  >Remove badge</button>
+                </div>
+              </template>
               <label v-if="badge !== 'none'" class="avatar-shape-label">Badge position</label>
               <select v-if="badge !== 'none'" v-model="badgePosition" class="frame-select">
                 <option v-for="(label, key) in BADGE_POSITION_LABELS" :key="key" :value="key">{{ label }}</option>
@@ -295,6 +320,10 @@
   const error = ref('')
   const success = ref('')
   const saving = ref(false)
+  const badgeFileInputRef = ref<HTMLInputElement | null>(null)
+  const badgeUploading = ref(false)
+
+  const authUserBadgeUrl = computed(() => (auth.user as { badgeUrl?: string } | null)?.badgeUrl ?? null)
   
   const frameBorderType = ref<'none' | 'gradient' | 'glow' | 'preset'>('none')
   const gradientColors = ref(['#ff7a18', '#ff0066', '#7a00ff'])
@@ -508,6 +537,48 @@
     avatarPreview.value = URL.createObjectURL(file)
     error.value = ''
   }
+
+  function triggerBadgeFileInput() {
+    badgeFileInputRef.value?.click()
+  }
+
+  async function onBadgeFileChange(e: Event) {
+    const input = e.target as HTMLInputElement
+    const file = input.files?.[0]
+    input.value = ''
+    if (!file) return
+    error.value = ''
+    success.value = ''
+    badgeUploading.value = true
+    try {
+      const formData = new FormData()
+      formData.append('badge', file)
+      const { data } = await api.post('/users/me/badge', formData)
+      auth.user = { ...auth.user, ...data }
+      auth.bumpAvatarVersion()
+      success.value = 'Badge uploaded.'
+    } catch (err: unknown) {
+      error.value = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Badge upload failed'
+    } finally {
+      badgeUploading.value = false
+    }
+  }
+
+  async function removeBadge() {
+    error.value = ''
+    success.value = ''
+    badgeUploading.value = true
+    try {
+      await api.delete('/users/me/badge')
+      await auth.fetchUser()
+      auth.bumpAvatarVersion()
+      success.value = 'Badge removed.'
+    } catch (err: unknown) {
+      error.value = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to remove badge'
+    } finally {
+      badgeUploading.value = false
+    }
+  }
   
   async function saveProfile() {
     error.value = ''
@@ -517,9 +588,7 @@
       if (selectedFile.value) {
         const formData = new FormData()
         formData.append('avatar', selectedFile.value)
-        const { data } = await api.post('/users/me/avatar', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        })
+        const { data } = await api.post('/users/me/avatar', formData)
         auth.user = { ...auth.user, ...data }
         auth.bumpAvatarVersion()
         selectedFile.value = null
@@ -875,6 +944,28 @@
     border-color: var(--accent-primary);
     box-shadow: 0 0 0 4px rgba(139, 69, 19, 0.1);
   }
+  .badge-file-input {
+    position: absolute;
+    width: 0;
+    height: 0;
+    opacity: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .badge-upload-block {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    margin-top: 0.5rem;
+  }
+  .badge-upload-hint {
+    width: 100%;
+    font-size: 0.75rem;
+    color: var(--gray-600);
+    margin: 0;
+  }
+  .badge-remove-btn { margin-left: 0; }
   .avatar-actions { }
   .btn-sm { padding: 0.375rem 0.75rem; font-size: 0.875rem; }
   .btn-outline { background: transparent; border: 1px solid var(--gray-300); color: var(--gray-700); }
