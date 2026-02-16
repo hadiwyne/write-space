@@ -354,6 +354,90 @@ html.ui-theme-dark-void {
   max-width: none;
 }
 
+/* Dark Void: landing (home) page – same aesthetic as rest of theme */
+html.ui-theme-dark-void .dark-void-standalone .home .hero h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-standalone .home .hero p {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-standalone .home .btn {
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-standalone .home .btn-primary {
+  background: var(--dark-void-text);
+  color: var(--dark-void-bg);
+  border: 2px solid var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-standalone .home .btn-primary:hover {
+  background: var(--dark-void-text-muted);
+  border-color: var(--dark-void-text-muted);
+  text-decoration: none;
+}
+html.ui-theme-dark-void .dark-void-standalone .home .btn-outline {
+  background: transparent;
+  border: 2px solid var(--dark-void-border);
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-standalone .home .btn-outline:hover {
+  border-color: var(--dark-void-text-muted);
+  color: var(--dark-void-text);
+  text-decoration: none;
+}
+
+/* Dark Void: login / sign up pages – same card and form aesthetic */
+html.ui-theme-dark-void .dark-void-standalone .auth-page .auth-card {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0 !important;
+  box-shadow: none;
+}
+html.ui-theme-dark-void .dark-void-standalone .auth-page .auth-card h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-standalone .auth-page .form-group label {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-standalone .auth-page .form-group input {
+  background: var(--dark-void-bg);
+  border: 1px solid var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-standalone .auth-page .form-group input::placeholder {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-standalone .auth-page .form-group input:focus {
+  border-color: var(--dark-void-text-muted);
+  box-shadow: none;
+}
+html.ui-theme-dark-void .dark-void-standalone .auth-page .btn-primary {
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--dark-void-text);
+  border: 2px solid var(--dark-void-text);
+  color: var(--dark-void-bg);
+}
+html.ui-theme-dark-void .dark-void-standalone .auth-page .btn-primary:hover:not(:disabled) {
+  background: var(--dark-void-text-muted);
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-standalone .auth-page .footer {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-standalone .auth-page .footer a {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-standalone .auth-page .footer a:hover {
+  color: var(--dark-void-text-muted);
+}
+
 /* Dark Void: PostCard – sharp corners, serif italic title, dark card, light grey actions */
 html.ui-theme-dark-void .card {
   background: var(--dark-void-card);
