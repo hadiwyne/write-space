@@ -25,6 +25,11 @@
           ></div>
           <span class="poll-option-label">{{ opt.text }}</span>
           <span v-if="showResults" class="poll-option-percent">{{ optionPercent(opt) }}%</span>
+          <i
+            v-if="userVotedOptionId === opt.id"
+            class="pi pi-check poll-option-voted-icon"
+            aria-hidden="true"
+          ></i>
         </div>
         <span v-if="showResults" class="poll-option-count">{{ voteCount(opt) }} {{ voteCount(opt) === 1 ? 'vote' : 'votes' }}</span>
       </div>
@@ -223,6 +228,15 @@ async function addOption() {
   z-index: 1;
   min-width: 2.5rem;
   text-align: right;
+}
+.poll-option-voted-icon {
+  position: absolute;
+  right: 2.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  z-index: 1;
 }
 .poll-option-count {
   font-size: 0.75rem;
