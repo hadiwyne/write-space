@@ -86,7 +86,7 @@
       </div>
       <PollBlock
         v-if="post.poll && post.poll.options?.length"
-        :post="post"
+        :post="postForPollBlock"
         compact
         @update="onPollUpdate"
       />
@@ -215,6 +215,18 @@ watch(
   },
   { deep: true, immediate: true }
 )
+
+type PollBlockPost = {
+  id: string
+  poll?: {
+    id: string
+    isOpen: boolean
+    resultsVisible: boolean
+    options: Array<{ id: string; text: string; order?: number; _count?: { votes: number } }>
+    votes?: Array<{ pollOptionId: string }>
+  }
+}
+const postForPollBlock = computed(() => props.post as PollBlockPost)
 
 const emit = defineEmits<{
   (e: 'archive', postId: string): void

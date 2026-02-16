@@ -193,10 +193,10 @@ async function handleDelete(postId: string) {
   }
 }
 
-function handlePollUpdate(updatedPost: FeedPost) {
-  const id = updatedPost.id
+function handlePollUpdate(updatedPost: Record<string, unknown>) {
+  const id = updatedPost.id as string | undefined
   if (!id) return
-  posts.value = posts.value.map((p) => (p.id === id ? updatedPost : p))
+  posts.value = posts.value.map((p) => (p.id === id ? (updatedPost as FeedPost) : p))
 }
 
 async function load() {

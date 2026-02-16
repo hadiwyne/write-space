@@ -108,7 +108,7 @@
       <template v-if="postType === 'poll'">
       <div class="form-group poll-options-group">
         <label class="poll-options-label">Options (add at least two)</label>
-        <div v-for="(opt, idx) in pollOptions" :key="idx" class="poll-option-row">
+        <div v-for="(_opt, idx) in pollOptions" :key="idx" class="poll-option-row">
           <input v-model="pollOptions[idx]" type="text" :placeholder="'Option ' + (idx + 1)" class="poll-option-input" maxlength="500" />
           <button type="button" class="btn btn-sm btn-ghost poll-option-remove" aria-label="Remove option" :disabled="pollOptions.length <= 2" @click="removePollOption(idx)">
             <i class="pi pi-times" aria-hidden="true"></i>

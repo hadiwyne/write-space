@@ -18,7 +18,7 @@
         <PollBlock
           v-if="post.poll && post.poll.options?.length"
           :post="post"
-          @update="post = $event"
+          @update="onPollUpdate"
         />
         <footer class="post-actions">
           <button type="button" class="action action-like" :class="{ active: liked }" @click="toggleLike" v-tooltip.bottom="liked ? 'Unlike' : 'Like'">
@@ -172,6 +172,10 @@ const post = ref<{
   }
   _count?: { likes: number; comments: number }
 } | null>(null)
+
+function onPollUpdate(updated: Record<string, unknown>) {
+  if (post.value) post.value = updated as typeof post.value
+}
 
 const isOwnPost = computed(() => {
   const u = auth.user

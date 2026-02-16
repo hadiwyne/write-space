@@ -505,11 +505,11 @@ function handlePollUpdate(updatedPost: Record<string, unknown>) {
   const id = updatedPost.id as string | undefined
   if (!id) return
   if (posts.value.some((p) => (p as { id?: string }).id === id)) {
-    posts.value = posts.value.map((p) => ((p as { id: string }).id === id ? updatedPost : p))
+    posts.value = posts.value.map((p) => ((p as { id: string }).id === id ? (updatedPost as (typeof posts.value)[number]) : p))
   } else if (likedPosts.value.some((p) => p.id === id)) {
     likedPosts.value = likedPosts.value.map((p) => (p.id === id ? (updatedPost as typeof p) : p))
   } else if (anonymousPosts.value.some((p) => (p as { id: string }).id === id)) {
-    anonymousPosts.value = anonymousPosts.value.map((p) => ((p as { id: string }).id === id ? updatedPost : p))
+    anonymousPosts.value = anonymousPosts.value.map((p) => ((p as { id: string }).id === id ? (updatedPost as (typeof anonymousPosts.value)[number]) : p))
   }
 }
 
