@@ -33,6 +33,8 @@ const ANONYMOUS_ALIASES = [
   'Hannah Montana',
   'I\'m Anonymous For Some Reason',
   'Erotic Neurotic',
+  'Pink Joy',
+  'Acrobatic Pantheress',
 ] as const;
 
 function pickAnonymousAlias(): string {
