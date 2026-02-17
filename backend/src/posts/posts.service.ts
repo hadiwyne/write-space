@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ContentType, Prisma } from '@prisma/client';
+import { mapPost } from '../utils/response.utils';
 // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
 const sharp = require('sharp') as typeof import('sharp');
 // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
@@ -78,6 +79,19 @@ export class PostsService {
         },
         ...(userId ? { votes: { where: { userId }, select: { pollOptionId: true } } } : {}),
       },
+    };
+  }
+
+  private postInclude(userId?: string | null) {
+    return {
+      author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
+      _count: { select: { likes: true, comments: true, reposts: true } },
+      poll: this.pollInclude(userId ?? null),
+      ...(userId ? {
+        likes: { where: { userId }, take: 1, select: { id: true } },
+        bookmarks: { where: { userId }, take: 1, select: { id: true } },
+        reposts: { where: { userId }, take: 1, select: { id: true } },
+      } : {}),
     };
   }
 
@@ -168,40 +182,23 @@ export class PostsService {
           ],
         }
         : { visibility: 'PUBLIC' as const };
-    return this.prisma.post.findMany({
+    const posts = await this.prisma.post.findMany({
       where: { isPublished: true, archivedAt: null, ...visibilityFilter },
       orderBy: { publishedAt: 'desc' },
       take: limit,
       skip: offset,
-      include: {
-        author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
-        _count: { select: { likes: true, comments: true, reposts: true } },
-        poll: this.pollInclude(userId ?? null),
-        ...(userId ? {
-          likes: { where: { userId }, take: 1, select: { id: true } },
-          bookmarks: { where: { userId }, take: 1, select: { id: true } },
-          reposts: { where: { userId }, take: 1, select: { id: true } },
-        } : {}),
-      },
+      include: this.postInclude(userId),
     });
+    return posts.map(p => mapPost(p, userId));
   }
 
   async findOne(id: string, userId?: string | null) {
     const post = await this.prisma.post.findUnique({
       where: { id },
-      include: {
-        author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
-        _count: { select: { likes: true, comments: true, reposts: true } },
-        poll: this.pollInclude(userId ?? null),
-        ...(userId ? {
-          likes: { where: { userId }, take: 1, select: { id: true } },
-          bookmarks: { where: { userId }, take: 1, select: { id: true } },
-          reposts: { where: { userId }, take: 1, select: { id: true } },
-        } : {}),
-      },
+      include: this.postInclude(userId),
     });
     if (!post) throw new NotFoundException('Post not found');
-    return post;
+    return mapPost(post, userId);
   }
 
   async findOnePublic(id: string, userId?: string, isSuperadmin = false) {

@@ -1,16 +1,29 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { mapPost, mapUser } from '../utils/response.utils';
 
 @Injectable()
 export class SearchService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
-  async searchPosts(q: string, limit = 20, offset = 0) {
+  private postInclude(userId?: string | null) {
+    return {
+      author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
+      _count: { select: { likes: true, comments: true, reposts: true } },
+      ...(userId ? {
+        likes: { where: { userId }, take: 1, select: { id: true } },
+        bookmarks: { where: { userId }, take: 1, select: { id: true } },
+        reposts: { where: { userId }, take: 1, select: { id: true } },
+      } : {}),
+    };
+  }
+
+  async searchPosts(q: string, userId?: string | null, limit = 20, offset = 0) {
     const term = q.trim();
     const tagMatch = term.startsWith('#') ? term.slice(1).trim().toLowerCase() : null;
 
     if (tagMatch) {
-      return this.prisma.post.findMany({
+      const posts = await this.prisma.post.findMany({
         where: {
           isPublished: true,
           archivedAt: null,
@@ -20,16 +33,14 @@ export class SearchService {
         orderBy: { publishedAt: 'desc' },
         take: limit,
         skip: offset,
-        include: {
-          author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
-          _count: { select: { likes: true, comments: true } },
-        },
+        include: this.postInclude(userId),
       });
+      return posts.map(p => mapPost(p, userId));
     }
 
     if (!term) return [];
 
-    return this.prisma.post.findMany({
+    const posts = await this.prisma.post.findMany({
       where: {
         isPublished: true,
         archivedAt: null,
@@ -42,11 +53,9 @@ export class SearchService {
       orderBy: { publishedAt: 'desc' },
       take: limit,
       skip: offset,
-      include: {
-        author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
-        _count: { select: { likes: true, comments: true } },
-      },
+      include: this.postInclude(userId),
     });
+    return posts.map(p => mapPost(p, userId));
   }
 
   async getTrendingTags(limit = 10): Promise<{ tag: string; count: number }[]> {
@@ -68,11 +77,11 @@ export class SearchService {
       .map(([tag, count]) => ({ tag, count }));
   }
 
-  async searchUsers(q: string, limit = 20, offset = 0) {
+  async searchUsers(q: string, userId?: string | null, limit = 20, offset = 0) {
     const term = q.trim();
     if (!term) return [];
 
-    return this.prisma.user.findMany({
+    const users = await this.prisma.user.findMany({
       where: {
         isSuperadmin: false,
         OR: [
@@ -87,12 +96,28 @@ export class SearchService {
         username: true,
         displayName: true,
         avatarUrl: true,
-avatarShape: true,
-    avatarFrame: true,
-    badgeUrl: true,
+        avatarShape: true,
+        avatarFrame: true,
+        badgeUrl: true,
         bio: true,
+        profileHTML: true,
+        whoCanSeeLikes: true,
+        whoCanSeeFollowing: true,
+        whoCanSeeFollowers: true,
+        whoCanFollowMe: true,
         _count: { select: { posts: true, followers: true, following: true } },
+        ...(userId ? {
+          followRequestsReceived: {
+            where: { fromUserId: userId },
+            select: { status: true },
+          },
+          followers: {
+            where: { followerId: userId },
+            select: { id: true },
+          },
+        } : {}),
       },
     });
+    return users.map(u => mapUser(u, userId));
   }
 }

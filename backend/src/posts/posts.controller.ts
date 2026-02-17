@@ -141,12 +141,6 @@ export class PostsController {
     return this.bookmarksService.toggle(id, user.id);
   }
 
-  @Get(':id/bookmarks/me')
-  @UseGuards(JwtAuthGuard)
-  async bookmarkMe(@Param('id') id: string, @CurrentUser() user: { id: string }) {
-    const bookmarked = await this.bookmarksService.userHasBookmark(id, user.id);
-    return { bookmarked };
-  }
 
   @Post(':id/reposts')
   @UseGuards(JwtAuthGuard)
@@ -154,12 +148,6 @@ export class PostsController {
     return this.repostsService.toggle(id, user.id);
   }
 
-  @Get(':id/reposts/me')
-  @UseGuards(JwtAuthGuard)
-  async repostMe(@Param('id') id: string, @CurrentUser() user: { id: string }) {
-    const reposted = await this.repostsService.userReposted(id, user.id);
-    return { reposted };
-  }
 
   @Post(':id/poll/vote')
   @UseGuards(JwtAuthGuard)

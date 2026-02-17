@@ -17,10 +17,13 @@ export function avatarSrc(url: string | null | undefined, cacheBust?: string | n
   return out
 }
 
-// Create base axios instance
+const REAL_TIME_ENDPOINTS = [
+  '/presence/online-count',
+  '/notifications/unread-count',
+]
+
 const axiosInstance = axios.create({
   baseURL,
-  headers: { 'Content-Type': 'application/json' },
 })
 
 // Wrap with cache interceptor
@@ -28,11 +31,34 @@ export const api = setupCache(axiosInstance, {
   ttl: 5 * 60 * 1000, // 5 minutes default cache
   methods: ['get'], // Only cache GET requests
   cachePredicate: {
-    statusCheck: (status) => status >= 200 && status < 400, // Cache successful responses
+    statusCheck: (status) => (status as number) >= 200 && (status as number) < 400, // Cache successful responses
   },
-  interpretHeader: true, // Respect Cache-Control headers from server
-  etag: true, // Support ETag validation
-  modifiedSince: true, // Support Last-Modified validation
+})
+
+// Extend AxiosRequestConfig type to include 'cache' property
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    cache?: boolean | import('axios-cache-interceptor').CacheRequestConfig;
+  }
+}
+
+// Add manual bypass in interceptor or check if we can use 'cache: false' in requests
+// Actually, axios-cache-interceptor allows passing cache: false in the request config.
+// But we want to do it globally for these endpoints.
+
+api.interceptors.request.use((config) => {
+  const url = config.url || ''
+  if (REAL_TIME_ENDPOINTS.some(path => url.includes(path))) {
+    // @ts-ignore - axios-cache-interceptor adds this property
+    config.cache = false
+  }
+
+  const token = localStorage.getItem('writespace_token')
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  if (config.data instanceof FormData) {
+    delete config.headers['Content-Type']
+  }
+  return config
 })
 
 /** Clears all cached API responses. Use on logout. */

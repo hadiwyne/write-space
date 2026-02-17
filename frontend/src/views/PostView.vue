@@ -179,7 +179,10 @@ const post = ref<{
     options: Array<{ id: string; text: string; order?: number; _count?: { votes: number } }>
     votes?: Array<{ pollOptionId: string }>
   }
-  _count?: { likes: number; comments: number }
+  _count?: { likes: number; comments: number; reposts: number }
+  isLiked?: boolean
+  isBookmarked?: boolean
+  isReposted?: boolean
 } | null>(null)
 
 function onPollUpdate(updated: Record<string, unknown>) {
@@ -274,11 +277,10 @@ async function load() {
       }
     }
     if (auth.token && post.value) {
-      const isLiked = (post.value as any).likes?.length > 0
-      liked.value = isLiked
-      if (isLiked) likedStore.setLiked(id, true)
-      bookmarked.value = (post.value as any).bookmarks?.length > 0
-      reposted.value = (post.value as any).reposts?.length > 0
+      liked.value = !!(post.value as any).isLiked
+      if (liked.value) likedStore.setLiked(id, true)
+      bookmarked.value = !!(post.value as any).isBookmarked
+      reposted.value = !!(post.value as any).isReposted
     }
     repostCount.value = (post.value?._count as { reposts?: number } | undefined)?.reposts ?? 0
   } finally {
@@ -316,7 +318,8 @@ async function toggleLike() {
         _count: {
           ...post.value._count,
           likes: likeCount.value,
-          comments: post.value._count?.comments ?? 0
+          comments: post.value._count?.comments ?? 0,
+          reposts: post.value._count?.reposts ?? 0
         }
       }
       setCachedPost(postId, post.value)

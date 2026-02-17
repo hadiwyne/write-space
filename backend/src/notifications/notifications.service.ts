@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsGateway } from './notifications.gateway';
+import { mapUser } from '../utils/response.utils';
 
 export type NotificationType = 'LIKE' | 'COMMENT' | 'COMMENT_REPLY' | 'FOLLOW' | 'FOLLOW_REQUEST' | 'MENTION';
 
@@ -9,7 +10,7 @@ export class NotificationsService {
   constructor(
     private prisma: PrismaService,
     private gateway: NotificationsGateway,
-  ) {}
+  ) { }
 
   async create(data: {
     userId: string;
@@ -28,10 +29,13 @@ export class NotificationsService {
         commentId: data.commentId,
       },
       include: {
-        actor: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
+        actor: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true, profileHTML: true, bio: true, whoCanSeeLikes: true, whoCanSeeFollowing: true, whoCanSeeFollowers: true, whoCanFollowMe: true, _count: { select: { followers: true, following: true } } } },
         post: { select: { id: true, title: true } },
       },
     });
+    if (notification.actor) {
+      (notification as any).actor = mapUser(notification.actor, data.userId);
+    }
     this.gateway.emitToUser(data.userId, 'notification', notification);
     return notification;
   }
@@ -40,15 +44,21 @@ export class NotificationsService {
     const where: { userId: string; readAt?: null } = { userId };
     if (unreadOnly) where.readAt = null;
 
-    return this.prisma.notification.findMany({
+    const list = await this.prisma.notification.findMany({
       where,
       orderBy: { createdAt: 'desc' },
       take: limit,
       skip: offset,
       include: {
-        actor: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
+        actor: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true, profileHTML: true, bio: true, whoCanSeeLikes: true, whoCanSeeFollowing: true, whoCanSeeFollowers: true, whoCanFollowMe: true, _count: { select: { followers: true, following: true } } } },
         post: { select: { id: true, title: true } },
       },
+    });
+    return list.map(n => {
+      if (n.actor) {
+        (n as any).actor = mapUser(n.actor, userId);
+      }
+      return n;
     });
   }
 
