@@ -1,6 +1,11 @@
 <template>
   <div class="profile-page">
-    <div v-if="loading" class="loading">Loading…</div>
+    <div v-if="loading && !profile" class="profile-loading-wrap">
+      <ProfileHeaderSkeleton />
+      <div class="post-list" style="margin-top: 2rem">
+        <PostCardSkeleton v-for="i in 3" :key="i" />
+      </div>
+    </div>
     <template v-else-if="profile">
       <div class="profile-header">
         <div class="profile-avatar-wrap">
@@ -76,7 +81,10 @@
           </button>
         </div>
         <div v-if="profileTab === 'posts'">
-          <div v-if="combinedFeed.length === 0" class="empty">No posts yet.</div>
+          <div v-if="loading && combinedFeed.length === 0" class="post-list">
+             <PostCardSkeleton v-for="i in 3" :key="i" />
+          </div>
+          <div v-else-if="combinedFeed.length === 0" class="empty">No posts yet.</div>
           <div v-else class="post-list">
             <div
               v-for="(item, i) in combinedFeed"
@@ -106,7 +114,9 @@
           </div>
         </div>
         <div v-else-if="profileTab === 'anonymous'">
-          <div v-if="anonymousLoading" class="empty">Loading…</div>
+          <div v-if="anonymousLoading" class="post-list">
+            <PostCardSkeleton v-for="i in 2" :key="i" />
+          </div>
           <div v-else-if="anonymousPosts.length === 0" class="empty">No anonymous posts yet.</div>
           <div v-else class="post-list">
             <PostCard
@@ -123,7 +133,9 @@
           </div>
         </div>
         <div v-else>
-          <div v-if="likedLoading" class="empty">Loading…</div>
+          <div v-if="likedLoading" class="post-list">
+            <PostCardSkeleton v-for="i in 2" :key="i" />
+          </div>
           <div v-else-if="likedPosts.length === 0" class="empty">
             <template v-if="isOwnProfile">No liked posts yet.</template>
             <template v-else-if="(profile?.whoCanSeeLikes ?? 'PUBLIC') === 'NO_ONE'">This user has hidden their likes.</template>
@@ -219,9 +231,11 @@ import { avatarShapeClass } from '@/utils/avatar'
 import AvatarFrame from '@/components/AvatarFrame.vue'
 import type { AvatarFrame as AvatarFrameType } from '@/types/avatarFrame'
 import { useAuthStore } from '@/stores/auth'
-import { getCachedProfile, setCachedProfile, setCachedProfiles } from '@/utils/profileCache'
+import { getCachedProfile, setCachedProfile, setCachedProfiles } from '@/utils/indexedDBCache'
 import PostCard from '@/components/PostCard.vue'
 import RepostCard from '@/components/RepostCard.vue'
+import PostCardSkeleton from '@/components/skeletons/PostCardSkeleton.vue'
+import ProfileHeaderSkeleton from '@/components/skeletons/ProfileHeaderSkeleton.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 
 const route = useRoute()
@@ -360,7 +374,7 @@ async function load() {
   reposts.value = []
   likedPosts.value = []
   anonymousPosts.value = []
-  const cached = getCachedProfile(username)
+  const cached = await getCachedProfile(username)
   if (cached) {
     profile.value = cached as typeof profile.value
     loading.value = false
@@ -397,31 +411,47 @@ async function load() {
 async function toggleFollow() {
   const username = profile.value?.username
   if (!username || followLoading.value) return
+  
+  // Optimistic Update
+  const originalFollowing = isFollowing.value
+  const originalRequested = isRequested.value
+  const originalFollowersCount = profile.value?._count?.followers ?? 0
+  
   followLoading.value = true
+  
   try {
     if (isFollowing.value) {
-      await api.delete(`/users/${username}/follow`)
+      // Optimistic: Unfollow
       isFollowing.value = false
       isRequested.value = false
       if (profile.value?._count != null) {
-        profile.value._count = {
-          ...profile.value._count,
-          followers: Math.max(0, (profile.value._count.followers ?? 0) - 1),
-        }
+        profile.value._count.followers = Math.max(0, originalFollowersCount - 1)
       }
+      
+      await api.delete(`/users/${username}/follow`)
       if (profile.value) setCachedProfile(profile.value.username, profile.value)
     } else {
+      // Optimistic: Follow (assume public unless we know otherwise, but better to wait for status if private)
+      // For now, let's just toggle and wait for API to tell us if it's 'requested' or 'following'
+      // But we can still be optimistic about starting the action
+      
       const { data } = await api.post<{ following?: boolean; requested?: boolean }>(`/users/${username}/follow`)
       isFollowing.value = data?.following ?? false
       isRequested.value = data?.requested ?? false
+      
       if (isFollowing.value && profile.value?._count != null) {
-        profile.value._count = {
-          ...profile.value._count,
-          followers: (profile.value._count.followers ?? 0) + 1,
-        }
+        profile.value._count.followers = originalFollowersCount + 1
       }
     }
     if (profile.value) setCachedProfile(profile.value.username, profile.value)
+  } catch (err) {
+    // Rollback
+    isFollowing.value = originalFollowing
+    isRequested.value = originalRequested
+    if (profile.value?._count != null) {
+      profile.value._count.followers = originalFollowersCount
+    }
+    console.warn('Follow toggle failed, rolled back state:', err)
   } finally {
     followLoading.value = false
   }

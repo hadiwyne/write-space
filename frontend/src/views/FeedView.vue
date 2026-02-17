@@ -74,7 +74,9 @@
     </section>
 
     <div class="feed-content">
-      <div v-if="loading" class="feed-loading">Loading…</div>
+      <div v-if="loading && posts.length === 0" class="post-list" :class="{ 'post-list--grid': viewMode === 'grid' }">
+        <PostCardSkeleton v-for="i in 3" :key="i" />
+      </div>
       <div v-else-if="posts.length === 0" class="feed-empty">
       <template v-if="sort === 'friends' && !auth.token">
         <router-link to="/login">Log in</router-link> to see posts from people you follow.
@@ -111,10 +113,9 @@ import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
-import { getCachedFeed, setCachedFeed } from '@/utils/feedCache'
-import { setCachedPosts } from '@/utils/postCache'
-import { setCachedProfiles } from '@/utils/profileCache'
+import { getCachedFeed, setCachedFeed, setCachedPosts, setCachedProfiles } from '@/utils/indexedDBCache'
 import PostCard from '@/components/PostCard.vue'
+import PostCardSkeleton from '@/components/skeletons/PostCardSkeleton.vue'
 
 type FeedPost = { id: string; _count?: { likes?: number; reposts?: number; comments?: number }; likes?: unknown[]; [key: string]: unknown }
 
@@ -161,7 +162,6 @@ function handleLike(postId: string, isLiked: boolean) {
   if (p?._count) {
     p._count = { ...p._count, likes: (p._count.likes ?? 0) + (isLiked ? 1 : -1) }
   }
-  // Update the likes array so the UI reflects the change immediately
   if (p) {
     if (isLiked) {
       p.likes = [{ id: 'local' }]
@@ -204,13 +204,17 @@ function handlePollUpdate(updatedPost: Record<string, unknown>) {
 
 async function load() {
   const tag = tagFilter.value.trim()
-  const cached = getCachedFeed(sort.value, tag)
+  const cacheKey = tag ? `${sort.value}|${tag}` : sort.value
+  
+  // Try to load from IndexedDB cache first
+  const cached = await getCachedFeed(cacheKey)
   if (cached && Array.isArray(cached)) {
     posts.value = cached as FeedPost[]
     loading.value = false
   } else {
     loading.value = true
   }
+  
   try {
     const params = new URLSearchParams()
     if (sort.value === 'popular') params.set('sort', 'popular')
@@ -218,7 +222,8 @@ async function load() {
     if (tag) params.set('tag', tag)
     const { data } = await api.get(`/feed?${params.toString()}`)
     posts.value = Array.isArray(data) ? data : []
-    setCachedFeed(sort.value, tag, posts.value)
+    
+    setCachedFeed(cacheKey, posts.value)
     setCachedPosts(posts.value)
     const authors = posts.value.map((p) => (p as { author?: unknown }).author).filter(Boolean)
     setCachedProfiles(authors)

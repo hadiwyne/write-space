@@ -260,10 +260,10 @@ function onLogout() {
   logout()
 }
 
-function logout() {
+async function logout() {
   dropdownOpen.value = false
   theme.clearUserThemes()
-  auth.logout()
+  await auth.logout()
   router.push('/')
 }
 

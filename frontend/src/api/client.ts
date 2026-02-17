@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { setupCache } from 'axios-cache-interceptor'
 
 const baseURL = import.meta.env.VITE_API_URL || '/api'
 
@@ -16,11 +17,30 @@ export function avatarSrc(url: string | null | undefined, cacheBust?: string | n
   return out
 }
 
-export const api = axios.create({
+// Create base axios instance
+const axiosInstance = axios.create({
   baseURL,
   headers: { 'Content-Type': 'application/json' },
 })
 
+// Wrap with cache interceptor
+export const api = setupCache(axiosInstance, {
+  ttl: 5 * 60 * 1000, // 5 minutes default cache
+  methods: ['get'], // Only cache GET requests
+  cachePredicate: {
+    statusCheck: (status) => status >= 200 && status < 400, // Cache successful responses
+  },
+  interpretHeader: true, // Respect Cache-Control headers from server
+  etag: true, // Support ETag validation
+  modifiedSince: true, // Support Last-Modified validation
+})
+
+/** Clears all cached API responses. Use on logout. */
+export async function clearApiCache() {
+  await api.storage.remove('all')
+}
+
+// Add auth token to requests
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('writespace_token')
   if (token) config.headers.Authorization = `Bearer ${token}`
@@ -30,6 +50,7 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+// Handle 401 unauthorized
 let handling401 = false
 api.interceptors.response.use(
   (r) => r,

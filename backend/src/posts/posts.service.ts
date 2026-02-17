@@ -3,6 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { ContentType, Prisma } from '@prisma/client';
 // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
 const sharp = require('sharp') as typeof import('sharp');
+// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
+const PDFDocument = require('pdfkit');
 import { PrismaService } from '../prisma/prisma.service';
 import { MarkdownRenderer } from './renderers/markdown.renderer';
 import { HtmlRenderer } from './renderers/html.renderer';
@@ -53,7 +55,7 @@ export class PostsService {
     private config: ConfigService,
     private markdown: MarkdownRenderer,
     private html: HtmlRenderer,
-  ) {}
+  ) { }
 
   private renderContent(content: string, type: ContentType): string {
     switch (type) {
@@ -129,7 +131,7 @@ export class PostsService {
           },
         });
       });
-      this.refreshLinkPreview(post!.id, dto.content).catch(() => {});
+      this.refreshLinkPreview(post!.id, dto.content).catch(() => { });
       return post!;
     }
 
@@ -150,7 +152,7 @@ export class PostsService {
       },
       include: { author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } } },
     });
-    this.refreshLinkPreview(post.id, dto.content).catch(() => {});
+    this.refreshLinkPreview(post.id, dto.content).catch(() => { });
     return post;
   }
 
@@ -159,12 +161,12 @@ export class PostsService {
       ? {}
       : userId
         ? {
-            OR: [
-              { visibility: 'PUBLIC' as const },
-              { visibility: 'FOLLOWERS_ONLY' as const, author: { followers: { some: { followerId: userId } } } },
-              { visibility: 'FOLLOWERS_ONLY' as const, authorId: userId },
-            ],
-          }
+          OR: [
+            { visibility: 'PUBLIC' as const },
+            { visibility: 'FOLLOWERS_ONLY' as const, author: { followers: { some: { followerId: userId } } } },
+            { visibility: 'FOLLOWERS_ONLY' as const, authorId: userId },
+          ],
+        }
         : { visibility: 'PUBLIC' as const };
     return this.prisma.post.findMany({
       where: { isPublished: true, archivedAt: null, ...visibilityFilter },
@@ -175,7 +177,11 @@ export class PostsService {
         author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
         _count: { select: { likes: true, comments: true, reposts: true } },
         poll: this.pollInclude(userId ?? null),
-        ...(userId ? { likes: { where: { userId }, take: 1, select: { id: true } } } : {}),
+        ...(userId ? {
+          likes: { where: { userId }, take: 1, select: { id: true } },
+          bookmarks: { where: { userId }, take: 1, select: { id: true } },
+          reposts: { where: { userId }, take: 1, select: { id: true } },
+        } : {}),
       },
     });
   }
@@ -187,6 +193,11 @@ export class PostsService {
         author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
         _count: { select: { likes: true, comments: true, reposts: true } },
         poll: this.pollInclude(userId ?? null),
+        ...(userId ? {
+          likes: { where: { userId }, take: 1, select: { id: true } },
+          bookmarks: { where: { userId }, take: 1, select: { id: true } },
+          reposts: { where: { userId }, take: 1, select: { id: true } },
+        } : {}),
       },
     });
     if (!post) throw new NotFoundException('Post not found');
@@ -201,13 +212,13 @@ export class PostsService {
     if ((post as { visibility?: string }).visibility === 'FOLLOWERS_ONLY' && !isAuthor) {
       const follows = userId
         ? await this.prisma.follow.findUnique({
-            where: { followerId_followingId: { followerId: userId, followingId: post.authorId } },
-          })
+          where: { followerId_followingId: { followerId: userId, followingId: post.authorId } },
+        })
         : null;
       if (!follows) throw new NotFoundException('Post not found');
     }
     // Increment view count in background so we don't wait; return the post we already have (avoids second findOne).
-    this.prisma.post.update({ where: { id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
+    this.prisma.post.update({ where: { id }, data: { viewCount: { increment: 1 } } }).catch(() => { });
     return post;
   }
 
@@ -239,8 +250,8 @@ export class PostsService {
     if ((post as { visibility?: string }).visibility === 'FOLLOWERS_ONLY' && !isAuthor) {
       const follows = userId
         ? await this.prisma.follow.findUnique({
-            where: { followerId_followingId: { followerId: userId, followingId: post.authorId } },
-          })
+          where: { followerId_followingId: { followerId: userId, followingId: post.authorId } },
+        })
         : null;
       if (!follows) throw new NotFoundException('Post not found');
     }
@@ -276,7 +287,7 @@ export class PostsService {
       },
       include: { author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } } },
     });
-    if (dto.content != null) this.refreshLinkPreview(updated.id, dto.content).catch(() => {});
+    if (dto.content != null) this.refreshLinkPreview(updated.id, dto.content).catch(() => { });
     return updated;
   }
 
@@ -358,7 +369,11 @@ export class PostsService {
         author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
         _count: { select: { likes: true, comments: true, reposts: true } },
         poll: this.pollInclude(viewerUserId ?? null),
-        ...(viewerUserId ? { likes: { where: { userId: viewerUserId }, take: 1, select: { id: true } } } : {}),
+        ...(viewerUserId ? {
+          likes: { where: { userId: viewerUserId }, take: 1, select: { id: true } },
+          bookmarks: { where: { userId: viewerUserId }, take: 1, select: { id: true } },
+          reposts: { where: { userId: viewerUserId }, take: 1, select: { id: true } },
+        } : {}),
       },
     });
   }
@@ -389,17 +404,42 @@ export class PostsService {
       const buffer = await this.exportDocx(post);
       return { format: 'docx', filename, buffer };
     }
-    const buffer = Buffer.from(this.exportHtml(post), 'utf-8');
-    return { format: 'html', filename, buffer };
+    const buffer = await this.exportPdf(post);
+    return { format: 'pdf', filename, buffer };
   }
 
-  private exportHtml(post: { title: string; renderedHTML: string; author?: { displayName?: string | null; username?: string }; anonymousAlias?: string | null }): string {
-    const author = (post as { anonymousAlias?: string | null }).anonymousAlias ?? post.author?.displayName ?? post.author?.username ?? 'Unknown';
-    return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${this.escapeHtml(post.title)}</title></head><body><article><h1>${this.escapeHtml(post.title)}</h1><p><small>By ${this.escapeHtml(author)}</small></p><div>${post.renderedHTML}</div></article></body></html>`;
-  }
+  private async exportPdf(post: { title: string; content: string; author?: { displayName?: string | null; username?: string }; anonymousAlias?: string | null }): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      const chunks: Buffer[] = [];
+      const doc = new PDFDocument({ margin: 50 });
 
-  private escapeHtml(s: string): string {
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', (err: Error) => reject(err));
+
+      const author = post.anonymousAlias ?? post.author?.displayName ?? post.author?.username ?? 'Unknown';
+
+      // Title
+      doc.fontSize(24).font('Helvetica-Bold').text(post.title);
+      doc.moveDown(0.5);
+
+      // Author and Date
+      doc.fontSize(10).font('Helvetica').fillColor('#666666').text(`By ${author} • ${new Date().toLocaleDateString()}`);
+      doc.moveDown(1.5);
+
+      // Horizontal line
+      doc.moveTo(50, doc.y).lineTo(550, doc.y).strokeColor('#eeeeee').stroke();
+      doc.moveDown(1.5);
+
+      // Content
+      doc.fontSize(12).font('Helvetica').fillColor('#000000').text(post.content, {
+        align: 'justify',
+        paragraphGap: 10,
+        lineGap: 4
+      });
+
+      doc.end();
+    });
   }
 
   private async exportDocx(post: { title: string; content: string }): Promise<Buffer> {

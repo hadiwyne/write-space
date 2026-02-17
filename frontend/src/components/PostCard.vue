@@ -244,13 +244,26 @@ function onPollUpdate(updatedPost: Record<string, unknown>) {
 
 async function toggleLike() {
   if (!auth.token || !props.post.id) return
+  
+  // Optimistic Update
+  const originalLiked = liked.value
+  const originalCount = likeCount.value
+  
+  // We can't directly mutate 'liked' as it's a computed property based on props and store
+  // but we can update the store which 'liked' depends on
+  likedStore.setLiked(props.post.id, !originalLiked)
+  likeCount.value = originalLiked ? originalCount - 1 : originalCount + 1
+  
   try {
     const { data } = await api.post(`/posts/${props.post.id}/likes`)
     likedStore.setLiked(props.post.id, data.liked)
     likeCount.value = data.count ?? likeCount.value
     emit('like', props.post.id, data.liked)
-  } catch {
-    // ignore
+  } catch (err) {
+    // Rollback
+    likedStore.setLiked(props.post.id, originalLiked)
+    likeCount.value = originalCount
+    console.warn('PostCard like failed, rolled back state:', err)
   }
 }
 
