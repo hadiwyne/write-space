@@ -41,7 +41,7 @@ export class PostsController {
     private readonly postsService: PostsService,
     private readonly bookmarksService: BookmarksService,
     private readonly repostsService: RepostsService,
-  ) {}
+  ) { }
 
   @Post()
   @UseGuards(JwtAuthGuard)
@@ -113,11 +113,13 @@ export class PostsController {
     @CurrentUser() user: { id: string; isSuperadmin?: boolean } | null,
     @Res() res: Response,
   ) {
-    const fmt = (format || 'html').toLowerCase();
-    if (fmt !== 'html' && fmt !== 'docx') throw new BadRequestException('Format must be html or docx');
+    const fmt = (format || 'pdf').toLowerCase();
+    if (fmt !== 'pdf' && fmt !== 'docx') throw new BadRequestException('Format must be pdf or docx');
     const result = await this.postsService.export(id, fmt, user?.id ?? null, !!user?.isSuperadmin);
-    const ext = result.format === 'docx' ? 'docx' : 'html';
-    const mime = result.format === 'docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'text/html';
+    const ext = result.format;
+    const mime = result.format === 'docx'
+      ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      : 'application/pdf';
     res.setHeader('Content-Disposition', `attachment; filename="${result.filename}.${ext}"`);
     res.setHeader('Content-Type', mime);
     res.send(result.buffer);

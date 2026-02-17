@@ -92,40 +92,37 @@ export default defineConfig({
           // API FEed
           {
             urlPattern: /\/api\/feed.*/i,
-            handler: 'NetworkFirst',
+            handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'api-feed-cache',
               expiration: {
                 maxEntries: 50,
                 maxAgeSeconds: 5 * 60,
               },
-              networkTimeoutSeconds: 3,
             },
           },
           // API Posts
           {
             urlPattern: /\/api\/posts\/.*/i,
-            handler: 'NetworkFirst',
+            handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'api-posts-cache',
               expiration: {
                 maxEntries: 100,
-                maxAgeSeconds: 10 * 60,
+                maxAgeSeconds: 15 * 60,
               },
-              networkTimeoutSeconds: 3,
             },
           },
           // API Users/Profiles
           {
             urlPattern: /\/api\/users\/.*/i,
-            handler: 'NetworkFirst',
+            handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'api-users-cache',
               expiration: {
                 maxEntries: 50,
                 maxAgeSeconds: 15 * 60,
               },
-              networkTimeoutSeconds: 3,
             },
           },
           // Uploads (avatars, images)

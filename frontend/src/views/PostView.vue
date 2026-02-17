@@ -69,8 +69,12 @@
               <i class="pi pi-download"></i> Export
             </button>
             <div v-if="exportOpen" class="export-dropdown">
-              <button type="button" class="export-option" @click="downloadExport('html')">Download as HTML</button>
-              <button type="button" class="export-option" @click="downloadExport('docx')">Download as DOCX</button>
+              <button type="button" class="export-option" @click="downloadExport('pdf')">
+                <i class="pi pi-file-pdf"></i> Download as PDF
+              </button>
+              <button type="button" class="export-option" @click="downloadExport('docx')">
+                <i class="pi pi-file-word"></i> Download as DOCX
+              </button>
             </div>
           </div>
           <template v-if="isOwnPost">
@@ -269,17 +273,12 @@ async function load() {
         // No poll or not found – keep post as-is
       }
     }
-    if (auth.token) {
-      const [likeRes, bookmarkRes, repostRes] = await Promise.all([
-        api.get(`/posts/${id}/likes/me`).catch(() => ({ data: { liked: false } })),
-        api.get(`/posts/${id}/bookmarks/me`).catch(() => ({ data: { bookmarked: false } })),
-        api.get(`/posts/${id}/reposts/me`).catch(() => ({ data: { reposted: false } })),
-      ])
-      const isLiked = likeRes.data?.liked ?? false
+    if (auth.token && post.value) {
+      const isLiked = (post.value as any).likes?.length > 0
       liked.value = isLiked
       if (isLiked) likedStore.setLiked(id, true)
-      bookmarked.value = bookmarkRes.data?.bookmarked ?? false
-      reposted.value = repostRes.data?.reposted ?? false
+      bookmarked.value = (post.value as any).bookmarks?.length > 0
+      reposted.value = (post.value as any).reposts?.length > 0
     }
     repostCount.value = (post.value?._count as { reposts?: number } | undefined)?.reposts ?? 0
   } finally {
@@ -314,7 +313,11 @@ async function toggleLike() {
     if (post.value) {
       post.value = {
         ...post.value,
-        _count: { ...post.value._count, likes: likeCount.value }
+        _count: {
+          ...post.value._count,
+          likes: likeCount.value,
+          comments: post.value._count?.comments ?? 0
+        }
       }
       setCachedPost(postId, post.value)
     }
@@ -411,7 +414,7 @@ async function downloadExport(format: string) {
   exportOpen.value = false
   try {
     const { data } = await api.get(`/posts/${route.params.id}/export`, { params: { format }, responseType: 'blob' })
-    const ext = format === 'docx' ? 'docx' : 'html'
+    const ext = format === 'docx' ? 'docx' : 'pdf'
     const name = (post.value?.title || 'post').replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').slice(0, 80) || 'export'
     const url = URL.createObjectURL(data as Blob)
     const a = document.createElement('a')

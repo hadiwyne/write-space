@@ -25,7 +25,6 @@ export class CacheControlInterceptor implements NestInterceptor {
                         'Cache-Control',
                         `public, max-age=${this.maxAge}`,
                     );
-                    response.setHeader('ETag', `W/"${Date.now()}"`);
                 }
             }),
         );

@@ -67,7 +67,7 @@ if (!self.define) {
     });
   };
 }
-define(['./workbox-21a80088'], (function (workbox) { 'use strict';
+define(['./workbox-fa6cb374'], (function (workbox) { 'use strict';
 
   self.skipWaiting();
   workbox.clientsClaim();
@@ -82,7 +82,7 @@ define(['./workbox-21a80088'], (function (workbox) { 'use strict';
     "revision": "3ca0b8505b4bec776b69afdba2768812"
   }, {
     "url": "index.html",
-    "revision": "0.li0s56gacik"
+    "revision": "0.7sgmglanh14"
   }], {});
   workbox.cleanupOutdatedCaches();
   workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("index.html"), {
@@ -106,25 +106,22 @@ define(['./workbox-21a80088'], (function (workbox) { 'use strict';
       statuses: [0, 200]
     })]
   }), 'GET');
-  workbox.registerRoute(/\/api\/feed.*/i, new workbox.NetworkFirst({
+  workbox.registerRoute(/\/api\/feed.*/i, new workbox.StaleWhileRevalidate({
     "cacheName": "api-feed-cache",
-    "networkTimeoutSeconds": 3,
     plugins: [new workbox.ExpirationPlugin({
       maxEntries: 50,
       maxAgeSeconds: 300
     })]
   }), 'GET');
-  workbox.registerRoute(/\/api\/posts\/.*/i, new workbox.NetworkFirst({
+  workbox.registerRoute(/\/api\/posts\/.*/i, new workbox.StaleWhileRevalidate({
     "cacheName": "api-posts-cache",
-    "networkTimeoutSeconds": 3,
     plugins: [new workbox.ExpirationPlugin({
       maxEntries: 100,
-      maxAgeSeconds: 600
+      maxAgeSeconds: 900
     })]
   }), 'GET');
-  workbox.registerRoute(/\/api\/users\/.*/i, new workbox.NetworkFirst({
+  workbox.registerRoute(/\/api\/users\/.*/i, new workbox.StaleWhileRevalidate({
     "cacheName": "api-users-cache",
-    "networkTimeoutSeconds": 3,
     plugins: [new workbox.ExpirationPlugin({
       maxEntries: 50,
       maxAgeSeconds: 900
