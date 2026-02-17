@@ -172,7 +172,7 @@
 
     <footer class="dark-void-status-bar" :class="{ 'status-bar-hidden': statusBarState.hidden }" aria-live="polite">
       <span class="dark-void-status-left">{{ statusLeft }}</span>
-      <span class="dark-void-status-online">ONLINE NOW: {{ onlineCount.toLocaleString() }} SOULS</span>
+      <span class="dark-void-status-online">ONLINE NOW: {{ Math.max(0, onlineCount - 1).toLocaleString() }} SOULS</span>
       <span class="dark-void-status-right">{{ statusRight }}</span>
     </footer>
   </div>
@@ -296,7 +296,11 @@ function onSidebarSearch() {
 
 async function fetchOnlineCount() {
   try {
-    const { data } = await api.get<{ count: number }>('/presence/online-count')
+    // Add cache-busting timestamp to bypass browser/disk cache
+    const { data } = await api.get<{ count: number }>(`/presence/online-count?t=${Date.now()}`, {
+      // @ts-ignore - axios-cache-interceptor bypass
+      cache: false
+    })
     onlineCount.value = typeof data?.count === 'number' ? data.count : 0
   } catch {
     onlineCount.value = 0

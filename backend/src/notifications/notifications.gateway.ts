@@ -28,7 +28,7 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
     private jwt: JwtService,
     private config: ConfigService,
     private presence: PresenceService,
-  ) {}
+  ) { }
 
   async handleConnection(client: SocketClient) {
     const raw =
@@ -45,18 +45,23 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
       const payload = this.jwt.verify(token, { secret });
       const userId = payload?.sub;
       if (userId) {
+        console.log(`[Presence] User connected: ${userId} (${client.id})`);
         this.userIdBySocketId.set(client.id, userId);
         this.presence.add(client.id, userId);
         client.join(`user:${userId}`);
       } else {
+        console.warn(`[Presence] Connection rejected: No userId in token`);
         client.disconnect();
       }
-    } catch {
+    } catch (err: any) {
+      console.error(`[Presence] Connection error:`, err?.message || err);
       client.disconnect();
     }
   }
 
   handleDisconnect(client: SocketClient) {
+    const userId = this.userIdBySocketId.get(client.id);
+    console.log(`[Presence] User disconnected: ${userId || 'unknown'} (${client.id})`);
     this.presence.remove(client.id);
     this.userIdBySocketId.delete(client.id);
   }

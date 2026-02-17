@@ -256,10 +256,6 @@ watch(notifOpen, (open) => {
   if (open) unreadCountWhenOpened.value = notifications.unreadCount
 })
 
-watch(() => auth.token, (token) => {
-  if (token) notifications.init()
-  else notifications.disconnectSocket()
-})
 watch(() => route.path, () => {
   headerVisible.value = true
 })
@@ -268,7 +264,6 @@ onMounted(() => {
   lastScrollY.value = getScrollY()
   if (auth.token) {
     auth.fetchUser()
-    notifications.init()
   }
   document.addEventListener('click', onDocumentClick)
   window.addEventListener('scroll', onScroll, { passive: true })

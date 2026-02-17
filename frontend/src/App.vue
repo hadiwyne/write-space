@@ -25,11 +25,13 @@ import FloatingActionButton from '@/components/FloatingActionButton.vue'
 import DarkVoidLayout from '@/components/DarkVoidLayout.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
+import { useNotificationsStore } from '@/stores/notifications'
 import knightCursorUrl from '@/assets/knight.png'
 
 const route = useRoute()
 const auth = useAuthStore()
 const theme = useThemeStore()
+const notifications = useNotificationsStore()
 const hideLayout = computed(() => route.meta.hideLayout === true)
 
 const statusBarState = reactive({ hidden: false })
@@ -84,6 +86,19 @@ onMounted(() => {
   if (theme.bgImageUrl) theme.setBgImage(theme.bgImageUrl)
   applyDarkVoidCursor(theme.isDarkVoid)
   loadStardustBg()
+  if (auth.token) {
+    console.log('[Presence] Token found on App mount, initializing notifications...')
+    notifications.init()
+  }
+})
+watch(() => auth.token, (token) => {
+  if (token) {
+    console.log('[Presence] Token changed (login), initializing notifications...')
+    notifications.init()
+  } else {
+    console.log('[Presence] Token cleared (logout), disconnecting socket...')
+    notifications.disconnectSocket()
+  }
 })
 watch(() => theme.isDarkVoid, () => {
   applyDarkVoidCursor(theme.isDarkVoid)
