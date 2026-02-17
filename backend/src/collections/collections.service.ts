@@ -1,12 +1,20 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { mapPost } from '../utils/response.utils';
 import { CreateCollectionDto } from './dto/create-collection.dto';
 import { UpdateCollectionDto } from './dto/update-collection.dto';
 
-const postInclude = {
-  author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
-  _count: { select: { likes: true, comments: true } },
-};
+function postInclude(userId: string | null) {
+  return {
+    author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
+    _count: { select: { likes: true, comments: true, reposts: true } },
+    ...(userId ? {
+      likes: { where: { userId }, take: 1, select: { id: true } },
+      bookmarks: { where: { userId }, take: 1, select: { id: true } },
+      reposts: { where: { userId }, take: 1, select: { id: true } },
+    } : {}),
+  } as const;
+}
 
 function slugify(s: string): string {
   return s.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '');
@@ -14,7 +22,7 @@ function slugify(s: string): string {
 
 @Injectable()
 export class CollectionsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async create(userId: string, dto: CreateCollectionDto) {
     const slug = dto.slug ? slugify(dto.slug) : slugify(dto.title) + '-' + Date.now().toString(36);
@@ -70,12 +78,16 @@ export class CollectionsService {
       where: isUuid ? { id: idOrSlug } : { slug: idOrSlug },
       include: {
         user: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
-        items: { orderBy: { order: 'asc' }, include: { post: { include: postInclude } } },
+        items: { orderBy: { order: 'asc' }, include: { post: { include: postInclude(viewerUserId ?? null) } } },
       },
     });
     if (!col) throw new NotFoundException('Collection not found');
     const isOwner = viewerUserId && col.userId === viewerUserId;
-    const items = col.items.map((i) => ({ ...i.post, order: i.order, addedAt: i.addedAt }));
+    const items = col.items.map((i) => ({
+      ...mapPost(i.post, viewerUserId ?? null),
+      order: i.order,
+      addedAt: i.addedAt
+    }));
     return { ...col, items, isOwner };
   }
 

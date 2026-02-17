@@ -91,7 +91,7 @@
       <div v-else class="post-list" :class="{ 'post-list--grid': viewMode === 'grid' }">
       <PostCard
         v-for="(p, i) in posts"
-        :key="p.id"
+        :key="(p.repostData as any)?.id ? `repost-${(p.repostData as any).id}` : p.id"
         :post="p"
         :show-actions="canShowActions(p)"
         :show-repost="!!auth.token"
@@ -105,6 +105,10 @@
       />
       </div>
     </div>
+    <!-- Background Refreshing indicator -->
+    <div v-if="refreshing" class="refreshing-indicator" aria-hidden="true">
+      <i class="pi pi-spin pi-spinner"></i> Updating...
+    </div>
   </div>
 </template>
 
@@ -117,7 +121,14 @@ import { getCachedFeed, setCachedFeed, setCachedPosts, setCachedProfiles } from 
 import PostCard from '@/components/PostCard.vue'
 import PostCardSkeleton from '@/components/skeletons/PostCardSkeleton.vue'
 
-type FeedPost = { id: string; _count?: { likes?: number; reposts?: number; comments?: number }; likes?: unknown[]; [key: string]: unknown }
+type FeedPost = { 
+  id: string; 
+  _count?: { likes?: number; reposts?: number; comments?: number }; 
+  isLiked?: boolean;
+  isBookmarked?: boolean;
+  isReposted?: boolean;
+  [key: string]: unknown 
+}
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -129,6 +140,7 @@ const viewMode = ref<'list' | 'grid'>('list')
 const repostedIds = ref<Set<string>>(new Set())
 const filterTabsRef = ref<HTMLElement | null>(null)
 const indicatorStyle = ref<{ left: string; width: string }>({ left: '0px', width: '0px' })
+const refreshing = ref(false)
 
 function updateTabIndicator() {
   nextTick(() => {
@@ -163,11 +175,7 @@ function handleLike(postId: string, isLiked: boolean) {
     p._count = { ...p._count, likes: (p._count.likes ?? 0) + (isLiked ? 1 : -1) }
   }
   if (p) {
-    if (isLiked) {
-      p.likes = [{ id: 'local' }]
-    } else {
-      p.likes = []
-    }
+    p.isLiked = isLiked
   }
 }
 
@@ -206,15 +214,23 @@ async function load() {
   const tag = tagFilter.value.trim()
   const cacheKey = tag ? `${sort.value}|${tag}` : sort.value
   
-  // Try to load from IndexedDB cache first
+  // 1. Set loading true and clear posts immediately to show skeletons if no immediate cache
+  loading.value = true
+  posts.value = []
+  
+  // 2. Try to load from IndexedDB cache
   const cached = await getCachedFeed(cacheKey)
-  if (cached && Array.isArray(cached)) {
+  if (cached && Array.isArray(cached) && cached.length > 0) {
     posts.value = cached as FeedPost[]
     loading.value = false
-  } else {
-    loading.value = true
+    // Sync reposted status from cache
+    const ids = new Set<string>()
+    posts.value.forEach(p => { if (p.isReposted) ids.add(p.id) })
+    repostedIds.value = ids
   }
   
+  refreshing.value = !loading.value // Show subtle indicator if we are showing cached data
+
   try {
     const params = new URLSearchParams()
     if (sort.value === 'popular') params.set('sort', 'popular')
@@ -223,12 +239,22 @@ async function load() {
     const { data } = await api.get(`/feed?${params.toString()}`)
     posts.value = Array.isArray(data) ? data : []
     
+    // Sync reposted status
+    const ids = new Set<string>()
+    posts.value.forEach(p => { if (p.isReposted) ids.add(p.id) })
+    repostedIds.value = ids
+
     setCachedFeed(cacheKey, posts.value)
     setCachedPosts(posts.value)
     const authors = posts.value.map((p) => (p as { author?: unknown }).author).filter(Boolean)
     setCachedProfiles(authors)
+  } catch (err) {
+      console.error('Feed load error:', err)
+      // If error but we have cache, keep cache; otherwise it's empty
+      if (posts.value.length === 0) posts.value = []
   } finally {
     loading.value = false
+    refreshing.value = false
   }
 }
 
@@ -409,8 +435,29 @@ onUnmounted(() => {
 .feed-loading, .feed-empty {
   padding: 2rem 0;
   color: var(--text-secondary);
+  text-align: center;
 }
 .feed-empty a { font-weight: 600; }
+
+.refreshing-indicator {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  background: var(--bg-card);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-md);
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  pointer-events: none;
+  animation: fadeIn 0.3s ease-out;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
 .post-list {
   display: flex;

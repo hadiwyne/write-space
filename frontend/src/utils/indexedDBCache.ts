@@ -168,7 +168,21 @@ export async function getCachedProfile(username: string): Promise<unknown | null
 export async function setCachedProfile(username: string, data: unknown): Promise<void> {
     try {
         const db = await getDB()
-        await db.put('profiles', { username, data: sanitize(data), cachedAt: Date.now() })
+        const existing = await db.get('profiles', username)
+        let merged = data
+        if (existing && existing.data && typeof existing.data === 'object') {
+            const oldData = existing.data as Record<string, unknown>
+            const newData = data as Record<string, unknown>
+            // Only overwrite if the new data is "Fuller" or doesn't exist
+            // A full profile usually has more fields like 'bio' or '_count'
+            const hasMoreInfo = (newData._count && !oldData._count) || (newData.bio && !oldData.bio)
+            if (!hasMoreInfo && oldData._count) {
+                merged = { ...oldData, ...newData } // Basic merge, keeping older full info
+            } else {
+                merged = { ...oldData, ...newData } // Preference the new if it's full
+            }
+        }
+        await db.put('profiles', { username, data: sanitize(merged), cachedAt: Date.now() })
     } catch (err) {
         console.warn('IndexedDB setCachedProfile error:', err)
     }
@@ -183,7 +197,12 @@ export async function setCachedProfiles(profiles: unknown[]): Promise<void> {
         for (const p of profiles) {
             const username = (p as { username?: string })?.username
             if (username) {
-                await tx.store.put({ username, data: sanitize(p), cachedAt: now })
+                const existing = await tx.store.get(username)
+                let merged = p
+                if (existing && existing.data && typeof existing.data === 'object') {
+                    merged = { ...(existing.data as object), ...(p as object) }
+                }
+                await tx.store.put({ username, data: sanitize(merged), cachedAt: now })
             }
         }
 

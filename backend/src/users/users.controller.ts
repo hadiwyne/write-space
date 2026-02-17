@@ -39,7 +39,7 @@ export class UsersController {
     private readonly followService: FollowService,
     private readonly repostsService: RepostsService,
     private readonly likesService: LikesService,
-  ) {}
+  ) { }
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
@@ -124,11 +124,6 @@ export class UsersController {
     return this.usersService.deleteBadge(user.id);
   }
 
-  @Get(':username/follow/status')
-  @UseGuards(JwtAuthGuard)
-  async getFollowStatus(@Param('username') username: string, @CurrentUser() user: { id: string }) {
-    return this.followService.getFollowStatus(user.id, username);
-  }
 
   @Post(':username/follow')
   @UseGuards(JwtAuthGuard)
@@ -189,13 +184,15 @@ export class UsersController {
   }
 
   @Public()
+  @UseGuards(OptionalJwtAuthGuard)
   @Get(':username/reposts')
   getReposts(
     @Param('username') username: string,
+    @CurrentUser() user: { id: string } | null,
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ) {
-    return this.repostsService.findByUser(username, Number(limit) || 50, Number(offset) || 0);
+    return this.repostsService.findByUser(username, Number(limit) || 50, Number(offset) || 0, user?.id);
   }
 
   @Get(':username/likes')

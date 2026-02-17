@@ -1,13 +1,26 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { mapPost } from '../utils/response.utils';
 
 @Injectable()
 export class LikesService {
   constructor(
     private prisma: PrismaService,
     private notifications: NotificationsService,
-  ) {}
+  ) { }
+
+  private postInclude(userId?: string | null) {
+    return {
+      author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
+      _count: { select: { likes: true, comments: true, reposts: true } },
+      ...(userId ? {
+        likes: { where: { userId }, take: 1, select: { id: true } },
+        bookmarks: { where: { userId }, take: 1, select: { id: true } },
+        reposts: { where: { userId }, take: 1, select: { id: true } },
+      } : {}),
+    } as const;
+  }
 
   async toggle(postId: string, userId: string) {
     const post = await this.prisma.post.findUnique({ where: { id: postId } });
@@ -65,13 +78,10 @@ export class LikesService {
       skip: offset,
       include: {
         post: {
-          include: {
-            author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
-            _count: { select: { likes: true, comments: true, reposts: true } },
-          },
+          include: this.postInclude(viewerId),
         },
       },
     });
-    return items.map((l) => l.post);
+    return items.map((l) => mapPost(l.post, viewerId));
   }
 }

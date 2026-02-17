@@ -156,7 +156,12 @@
         </div>
       </div>
     </template>
-    <div v-else class="error">User not found</div>
+    <div v-else-if="!loading" class="error">User not found</div>
+    
+    <!-- Background Refreshing indicator -->
+    <div v-if="refreshing" class="refreshing-indicator" aria-hidden="true">
+      <i class="pi pi-spin pi-spinner"></i> Refreshing...
+    </div>
 
     <!-- Followers / Following modal -->
     <Teleport to="body">
@@ -261,6 +266,7 @@ const anonymousLoading = ref(false)
 const profileTab = ref<'posts' | 'liked' | 'anonymous'>('posts')
 const profileTabsRef = ref<HTMLElement | null>(null)
 const tabIndicatorStyle = ref<{ left: string; width: string }>({ left: '0px', width: '0px' })
+const refreshing = ref(false)
 
 function profileFrame(p: typeof profile.value): AvatarFrameType | null {
   return ((p as { avatarFrame?: AvatarFrameType } | null)?.avatarFrame ?? null) as AvatarFrameType | null
@@ -367,18 +373,35 @@ const modalEmptyReason = computed(() => {
 
 async function load() {
   const username = route.params.username as string
-  profileTab.value = 'posts'
-  loading.value = true
-  isFollowing.value = false
-  isRequested.value = false
+  if (!username) return
+
+  // Clear feed-specific states immediately to avoid "ghosting" previous profile's data
+  posts.value = []
   reposts.value = []
   likedPosts.value = []
   anonymousPosts.value = []
+  profileTab.value = 'posts'
+  
   const cached = await getCachedProfile(username)
   if (cached) {
     profile.value = cached as typeof profile.value
-    loading.value = false
+    // If it's a full profile (has _count), we can hide the big skeleton
+    if (profile.value && profile.value._count) {
+      loading.value = false
+      if (profile.value) {
+        isFollowing.value = !!(profile.value as any).isFollowing
+        isRequested.value = !!(profile.value as any).hasRequested
+      }
+    } else {
+      loading.value = true
+    }
+  } else {
+    profile.value = null
+    loading.value = true
   }
+
+  refreshing.value = !loading.value // If not show skeleton, show subtle refresh text
+
   try {
     const [profileRes, postsRes, repostsRes] = await Promise.all([
       api.get(`/users/${username}`),
@@ -387,24 +410,27 @@ async function load() {
     ])
     profile.value = profileRes.data
     setCachedProfile(username, profileRes.data)
+    
     posts.value = Array.isArray(postsRes.data) ? postsRes.data : []
     reposts.value = Array.isArray(repostsRes.data) ? repostsRes.data : []
+    
+    // Follow status is now consolidated in profileRes.data
+    // Follow status is now consolidated as flat flags
+    if (profile.value) {
+      isFollowing.value = !!(profile.value as any).isFollowing
+      isRequested.value = !!(profile.value as any).hasRequested
+    }
+
     if (Array.isArray(postsRes.data) && postsRes.data.length === 0 && username) {
-      const fallback = await api.get('/feed').then((r) => r.data).catch(() => [])
-      const byUser = fallback.filter((p: { author?: { username?: string } }) => p.author?.username === username)
-      posts.value = byUser
+      // Fallback logic for old data if needed, but usually empty means empty
+      // const fallback = ...
     }
-    if (auth.isLoggedIn && profile.value && auth.user?.username !== profile.value.username) {
-      const statusRes = await api.get(`/users/${username}/follow/status`).catch(() => ({ data: { following: false, requested: false } }))
-      isFollowing.value = statusRes.data?.following ?? false
-      isRequested.value = statusRes.data?.requested ?? false
-    }
-  } catch {
-    profile.value = null
-    posts.value = []
-    reposts.value = []
+  } catch (err) {
+    console.error('Profile load error:', err)
+    if (!profile.value) profile.value = null
   } finally {
     loading.value = false
+    refreshing.value = false
   }
 }
 
@@ -616,8 +642,27 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.profile-page { padding: 0; }
-.loading, .error { padding: clamp(1rem, 4vw, 2rem) 0; color: var(--text-secondary); }
+.profile-page { padding: 0; position: relative; }
+.loading, .error { padding: clamp(1rem, 4vw, 2rem) 0; color: var(--text-secondary); text-align: center; }
+.refreshing-indicator {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  background: var(--bg-card);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-md);
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  pointer-events: none;
+  animation: fadeIn 0.3s ease-out;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 .profile-header {
   text-align: center;
   padding: clamp(1rem, 4vw, 2rem);

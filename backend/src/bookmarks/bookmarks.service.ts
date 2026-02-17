@@ -1,14 +1,22 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { mapPost } from '../utils/response.utils';
 
-const postInclude = {
-  author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
-  _count: { select: { likes: true, comments: true } },
-};
+function postInclude(userId: string | null) {
+  return {
+    author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
+    _count: { select: { likes: true, comments: true, reposts: true } },
+    ...(userId ? {
+      likes: { where: { userId }, take: 1, select: { id: true } },
+      bookmarks: { where: { userId }, take: 1, select: { id: true } },
+      reposts: { where: { userId }, take: 1, select: { id: true } },
+    } : {}),
+  } as const;
+}
 
 @Injectable()
 export class BookmarksService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async toggle(postId: string, userId: string) {
     const post = await this.prisma.post.findUnique({ where: { id: postId } });
@@ -30,9 +38,12 @@ export class BookmarksService {
       orderBy: { createdAt: 'desc' },
       take: limit,
       skip: offset,
-      include: { post: { include: postInclude } },
+      include: { post: { include: postInclude(userId) } },
     });
-    return items.map((b) => ({ ...b.post, bookmarkedAt: b.createdAt }));
+    return items.map((b) => ({
+      ...mapPost(b.post, userId),
+      bookmarkedAt: b.createdAt
+    }));
   }
 
   async userHasBookmark(postId: string, userId: string): Promise<boolean> {

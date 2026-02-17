@@ -1,5 +1,11 @@
 <template>
   <article class="card" :style="{ animationDelay }">
+    <div v-if="post.repostData" class="card-repost-header">
+      <i class="pi pi-refresh"></i>
+      <router-link :to="'/u/' + post.repostData.user?.username" class="reposter-link" @click.stop>
+        {{ post.repostData.user?.displayName || post.repostData.user?.username }} reposted
+      </router-link>
+    </div>
     <header class="card-header">
       <router-link
         v-if="!post.isAnonymous && post.author?.username"
@@ -199,9 +205,7 @@ const anonAvatarUrl = computed(() => {
   return getAnonAvatarUrl(props.post.id)
 })
 
-const likedFromApi = computed(() =>
-  !!(props.post.likes && Array.isArray(props.post.likes) && props.post.likes.length > 0)
-)
+const likedFromApi = computed(() => !!props.post.isLiked)
 const liked = computed(() => likedFromApi.value || likedStore.has(props.post.id))
 const likeCount = ref((props.post._count && props.post._count.likes) || 0)
 
@@ -210,7 +214,7 @@ watch(
   (post) => {
     likeCount.value = (post._count && post._count.likes) || 0
     // Sync API liked state to store
-    if (post.likes && Array.isArray(post.likes) && post.likes.length > 0) {
+    if (post.isLiked) {
       likedStore.setLiked(post.id, true)
     }
   },
@@ -276,7 +280,8 @@ function onDelete() {
 function onUnarchive() {
   emit('unarchive', props.post.id)
 }
-function onRepost() {
+async function onRepost() {
+  if (!auth.token || !props.post.id) return
   emit('repost', props.post.id)
 }
 /** Extract image URLs from post (rendered HTML or markdown) for thumbnail preview. Max 4. */
@@ -354,6 +359,27 @@ function formatDate(s: string | undefined) {
   border: 2px solid var(--border-light);
   transition: all 0.2s ease;
   animation: fadeInUp 0.6s ease-out both;
+}
+.card-repost-header {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin-bottom: 0.875rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-primary);
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  color: var(--accent-primary);
+  font-weight: 700;
+  border: 1px dashed var(--border-medium);
+}
+.reposter-link {
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+.reposter-link:hover {
+  color: var(--accent-primary);
+  text-decoration: underline;
 }
 .card::after {
   content: '';

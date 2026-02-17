@@ -8,6 +8,7 @@ import type { SharpOptions } from 'sharp';
 // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
 const DOMPurify = require('isomorphic-dompurify') as { sanitize: (html: string, options?: object) => string };
 import { PrismaService } from '../prisma/prisma.service';
+import { mapUser } from '../utils/response.utils';
 import { RegisterDto } from '../auth/dto/register.dto';
 import { UpdateProfileDto, PRIVACY_VISIBILITY, WHO_CAN_FOLLOW_ME } from './dto/update-profile.dto';
 
@@ -89,7 +90,7 @@ export class UsersService {
   constructor(
     private prisma: PrismaService,
     private config: ConfigService,
-  ) {}
+  ) { }
 
   /** For auth: returns only id, email, passwordHash so we can verify then fetch user without hash. */
   async findByEmail(email: string) {
@@ -165,6 +166,16 @@ export class UsersService {
         whoCanSeeFollowers: true,
         whoCanFollowMe: true,
         _count: { select: { followers: true, following: true, reposts: true, likes: true } },
+        ...(viewerId ? {
+          followRequestsReceived: {
+            where: { fromUserId: viewerId },
+            select: { status: true },
+          },
+          followers: {
+            where: { followerId: viewerId },
+            select: { id: true },
+          },
+        } : {}),
       },
     });
     if (!user) return null;
@@ -180,18 +191,21 @@ export class UsersService {
     const isOwnProfile = viewerId === user.id;
     const anonymousPostsCount = isOwnProfile
       ? await this.prisma.post.count({
-          where: {
-            authorId: user.id,
-            isPublished: true,
-            archivedAt: null,
-            isAnonymous: true,
-          },
-        })
+        where: {
+          authorId: user.id,
+          isPublished: true,
+          archivedAt: null,
+          isAnonymous: true,
+        },
+      })
       : 0;
+
+    const mapped = mapUser(user, viewerId ?? null);
+
     return {
-      ...user,
+      ...mapped,
       _count: {
-        ...user._count,
+        ...mapped._count,
         posts: postsCount,
         ...(isOwnProfile ? { anonymousPosts: anonymousPostsCount } : {}),
       },
@@ -219,9 +233,9 @@ export class UsersService {
     const profileHTML =
       dto.profileHTML !== undefined
         ? DOMPurify.sanitize(dto.profileHTML, {
-            ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'h1', 'h2', 'h3', 'ul', 'ol', 'li', 'a', 'img', 'blockquote', 'span', 'div'],
-            ALLOWED_ATTR: ['href', 'src', 'alt', 'class'],
-          })
+          ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'h1', 'h2', 'h3', 'ul', 'ol', 'li', 'a', 'img', 'blockquote', 'span', 'div'],
+          ALLOWED_ATTR: ['href', 'src', 'alt', 'class'],
+        })
         : undefined;
     const allowed = ['circle', 'square', 'rounded', 'squircle']
     const avatarShape =
