@@ -38,21 +38,26 @@ export const useNotificationsStore = defineStore('notifications', () => {
 
   function connectSocket(token: string) {
     if (socket?.connected) return
-    const origin = typeof window !== 'undefined' ? window.location.origin : ''
-    // In dev, Vite may not proxy /socket.io; avoid connection attempts that can cause reloads
-    const isDev = import.meta.env.DEV && !import.meta.env.VITE_API_URL
-    if (isDev) return
-    socket = io(`${origin}/notifications`, {
+    console.log('[Presence] Attempting to connect socket...');
+    socket = io('/notifications', {
       path: '/socket.io',
       auth: { token },
       transports: ['websocket', 'polling'],
     })
+    console.log('[Presence] Socket object created:', socket.id || 'initial');
     socket.on('notification', (payload: NotificationItem) => {
       list.value = [payload, ...list.value].slice(0, 50)
       unreadCount.value += 1
     })
     socket.on('connect', () => {
+      console.log('[Presence] Real-time connection established');
       fetchUnreadCount()
+    })
+    socket.on('connect_error', (err) => {
+      console.error('[Presence] Connection error:', err.message);
+    })
+    socket.on('disconnect', (reason) => {
+      console.log('[Presence] Disconnected:', reason);
     })
   }
 

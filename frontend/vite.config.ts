@@ -241,8 +241,8 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
-      // Uncomment to proxy Socket.IO (real-time notifications). Can cause noisy ws errors when backend restarts.
-      // '/socket.io': { target: 'http://localhost:3000', ws: true },
+      // Proxy Socket.IO (real-time notifications)
+      '/socket.io': { target: 'http://localhost:3000', ws: true },
     },
   },
 })
