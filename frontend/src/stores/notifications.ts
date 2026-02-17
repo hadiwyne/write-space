@@ -39,7 +39,9 @@ export const useNotificationsStore = defineStore('notifications', () => {
   function connectSocket(token: string) {
     if (socket?.connected) return
     console.log('[Presence] Attempting to connect socket...');
-    socket = io('/notifications', {
+    const apiUrl = import.meta.env.VITE_API_URL || ''
+    console.log('[Presence] Connecting to socket at:', apiUrl || 'relative path')
+    socket = io(apiUrl || undefined, {
       path: '/socket.io',
       auth: { token },
       transports: ['websocket', 'polling'],

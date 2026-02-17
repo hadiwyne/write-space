@@ -172,7 +172,7 @@
 
     <footer class="dark-void-status-bar" :class="{ 'status-bar-hidden': statusBarState.hidden }" aria-live="polite">
       <span class="dark-void-status-left">{{ statusLeft }}</span>
-      <span class="dark-void-status-online">ONLINE NOW: {{ Math.max(0, onlineCount - 1).toLocaleString() }} SOULS</span>
+      <span class="dark-void-status-online">ONLINE NOW: {{ onlineCount.toLocaleString() }} SOULS</span>
       <span class="dark-void-status-right">{{ statusRight }}</span>
     </footer>
   </div>
@@ -297,10 +297,19 @@ function onSidebarSearch() {
 async function fetchOnlineCount() {
   try {
     // Add cache-busting timestamp to bypass browser/disk cache
-    const { data } = await api.get<{ count: number }>(`/presence/online-count?t=${Date.now()}`, {
+    const response = await api.get<{ count: number }>(`/presence/online-count?t=${Date.now()}`, {
       // @ts-ignore - axios-cache-interceptor bypass
       cache: false
     })
+    
+    // Check if we got HTML back (Netlify 404/index.html fallback)
+    if (typeof response.data === 'string' && (response.data as string).startsWith('<!DOCTYPE html>')) {
+      console.error('[Presence] Received HTML instead of JSON. VITE_API_URL is likely missing or incorrect.')
+      onlineCount.value = 0
+      return
+    }
+
+    const data = response.data
     onlineCount.value = typeof data?.count === 'number' ? data.count : 0
   } catch {
     onlineCount.value = 0
