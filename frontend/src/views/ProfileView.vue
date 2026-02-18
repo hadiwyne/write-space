@@ -18,7 +18,7 @@
         </div>
         <h1>{{ profile.displayName || profile.username }}</h1>
         <p v-if="profile.bio" class="bio">{{ profile.bio }}</p>
-        <div v-if="profile.profileHTML" class="profile-html" v-html="profile.profileHTML"></div>
+        <div v-if="profile.profileHTML" class="profile-html" v-html="resolvedProfileHtml"></div>
         <div class="profile-stats">
           <button type="button" class="stat-item" @click="scrollToPosts">
             <span class="stat-value">{{ totalPosts }}</span>
@@ -231,7 +231,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
-import { api, avatarSrc } from '@/api/client'
+import { api, avatarSrc, resolveContentImageUrls } from '@/api/client'
 import { avatarShapeClass } from '@/utils/avatar'
 import AvatarFrame from '@/components/AvatarFrame.vue'
 import type { AvatarFrame as AvatarFrameType } from '@/types/avatarFrame'
@@ -343,6 +343,7 @@ const confirmMessage = computed(() =>
     : 'Archive this post? It will be hidden from the feed and your profile. You can restore it later.'
 )
 const isOwnProfile = computed(() => auth.user && profile.value && auth.user.username === profile.value.username)
+const resolvedProfileHtml = computed(() => resolveContentImageUrls(profile.value?.profileHTML ?? ''))
 const canSeeLikes = computed(() => {
   const p = profile.value
   if (!p) return false

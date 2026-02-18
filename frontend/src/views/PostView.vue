@@ -11,7 +11,7 @@
           <span v-else class="author author-anonymous">{{ post.anonymousAlias || 'Anonymous' }}</span>
           <span class="date">{{ formatDate(post.publishedAt) }}</span>
         </div>
-        <div class="post-content" v-html="post.renderedHTML"></div>
+        <div class="post-content" v-html="resolvedPostHtml"></div>
         <div v-if="(post.tags?.length || 0) > 0" class="post-tags">
           <router-link v-for="t in post.tags" :key="t" :to="`/feed?tag=${t}`" class="tag">#{{ t }}</router-link>
         </div>
@@ -144,7 +144,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRoute } from 'vue-router'
-import { api, avatarSrc } from '@/api/client'
+import { api, avatarSrc, resolveContentImageUrls } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import { useLikedPostsStore } from '@/stores/likedPosts'
 import { getCachedPost, setCachedPost } from '@/utils/indexedDBCache'
@@ -188,6 +188,8 @@ const post = ref<{
 function onPollUpdate(updated: Record<string, unknown>) {
   if (post.value) post.value = updated as typeof post.value
 }
+
+const resolvedPostHtml = computed(() => resolveContentImageUrls(post.value?.renderedHTML ?? ''))
 
 const isOwnPost = computed(() => {
   const u = auth.user
