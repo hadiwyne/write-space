@@ -31,6 +31,8 @@ export type PostCardStyle = {
   borderColor?: string
   borderWidth?: number
   borderStyle?: PostCardBorderStyle
+  /** Border image source (URL). If set, overrides borderColor/Style for the border visual (though width is still used). */
+  borderImage?: string
   gradient?: {
     colors: string[]
     angle?: number

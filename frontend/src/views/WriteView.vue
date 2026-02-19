@@ -271,6 +271,13 @@
                 <select v-model="cardStyleForm.borderStyle" class="card-style-select card-style-select-sm">
                   <option v-for="(label, key) in BORDER_STYLE_LABELS" :key="key" :value="key">{{ label }}</option>
                 </select>
+                <div class="card-style-upload-row">
+                  <input ref="borderImageFileInputRef" type="file" accept="image/*" class="hidden" @change="onCardBorderImageUpload" />
+                  <button type="button" class="btn btn-sm btn-outline" @click="triggerBorderImageFileInput">Image border</button>
+                  <input v-model="cardStyleForm.borderImage" type="url" placeholder="Image URL for border" class="card-style-input card-style-input-url" />
+                </div>
+                <!-- Optional hint for using border images effectively? -->
+                <p v-if="cardStyleForm.borderImage" class="card-style-hint">Border width behaves as the slice width</p>
               </div>
               <div class="card-style-group">
                 <label class="card-style-label">Gradient</label>
@@ -572,6 +579,7 @@ type CardStyleFormState = Record<string, unknown> & {
   overlayGifUrl?: string
   buttonSize?: string
   animation?: string
+  borderImage?: string
 }
 const cardStyleForm = ref<CardStyleFormState | null>(null)
 
@@ -608,6 +616,7 @@ function isCardStyleDefault(form: CardStyleFormState): boolean {
   if (form.overlayGifUrl && form.overlayGifUrl.trim()) return false
   if (form.buttonSize && form.buttonSize !== 'default') return false
   if (form.animation && form.animation !== 'none') return false
+  if (form.borderImage && form.borderImage.trim()) return false
   return true
 }
 
@@ -639,6 +648,7 @@ function buildCardStylePayload(form: CardStyleFormState | null): PostCardStyle |
   if (form.overlayGifUrl?.trim()) out.overlayGifUrl = form.overlayGifUrl.trim()
   if (form.buttonSize && form.buttonSize !== 'default') out.buttonSize = form.buttonSize as PostCardStyle['buttonSize']
   if (form.animation && form.animation !== 'none') out.animation = form.animation as PostCardStyle['animation']
+  if (form.borderImage?.trim()) out.borderImage = form.borderImage.trim()
   return Object.keys(out).length ? out : undefined
 }
 
@@ -665,6 +675,7 @@ const gradientColorsStr = computed({
 
 const badgeFileInputRef = ref<HTMLInputElement | null>(null)
 const overlayGifFileInputRef = ref<HTMLInputElement | null>(null)
+const borderImageFileInputRef = ref<HTMLInputElement | null>(null)
 const editingCardColorKey = ref<string | null>(null)
 const editingCardHex = ref('#000000')
 const editingCardHsl = ref({ h: 0, s: 0, l: 0 })
@@ -854,6 +865,30 @@ async function onCardOverlayGifUpload(e: Event) {
     error.value = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Upload failed'
   }
 }
+
+async function onCardBorderImageUpload(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file || !cardStyleForm.value) return
+  if (file.size > MAX_IMAGE_SIZE_BYTES) {
+    error.value = 'Image must be 5 MB or smaller.'
+    return
+  }
+  try {
+    const formData = new FormData()
+    formData.append('image', file)
+    const { data } = await api.post<{ url: string }>('/posts/upload-image', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+    cardStyleForm.value.borderImage = data.url
+  } catch (err) {
+    error.value = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Upload failed'
+  }
+}
+
+function triggerBorderImageFileInput() {
+  borderImageFileInputRef.value?.click()
+}
+
 
 const previewPost = computed(() => {
   const style = cardStyleForm.value != null ? (cardStyleForm.value as PostCardStyle) : undefined
@@ -1586,6 +1621,7 @@ function resetCardStyle() {
   flex-wrap: wrap;
 }
 .card-style-input-url { flex: 1; min-width: 10rem; }
+.card-style-hint { font-size: 0.75rem; color: var(--text-tertiary); margin-top: 0.25rem; }
 
 /* Modal backdrop shared styles (used by Teleported dialogs)
    - make global so they apply even when the element is moved out of the

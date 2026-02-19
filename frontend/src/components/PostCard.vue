@@ -312,6 +312,11 @@ const cardWrapperStyle = computed(() => {
   if (s.borderColor) base.borderColor = s.borderColor
   if (s.borderWidth != null) base.borderWidth = `${s.borderWidth}px`
   if (s.borderStyle) base.borderStyle = s.borderStyle
+  if (s.borderImage) {
+    base.borderImageSource = `url(${s.borderImage})`
+    base.borderImageSlice = '30' // Default slice, maybe exposing this is too complex for now
+    base.borderImageRepeat = 'stretch' // Default repeat
+  }
   if (s.boxShadow) base.boxShadow = s.boxShadow
   return base
 })
