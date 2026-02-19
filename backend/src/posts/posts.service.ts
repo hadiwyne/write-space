@@ -125,6 +125,7 @@ export class PostsService {
             visibility: dto.visibility ?? 'PUBLIC',
             isAnonymous,
             anonymousAlias,
+            cardStyle: (dto.cardStyle ?? undefined) as Prisma.InputJsonValue | undefined,
           },
         });
         await tx.poll.create({
@@ -165,6 +166,7 @@ export class PostsService {
         visibility: dto.visibility ?? 'PUBLIC',
         isAnonymous,
         anonymousAlias,
+        cardStyle: (dto.cardStyle ?? undefined) as Prisma.InputJsonValue | undefined,
       },
       include: { author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } } },
     });
@@ -283,6 +285,7 @@ export class PostsService {
           publishedAt: dto.isPublished ? new Date() : post.publishedAt,
         }),
         ...(dto.visibility != null && { visibility: dto.visibility }),
+        ...(dto.cardStyle !== undefined && { cardStyle: dto.cardStyle as Prisma.InputJsonValue }),
       },
       include: { author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } } },
     });

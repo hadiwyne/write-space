@@ -1,6 +1,6 @@
-import { IsString, IsOptional, IsBoolean, IsArray, IsEnum, MinLength, MaxLength, ValidateNested } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsArray, IsEnum, IsObject, MinLength, MaxLength, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ContentType, PostVisibility } from '@prisma/client';
+import { ContentType, PostVisibility, Prisma } from '@prisma/client';
 import { CreatePostPollDto } from './create-post-poll.dto';
 
 export class CreatePostDto {
@@ -41,4 +41,8 @@ export class CreatePostDto {
   @ValidateNested()
   @Type(() => CreatePostPollDto)
   poll?: CreatePostPollDto;
+
+  @IsOptional()
+  @IsObject()
+  cardStyle?: Prisma.InputJsonValue;
 }

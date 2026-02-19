@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { CacheControlInterceptor } from './common/interceptors/cache.interceptor';
+import { AbsoluteUrlInterceptor } from './common/interceptors/absolute-url.interceptor';
+import { AppController } from './app.controller';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
@@ -21,6 +23,7 @@ import { ThemesModule } from './themes/themes.module';
 import { PresenceModule } from './presence/presence.module';
 
 @Module({
+  controllers: [AppController],
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
@@ -43,6 +46,7 @@ import { PresenceModule } from './presence/presence.module';
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_INTERCEPTOR, useValue: new CacheControlInterceptor(300) }, // 5 min cache headers
+    { provide: APP_INTERCEPTOR, useClass: AbsoluteUrlInterceptor }, // rewrite relative image URLs to absolute for cross-origin frontends
   ],
 })
 export class AppModule { }

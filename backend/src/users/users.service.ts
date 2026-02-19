@@ -5,8 +5,7 @@ import * as bcrypt from 'bcrypt';
 // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
 const sharp = require('sharp') as typeof import('sharp');
 import type { SharpOptions } from 'sharp';
-// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
-const DOMPurify = require('isomorphic-dompurify') as { sanitize: (html: string, options?: object) => string };
+import sanitizeHtml from 'sanitize-html';
 import { PrismaService } from '../prisma/prisma.service';
 import { mapUser } from '../utils/response.utils';
 import { RegisterDto } from '../auth/dto/register.dto';
@@ -232,9 +231,14 @@ export class UsersService {
     if (!user) throw new NotFoundException('User not found');
     const profileHTML =
       dto.profileHTML !== undefined
-        ? DOMPurify.sanitize(dto.profileHTML, {
-          ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'h1', 'h2', 'h3', 'ul', 'ol', 'li', 'a', 'img', 'blockquote', 'span', 'div'],
-          ALLOWED_ATTR: ['href', 'src', 'alt', 'class'],
+        ? sanitizeHtml(dto.profileHTML, {
+          allowedTags: ['p', 'br', 'strong', 'em', 'h1', 'h2', 'h3', 'ul', 'ol', 'li', 'a', 'img', 'blockquote', 'span', 'div'],
+          allowedAttributes: {
+            a: ['href', 'class'],
+            img: ['src', 'alt', 'class'],
+            p: ['class'], strong: ['class'], em: ['class'], span: ['class'], div: ['class'],
+            h1: ['class'], h2: ['class'], h3: ['class'], ul: ['class'], ol: ['class'], li: ['class'], blockquote: ['class'],
+          },
         })
         : undefined;
     const allowed = ['circle', 'square', 'rounded', 'squircle']

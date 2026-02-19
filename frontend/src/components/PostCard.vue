@@ -1,5 +1,21 @@
 <template>
-  <article class="card" :style="{ animationDelay }">
+  <article
+    class="card"
+    :class="[cardShapeClass, cardAnimationClass, cardButtonSizeClass, { 'card--bg-opacity': cardHasBgOpacity }]"
+    :style="cardWrapperStyle"
+  >
+    <div v-if="cardStyle?.overlayGifUrl" class="card-overlay-gif" aria-hidden="true">
+      <img :src="cardStyle.overlayGifUrl" alt="" class="card-overlay-gif-img" />
+    </div>
+    <div
+      v-if="cardBadgeDisplay"
+      class="card-badge"
+      :class="['card-badge--' + (cardStyle?.badgePosition || 'top-right'), cardBadgeMovementClass]"
+      aria-hidden="true"
+    >
+      <img v-if="cardBadgeDisplay === 'custom' && cardStyle?.badgeImageUrl" :src="cardStyle.badgeImageUrl" alt="" class="card-badge-img" />
+      <span v-else class="card-badge-emoji">{{ cardBadgeEmoji }}</span>
+    </div>
     <div v-if="post.repostData" class="card-repost-header">
       <i class="pi pi-refresh"></i>
       <router-link :to="'/u/' + post.repostData.user?.username" class="reposter-link" @click.stop>
@@ -99,7 +115,7 @@
       />
     </div>
 
-    <footer class="card-footer">
+    <footer class="card-footer" :class="cardFooterSizeClass">
       <button
         v-if="canLike"
         type="button"
@@ -164,6 +180,8 @@ import { avatarShapeClass } from '@/utils/avatar'
 import AvatarFrame from '@/components/AvatarFrame.vue'
 import PollBlock from '@/components/PollBlock.vue'
 import type { AvatarFrame as AvatarFrameType } from '@/types/avatarFrame'
+import type { PostCardStyle } from '@/types/postCardStyle'
+import { BADGE_EMOJI } from '@/types/postCardStyle'
 import { useAuthStore } from '@/stores/auth'
 import { useLikedPostsStore } from '@/stores/likedPosts'
 
@@ -232,6 +250,112 @@ type PollBlockPost = {
   }
 }
 const postForPollBlock = computed(() => props.post as PollBlockPost)
+
+const cardStyle = computed((): PostCardStyle => {
+  const raw = (props.post as { cardStyle?: PostCardStyle }).cardStyle
+  return raw && typeof raw === 'object' ? raw : null
+})
+
+function buildCardBackground(s: NonNullable<PostCardStyle>): string | undefined {
+  const g = s.gradient
+  if (g?.colors?.length) {
+    if (g.conic) return `conic-gradient(from ${g.angle ?? 0}deg, ${g.colors.join(', ')})`
+    return `linear-gradient(${g.angle ?? 180}deg, ${g.colors.join(', ')})`
+  }
+  if (s.backgroundColor) return s.backgroundColor
+  return undefined
+}
+
+/** For shimmer/gradient-shift we need a gradient + background-size. If only solid color, use a two-tone gradient. */
+function getBackgroundForAnimation(
+  s: NonNullable<PostCardStyle>,
+  bg: string | undefined
+): { background: string; backgroundSize?: string } {
+  const anim = s.animation
+  if (anim !== 'shimmer' && anim !== 'gradient-shift') return { background: bg ?? '' }
+  if (bg && (s.gradient?.colors?.length ?? 0) > 0) {
+    return {
+      background: bg,
+      backgroundSize: anim === 'shimmer' ? '200% 100%' : '200% 200%',
+    }
+  }
+  const color = s.backgroundColor || 'var(--bg-card, #fff)'
+  const fallbackGradient = `linear-gradient(90deg, ${color} 0%, rgba(255,255,255,0.7) 50%, ${color} 100%)`
+  return {
+    background: fallbackGradient,
+    backgroundSize: anim === 'shimmer' ? '200% 100%' : '200% 200%',
+  }
+}
+
+const cardHasBgOpacity = computed(() => {
+  const s = cardStyle.value
+  return s && s.backgroundOpacity != null && s.backgroundOpacity !== 1
+})
+
+const cardWrapperStyle = computed(() => {
+  const s = cardStyle.value
+  const base: Record<string, string> = { animationDelay: props.animationDelay }
+  if (!s) return base
+  let bg = buildCardBackground(s)
+  const animBg = getBackgroundForAnimation(s, bg)
+  if (cardHasBgOpacity.value) {
+    base.background = 'transparent'
+    base['--card-bg'] = animBg.background
+    base['--card-bg-opacity'] = String(s.backgroundOpacity)
+    base['--card-bg-size'] = animBg.backgroundSize || 'auto'
+  } else {
+    if (animBg.background) base.background = animBg.background
+    if (animBg.backgroundSize) base.backgroundSize = animBg.backgroundSize
+  }
+  if (s.backgroundImage) base.backgroundImage = s.backgroundImage
+  if (s.opacity != null && s.opacity !== 1) base.opacity = String(s.opacity)
+  if (s.borderColor) base.borderColor = s.borderColor
+  if (s.borderWidth != null) base.borderWidth = `${s.borderWidth}px`
+  if (s.borderStyle) base.borderStyle = s.borderStyle
+  if (s.boxShadow) base.boxShadow = s.boxShadow
+  return base
+})
+
+const cardShapeClass = computed(() => {
+  const shape = cardStyle.value?.shape
+  if (!shape || shape === 'default') return ''
+  return `card--shape-${shape}`
+})
+
+const cardAnimationClass = computed(() => {
+  const anim = cardStyle.value?.animation
+  if (!anim || anim === 'none') return ''
+  return `card--animation-${anim}`
+})
+
+const cardButtonSizeClass = computed(() => {
+  const size = cardStyle.value?.buttonSize
+  if (!size || size === 'default') return ''
+  return `card--buttons-${size}`
+})
+
+const cardFooterSizeClass = computed(() => {
+  const size = cardStyle.value?.buttonSize
+  if (!size || size === 'default') return ''
+  return `card-footer--${size}`
+})
+
+const cardBadgeDisplay = computed(() => {
+  const b = cardStyle.value?.badge
+  return b && b !== 'none' ? b : null
+})
+
+const cardBadgeMovementClass = computed(() => {
+  const m = cardStyle.value?.badgeMovement
+  if (!m || m === 'none') return ''
+  return `card-badge--${m}`
+})
+
+const cardBadgeEmoji = computed(() => {
+  const b = cardBadgeDisplay.value
+  if (!b || b === 'custom') return ''
+  return BADGE_EMOJI[b as keyof typeof BADGE_EMOJI] ?? '✨'
+})
 
 const emit = defineEmits<{
   (e: 'archive', postId: string): void
@@ -392,11 +516,141 @@ function formatDate(s: string | undefined) {
   opacity: 0;
   transition: opacity 0.2s ease;
 }
+.card.card--bg-opacity::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: var(--card-bg);
+  background-size: var(--card-bg-size, auto);
+  opacity: var(--card-bg-opacity, 1);
+  border-radius: inherit;
+  pointer-events: none;
+}
+.card.card--bg-opacity .card-repost-header,
+.card.card--bg-opacity .card-header,
+.card.card--bg-opacity .card-body,
+.card.card--bg-opacity .card-footer,
+.card.card--bg-opacity .card-overlay-gif,
+.card.card--bg-opacity .card-badge {
+  position: relative;
+  z-index: 1;
+}
 .card:hover {
   border-color: var(--accent-secondary);
 }
 .card:hover::after {
   opacity: 1;
+}
+
+/* Card style: shape */
+.card--shape-rounded { border-radius: 1rem; }
+.card--shape-square { border-radius: 0; }
+.card--shape-squircle { border-radius: 20%; }
+.card--shape-pill { border-radius: 9999px; }
+
+/* Card style: surface animations (no card movement) */
+.card--animation-shimmer {
+  background-size: 200% 100%;
+  animation: card-shimmer 3s ease-in-out infinite;
+}
+@keyframes card-shimmer {
+  0%, 100% { background-position: 100% 0; }
+  50% { background-position: 0 0; }
+}
+.card--animation-glitter {
+  position: relative;
+}
+.card--animation-glitter::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle at 20% 30%, rgba(255,255,255,0.4) 0%, transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(255,255,255,0.3) 0%, transparent 35%);
+  pointer-events: none;
+  animation: card-glitter 4s ease-in-out infinite;
+}
+@keyframes card-glitter {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+.card--animation-gradient-shift {
+  background-size: 200% 200%;
+  animation: card-gradient-shift 6s ease infinite;
+}
+@keyframes card-gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Card style: footer button size */
+.card--buttons-small .card-footer .action-stat,
+.card--buttons-small .card-footer .action-btn {
+  padding: 0.375rem 0.625rem;
+  font-size: 0.8125rem;
+  gap: 0.375rem;
+}
+.card--buttons-small .card-footer .action-stat .pi,
+.card--buttons-small .card-footer .action-btn .pi { font-size: 0.9375rem; }
+.card--buttons-large .card-footer .action-stat,
+.card--buttons-large .card-footer .action-btn {
+  padding: 0.75rem 1.25rem;
+  font-size: 1rem;
+  gap: 0.625rem;
+}
+.card--buttons-large .card-footer .action-stat .pi,
+.card--buttons-large .card-footer .action-btn .pi { font-size: 1.25rem; }
+
+/* Overlay GIF (transparent) */
+.card-overlay-gif {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+}
+.card-overlay-gif-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.5;
+}
+
+/* Card badge (corner) */
+.card-badge {
+  position: absolute;
+  z-index: 3;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.125rem;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
+}
+.card-badge--top-right { top: 0.75rem; right: 0.75rem; }
+.card-badge--top-left { top: 0.75rem; left: 0.75rem; }
+.card-badge--bottom-right { bottom: 0.75rem; right: 0.75rem; }
+.card-badge--bottom-left { bottom: 0.75rem; left: 0.75rem; }
+.card-badge-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.card-badge--float {
+  animation: card-badge-float 2.5s ease-in-out infinite;
+}
+.card-badge--orbit {
+  animation: card-badge-orbit 8s linear infinite;
+}
+@keyframes card-badge-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+@keyframes card-badge-orbit {
+  from { transform: rotate(0deg) translateX(12px) rotate(0deg); }
+  to { transform: rotate(360deg) translateX(12px) rotate(-360deg); }
 }
 
 .card-author {

@@ -2178,6 +2178,117 @@ html.ui-theme-dark-void .dark-void-main .write-page .btn-ghost {
 html.ui-theme-dark-void .dark-void-main .write-page .btn-ghost:hover {
   color: var(--dark-void-text);
 }
+/* Modify your post card – Dark Void */
+html.ui-theme-dark-void .dark-void-main .write-page .card-style-toggle,
+html.ui-theme-dark-void .dark-void-main .edit-page .card-style-toggle {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .card-style-toggle:hover,
+html.ui-theme-dark-void .dark-void-main .edit-page .card-style-toggle:hover {
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .card-style-toggle:focus,
+html.ui-theme-dark-void .dark-void-main .edit-page .card-style-toggle:focus {
+  border-color: var(--dark-void-text-muted);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .card-style-chevron,
+html.ui-theme-dark-void .dark-void-main .edit-page .card-style-chevron {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .card-style-panel,
+html.ui-theme-dark-void .dark-void-main .edit-page .card-style-panel {
+  background: var(--dark-void-bg);
+  border-color: var(--dark-void-border);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .card-style-label,
+html.ui-theme-dark-void .dark-void-main .edit-page .card-style-label {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .card-style-select,
+html.ui-theme-dark-void .dark-void-main .edit-page .card-style-select {
+  background: var(--dark-void-card);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .card-style-select:hover,
+html.ui-theme-dark-void .dark-void-main .edit-page .card-style-select:hover {
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .card-style-select:focus,
+html.ui-theme-dark-void .dark-void-main .edit-page .card-style-select:focus {
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .card-style-input,
+html.ui-theme-dark-void .dark-void-main .edit-page .card-style-input {
+  background: var(--dark-void-card);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  border-radius: 0 !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .card-style-input::placeholder,
+html.ui-theme-dark-void .dark-void-main .edit-page .card-style-input::placeholder {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .card-style-input:focus,
+html.ui-theme-dark-void .dark-void-main .edit-page .card-style-input:focus {
+  border-color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .card-style-check,
+html.ui-theme-dark-void .dark-void-main .edit-page .card-style-check {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .card-style-check span,
+html.ui-theme-dark-void .dark-void-main .edit-page .card-style-check span {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .card-style-check input[type="checkbox"],
+html.ui-theme-dark-void .dark-void-main .edit-page .card-style-check input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 2px solid var(--dark-void-border);
+  border-radius: 0 !important;
+  background: var(--dark-void-bg);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .card-style-check input[type="checkbox"]:checked,
+html.ui-theme-dark-void .dark-void-main .edit-page .card-style-check input[type="checkbox"]:checked {
+  background: var(--dark-void-text-muted);
+  border-color: var(--dark-void-text-muted);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 6l3 3 5-6'/%3E%3C/svg%3E");
+  background-size: 0.75rem 0.75rem;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .card-style-preview-wrap,
+html.ui-theme-dark-void .dark-void-main .edit-page .card-style-preview-wrap {
+  border-top-color: var(--dark-void-border);
+}
+html.ui-theme-dark-void .dark-void-main .write-page .card-style-preview-label,
+html.ui-theme-dark-void .dark-void-main .edit-page .card-style-preview-label {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .card-style-preview-inner,
+html.ui-theme-dark-void .dark-void-main .edit-page .card-style-preview-inner {
+  background: var(--dark-void-card);
+  border-color: var(--dark-void-border);
+  border-radius: 0 !important;
+}
 /* Rich text editor (Write view) – Dark Void */
 html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor {
   font-family: 'Space Grotesk', sans-serif;

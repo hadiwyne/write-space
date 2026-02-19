@@ -41,7 +41,7 @@ export class PostsController {
     private readonly postsService: PostsService,
     private readonly bookmarksService: BookmarksService,
     private readonly repostsService: RepostsService,
-  ) { }
+  ) {}
 
   @Post()
   @UseGuards(JwtAuthGuard)
