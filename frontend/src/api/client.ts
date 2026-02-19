@@ -17,6 +17,12 @@ export function avatarSrc(url: string | null | undefined, cacheBust?: string | n
   return out
 }
 
+export function resolveContentImageUrls(html: string | null | undefined): string {
+  if (!html) return ''
+  const base = baseURL.replace(/\/$/, '')
+  return html.replace(/src=(["'])(\/[^"']*)\1/g, (_m, q, path) => `src=${q}${base}${path}${q}`)
+}
+
 const REAL_TIME_ENDPOINTS = [
   '/presence/online-count',
   '/notifications/unread-count',
