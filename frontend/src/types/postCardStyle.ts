@@ -13,8 +13,7 @@ export type PostCardBadgePosition = 'top-right' | 'top-left' | 'bottom-right' | 
 /** Badge movement animation around the card. */
 export type PostCardBadgeMovement = 'none' | 'float' | 'orbit'
 
-/** Card surface animation (no movement of the card itself). */
-export type PostCardAnimation = 'none' | 'shimmer' | 'glitter' | 'gradient-shift'
+
 
 /** Footer button size. */
 export type PostCardButtonSize = 'default' | 'small' | 'large'
@@ -45,8 +44,11 @@ export type PostCardStyle = {
   badgeMovement?: PostCardBadgeMovement
   badgeImageUrl?: string
   overlayGifUrl?: string
+  /** Overlay GIF opacity (0–1). Allows GIF to act more like a subtle background. */
+  overlayGifOpacity?: number
+  /** Determines stacking of overlay. 'cover' places GIF above all card content; 'background' keeps it beneath buttons/text/etc. */
+  overlayGifMode?: 'cover' | 'background'
   buttonSize?: PostCardButtonSize
-  animation?: PostCardAnimation
   /** Box shadow override (e.g. "0 4px 20px rgba(0,0,0,0.15)"). */
   boxShadow?: string
 } | null
@@ -92,12 +94,7 @@ export const BADGE_MOVEMENT_LABELS: Record<PostCardBadgeMovement, string> = {
   orbit: 'Orbit',
 }
 
-export const ANIMATION_LABELS: Record<PostCardAnimation, string> = {
-  none: 'None',
-  shimmer: 'Shimmer',
-  glitter: 'Glitter',
-  'gradient-shift': 'Gradient shift',
-}
+
 
 export const BUTTON_SIZE_LABELS: Record<PostCardButtonSize, string> = {
   default: 'Default',

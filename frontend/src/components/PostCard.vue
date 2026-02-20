@@ -1,11 +1,16 @@
 <template>
   <article
     class="card"
-    :class="[cardShapeClass, cardAnimationClass, cardButtonSizeClass, { 'card--bg-opacity': cardHasBgOpacity }]"
+    :class="[cardShapeClass, cardButtonSizeClass, { 'card--bg-opacity': cardHasBgOpacity, 'card--overlay-bg': cardStyle?.overlayGifMode === 'background' }]"
     :style="cardWrapperStyle"
   >
     <div v-if="cardStyle?.overlayGifUrl" class="card-overlay-gif" aria-hidden="true">
-      <img :src="cardStyle.overlayGifUrl" alt="" class="card-overlay-gif-img" />
+      <img
+        :src="cardStyle.overlayGifUrl"
+        alt=""
+        class="card-overlay-gif-img"
+        :style="{ opacity: cardStyle?.overlayGifOpacity != null ? cardStyle.overlayGifOpacity : 0.5 }"
+      />
     </div>
     <div
       v-if="cardBadgeDisplay"
@@ -271,20 +276,7 @@ function getBackgroundForAnimation(
   s: NonNullable<PostCardStyle>,
   bg: string | undefined
 ): { background: string; backgroundSize?: string } {
-  const anim = s.animation
-  if (anim !== 'shimmer' && anim !== 'gradient-shift') return { background: bg ?? '' }
-  if (bg && (s.gradient?.colors?.length ?? 0) > 0) {
-    return {
-      background: bg,
-      backgroundSize: anim === 'shimmer' ? '200% 100%' : '200% 200%',
-    }
-  }
-  const color = s.backgroundColor || 'var(--bg-card, #fff)'
-  const fallbackGradient = `linear-gradient(90deg, ${color} 0%, rgba(255,255,255,0.7) 50%, ${color} 100%)`
-  return {
-    background: fallbackGradient,
-    backgroundSize: anim === 'shimmer' ? '200% 100%' : '200% 200%',
-  }
+  return { background: bg ?? '' }
 }
 
 const cardHasBgOpacity = computed(() => {
@@ -314,8 +306,8 @@ const cardWrapperStyle = computed(() => {
   if (s.borderStyle) base.borderStyle = s.borderStyle
   if (s.borderImage) {
     base.borderImageSource = `url(${s.borderImage})`
-    base.borderImageSlice = '30' // Default slice, maybe exposing this is too complex for now
-    base.borderImageRepeat = 'stretch' // Default repeat
+    base.borderImageSlice = '30'
+    base.borderImageRepeat = 'stretch'
   }
   if (s.boxShadow) base.boxShadow = s.boxShadow
   return base
@@ -327,11 +319,7 @@ const cardShapeClass = computed(() => {
   return `card--shape-${shape}`
 })
 
-const cardAnimationClass = computed(() => {
-  const anim = cardStyle.value?.animation
-  if (!anim || anim === 'none') return ''
-  return `card--animation-${anim}`
-})
+
 
 const cardButtonSizeClass = computed(() => {
   const size = cardStyle.value?.buttonSize
@@ -554,40 +542,7 @@ function formatDate(s: string | undefined) {
 .card--shape-squircle { border-radius: 20%; }
 .card--shape-pill { border-radius: 9999px; }
 
-/* Card style: surface animations (no card movement) */
-.card--animation-shimmer {
-  background-size: 200% 100%;
-  animation: card-shimmer 3s ease-in-out infinite;
-}
-@keyframes card-shimmer {
-  0%, 100% { background-position: 100% 0; }
-  50% { background-position: 0 0; }
-}
-.card--animation-glitter {
-  position: relative;
-}
-.card--animation-glitter::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(circle at 20% 30%, rgba(255,255,255,0.4) 0%, transparent 40%),
-    radial-gradient(circle at 80% 70%, rgba(255,255,255,0.3) 0%, transparent 35%);
-  pointer-events: none;
-  animation: card-glitter 4s ease-in-out infinite;
-}
-@keyframes card-glitter {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
-}
-.card--animation-gradient-shift {
-  background-size: 200% 200%;
-  animation: card-gradient-shift 6s ease infinite;
-}
-@keyframes card-gradient-shift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
+
 
 /* Card style: footer button size */
 .card--buttons-small .card-footer .action-stat,
@@ -615,11 +570,23 @@ function formatDate(s: string | undefined) {
   z-index: 1;
   overflow: hidden;
 }
+.card--overlay-bg .card-overlay-gif {
+  /* move behind card content but still on top of background */
+  z-index: 0;
+}
+.card--overlay-bg .card-header,
+.card--overlay-bg .card-body,
+.card--overlay-bg .card-footer,
+.card--overlay-bg .card-badge,
+.card--overlay-bg .card-repost-header {
+  position: relative;
+  z-index: 1;
+}
 .card-overlay-gif-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0.5;
+  /* opacity is controlled dynamically via inline style - fallback to 0.5 when not provided */
 }
 
 /* Card badge (corner) */

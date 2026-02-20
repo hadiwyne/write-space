@@ -339,6 +339,21 @@
                   <button type="button" class="btn btn-sm btn-outline" @click="overlayGifFileInputRef?.click()">Upload GIF</button>
                   <input v-model="cardStyleForm.overlayGifUrl" type="url" placeholder="Or paste URL (transparent GIF)" class="card-style-input card-style-input-url" />
                 </div>
+                <div v-if="cardStyleForm.overlayGifUrl" class="card-style-radio-row">
+                  <label class="card-style-label-inline">
+                    <input type="radio" v-model="cardStyleForm.overlayGifMode" value="cover" /> Cover card (default)
+                  </label>
+                  <label class="card-style-label-inline">
+                    <input type="radio" v-model="cardStyleForm.overlayGifMode" value="background" /> Background only
+                  </label>
+                </div>
+              </div>
+              <div v-if="cardStyleForm.overlayGifUrl" class="card-style-group">
+                <label class="card-style-label">Overlay transparency</label>
+                <div class="card-style-slider-row">
+                  <input v-model.number="cardStyleForm.overlayGifOpacity" type="range" min="0" max="1" step="0.05" class="card-style-slider" />
+                  <span class="card-style-slider-value">{{ Math.round((cardStyleForm.overlayGifOpacity ?? 1) * 100) }}%</span>
+                </div>
               </div>
               <div class="card-style-group">
                 <label class="card-style-label">Footer button size</label>
@@ -346,12 +361,7 @@
                   <option v-for="(label, key) in BUTTON_SIZE_LABELS" :key="key" :value="key">{{ label }}</option>
                 </select>
               </div>
-              <div class="card-style-group">
-                <label class="card-style-label">Card animation</label>
-                <select v-model="cardStyleForm.animation" class="card-style-select">
-                  <option v-for="(label, key) in ANIMATION_LABELS" :key="key" :value="key">{{ label }}</option>
-                </select>
-              </div>
+
             </div>
             <div class="card-style-preview-wrap">
               <p class="card-style-preview-label">Live preview</p>
@@ -487,7 +497,6 @@ import {
   BADGE_LABELS,
   BADGE_POSITION_LABELS,
   BADGE_MOVEMENT_LABELS,
-  ANIMATION_LABELS,
   BUTTON_SIZE_LABELS,
 } from '@/types/postCardStyle'
 
@@ -577,8 +586,9 @@ type CardStyleFormState = Record<string, unknown> & {
   badgeMovement?: string
   badgeImageUrl?: string
   overlayGifUrl?: string
+  overlayGifOpacity?: number
+  overlayGifMode?: 'cover' | 'background'
   buttonSize?: string
-  animation?: string
   borderImage?: string
 }
 const cardStyleForm = ref<CardStyleFormState | null>(null)
@@ -590,9 +600,10 @@ const DEFAULT_CARD_STYLE_FORM: CardStyleFormState = {
   badgePosition: 'top-right',
   badgeMovement: 'none',
   buttonSize: 'default',
-  animation: 'none',
   opacity: 1,
   backgroundOpacity: 1,
+  overlayGifOpacity: 1,
+  overlayGifMode: 'cover',
   borderWidth: 0,
   gradient: { colors: [], conic: false, angle: 180, speed: 1 },
 }
@@ -614,8 +625,9 @@ function isCardStyleDefault(form: CardStyleFormState): boolean {
   if (form.badge && form.badge !== 'none') return false
   if (form.badgeImageUrl && form.badgeImageUrl.trim()) return false
   if (form.overlayGifUrl && form.overlayGifUrl.trim()) return false
+  if (form.overlayGifOpacity != null && form.overlayGifOpacity !== 1) return false
+  if (form.overlayGifMode && form.overlayGifMode !== 'cover') return false
   if (form.buttonSize && form.buttonSize !== 'default') return false
-  if (form.animation && form.animation !== 'none') return false
   if (form.borderImage && form.borderImage.trim()) return false
   return true
 }
@@ -646,8 +658,9 @@ function buildCardStylePayload(form: CardStyleFormState | null): PostCardStyle |
     if (form.badgeImageUrl?.trim()) out.badgeImageUrl = form.badgeImageUrl.trim()
   }
   if (form.overlayGifUrl?.trim()) out.overlayGifUrl = form.overlayGifUrl.trim()
+  if (form.overlayGifOpacity != null && form.overlayGifOpacity !== 1) out.overlayGifOpacity = form.overlayGifOpacity
+  if (form.overlayGifMode && form.overlayGifMode !== 'cover') out.overlayGifMode = form.overlayGifMode
   if (form.buttonSize && form.buttonSize !== 'default') out.buttonSize = form.buttonSize as PostCardStyle['buttonSize']
-  if (form.animation && form.animation !== 'none') out.animation = form.animation as PostCardStyle['animation']
   if (form.borderImage?.trim()) out.borderImage = form.borderImage.trim()
   return Object.keys(out).length ? out : undefined
 }
@@ -889,9 +902,12 @@ function triggerBorderImageFileInput() {
   borderImageFileInputRef.value?.click()
 }
 
-
 const previewPost = computed(() => {
-  const style = cardStyleForm.value != null ? (cardStyleForm.value as PostCardStyle) : undefined
+  const form = cardStyleForm.value
+  // stringify the form to create a deep dependency; ensures preview updates for any field change
+  let _ = ''
+  if (form) _ = JSON.stringify(form)
+  const style = form ? ({ ...form } as PostCardStyle) : undefined
   return {
     id: 'preview',
     title: title.value || 'Post title',
@@ -1205,6 +1221,12 @@ function randomizeCardStyle() {
   if (cardStyleForm.value.gradient && cardStyleForm.value.gradient.colors.length > 0) {
     cardStyleForm.value.gradient.colors = cardStyleForm.value.gradient.colors.map(() => randomHex())
   }
+  // also randomize overlay opacity when GIF is present, to give a quick effect
+  if (cardStyleForm.value.overlayGifUrl) {
+    cardStyleForm.value.overlayGifOpacity = Number(Math.random().toFixed(2))
+    // occasionally toggle mode
+    cardStyleForm.value.overlayGifMode = Math.random() < 0.5 ? 'cover' : 'background'
+  }
 }
 
 function resetCardStyle() {
@@ -1220,6 +1242,8 @@ function resetCardStyle() {
 .title-input { width: 100%; min-width: 0; font-size: clamp(1.125rem, 4vw, 1.5rem); padding: 0.5rem 0; border: none; border-bottom: 1px solid var(--gray-200); background: transparent; }
 .title-warning { font-size: 0.8125rem; color: var(--accent-burgundy, #6b2c3e); margin: 0.25rem 0 0; }
 .post-type-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.card-style-radio-row { display: flex; gap: 1rem; align-items: center; margin-top: 0.5rem; }
+.card-style-radio-row label { font-size: 0.875rem; }
 .post-type-btn {
   display: inline-flex;
   align-items: center;
