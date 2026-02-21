@@ -77,7 +77,6 @@
         <div class="editor-pane">
           <RichTextEditor
             v-if="contentType === 'WYSIWYG'"
-            ref="richEditorRef"
             v-model="content"
             :can-add-image="imageCountInContent < MAX_IMAGES_PER_POST"
             @image-upload="onRichEditorImageUpload"
@@ -170,12 +169,6 @@
         <Transition name="card-panel">
           <div v-if="modifyPostCardOpen" class="card-style-panel">
             <div v-if="cardStyleForm" class="card-style-options">
-              <div class="card-style-group">
-                <label class="card-style-label">Shape</label>
-                <select v-model="cardStyleForm.shape" class="card-style-select">
-                  <option v-for="(label, key) in SHAPE_LABELS" :key="key" :value="key">{{ label }}</option>
-                </select>
-              </div>
               <div class="card-style-group">
                 <label class="card-style-label">Background color</label>
                 <div class="color-input-wrap">
@@ -314,45 +307,27 @@
                 </label>
               </div>
               <div class="card-style-group">
-                <label class="card-style-label">Badge</label>
-                <select v-model="cardStyleForm.badge" class="card-style-select">
-                  <option v-for="(label, key) in BADGE_LABELS" :key="key" :value="key">{{ label }}</option>
-                </select>
-                <template v-if="cardStyleForm.badge && cardStyleForm.badge !== 'none'">
-                  <select v-model="cardStyleForm.badgePosition" class="card-style-select card-style-select-sm">
-                    <option v-for="(label, key) in BADGE_POSITION_LABELS" :key="key" :value="key">{{ label }}</option>
-                  </select>
-                  <select v-model="cardStyleForm.badgeMovement" class="card-style-select card-style-select-sm">
-                    <option v-for="(label, key) in BADGE_MOVEMENT_LABELS" :key="key" :value="key">{{ label }}</option>
-                  </select>
-                  <div v-if="cardStyleForm.badge === 'custom'" class="card-style-upload-row">
-                    <input ref="badgeFileInputRef" type="file" accept="image/*" class="hidden" @change="onCardBadgeUpload" />
-                    <button type="button" class="btn btn-sm btn-outline" @click="triggerBadgeFileInput">Upload image</button>
-                    <input v-model="cardStyleForm.badgeImageUrl" type="url" placeholder="Or paste URL" class="card-style-input card-style-input-url" />
-                  </div>
-                </template>
-              </div>
-              <div class="card-style-group">
-                <label class="card-style-label">Overlay GIF</label>
+                <label class="card-style-label">Overlay</label>
+                <p class="card-style-hint">Image or GIF (transparent recommended)</p>
                 <div class="card-style-upload-row">
-                  <input ref="overlayGifFileInputRef" type="file" accept="image/gif" class="hidden" @change="onCardOverlayGifUpload" />
-                  <button type="button" class="btn btn-sm btn-outline" @click="overlayGifFileInputRef?.click()">Upload GIF</button>
-                  <input v-model="cardStyleForm.overlayGifUrl" type="url" placeholder="Or paste URL (transparent GIF)" class="card-style-input card-style-input-url" />
+                  <input ref="overlayFileInputRef" type="file" accept="image/*" class="hidden" @change="onCardOverlayUpload" />
+                  <button type="button" class="btn btn-sm btn-outline" @click="triggerOverlayFileInput">Upload overlay</button>
+                  <input v-model="cardStyleForm.overlayUrl" type="url" placeholder="Or paste URL (image or GIF)" class="card-style-input card-style-input-url" />
                 </div>
-                <div v-if="cardStyleForm.overlayGifUrl" class="card-style-radio-row">
+                <div v-if="cardStyleForm.overlayUrl" class="card-style-radio-row">
                   <label class="card-style-label-inline">
-                    <input type="radio" v-model="cardStyleForm.overlayGifMode" value="cover" /> Cover card (default)
+                    <input type="radio" v-model="cardStyleForm.overlayMode" value="cover" /> Cover card (default)
                   </label>
                   <label class="card-style-label-inline">
-                    <input type="radio" v-model="cardStyleForm.overlayGifMode" value="background" /> Background only
+                    <input type="radio" v-model="cardStyleForm.overlayMode" value="background" /> Background only
                   </label>
                 </div>
               </div>
-              <div v-if="cardStyleForm.overlayGifUrl" class="card-style-group">
+              <div v-if="cardStyleForm.overlayUrl" class="card-style-group">
                 <label class="card-style-label">Overlay transparency</label>
                 <div class="card-style-slider-row">
-                  <input v-model.number="cardStyleForm.overlayGifOpacity" type="range" min="0" max="1" step="0.05" class="card-style-slider" />
-                  <span class="card-style-slider-value">{{ Math.round((cardStyleForm.overlayGifOpacity ?? 1) * 100) }}%</span>
+                  <input v-model.number="cardStyleForm.overlayOpacity" type="range" min="0" max="1" step="0.05" class="card-style-slider" />
+                  <span class="card-style-slider-value">{{ Math.round((cardStyleForm.overlayOpacity ?? 1) * 100) }}%</span>
                 </div>
               </div>
               <div class="card-style-group">
@@ -490,13 +465,13 @@ import { api } from '@/api/client'
 import { renderPreview, type ContentType } from '@/utils/preview'
 import RichTextEditor from '@/components/RichTextEditor.vue'
 import PostCard from '@/components/PostCard.vue'
-import type { PostCardStyle } from '@/types/postCardStyle'
+import type {
+  PostCardStyle,
+  PostCardBorderStyle,
+  PostCardButtonSize,
+} from '@/types/postCardStyle'
 import {
-  SHAPE_LABELS,
   BORDER_STYLE_LABELS,
-  BADGE_LABELS,
-  BADGE_POSITION_LABELS,
-  BADGE_MOVEMENT_LABELS,
   BUTTON_SIZE_LABELS,
 } from '@/types/postCardStyle'
 
@@ -573,7 +548,6 @@ const visibilityIcon = computed(() => (visibility.value === 'PUBLIC' ? 'pi pi-gl
 
 const modifyPostCardOpen = ref(false)
 type CardStyleFormState = Record<string, unknown> & {
-  shape?: string
   backgroundColor?: string
   borderColor?: string
   borderWidth?: number
@@ -581,29 +555,21 @@ type CardStyleFormState = Record<string, unknown> & {
   opacity?: number
   backgroundOpacity?: number
   gradient?: { colors: string[]; conic?: boolean; angle?: number; speed?: number }
-  badge?: string
-  badgePosition?: string
-  badgeMovement?: string
-  badgeImageUrl?: string
-  overlayGifUrl?: string
-  overlayGifOpacity?: number
-  overlayGifMode?: 'cover' | 'background'
+  overlayUrl?: string
+  overlayOpacity?: number
+  overlayMode?: 'cover' | 'background'
   buttonSize?: string
   borderImage?: string
 }
 const cardStyleForm = ref<CardStyleFormState | null>(null)
 
 const DEFAULT_CARD_STYLE_FORM: CardStyleFormState = {
-  shape: 'default',
   borderStyle: 'solid',
-  badge: 'none',
-  badgePosition: 'top-right',
-  badgeMovement: 'none',
   buttonSize: 'default',
   opacity: 1,
   backgroundOpacity: 1,
-  overlayGifOpacity: 1,
-  overlayGifMode: 'cover',
+  overlayOpacity: 1,
+  overlayMode: 'cover',
   borderWidth: 0,
   gradient: { colors: [], conic: false, angle: 180, speed: 1 },
 }
@@ -613,7 +579,6 @@ function getDefaultCardStyleForm(): CardStyleFormState {
 }
 
 function isCardStyleDefault(form: CardStyleFormState): boolean {
-  if (form.shape && form.shape !== 'default') return false
   if (form.backgroundColor && form.backgroundColor.trim()) return false
   if (form.opacity != null && form.opacity !== 1) return false
   if (form.backgroundOpacity != null && form.backgroundOpacity !== 1) return false
@@ -622,11 +587,9 @@ function isCardStyleDefault(form: CardStyleFormState): boolean {
   if (form.borderStyle && form.borderStyle !== 'solid') return false
   const g = form.gradient
   if (g?.colors?.length) return false
-  if (form.badge && form.badge !== 'none') return false
-  if (form.badgeImageUrl && form.badgeImageUrl.trim()) return false
-  if (form.overlayGifUrl && form.overlayGifUrl.trim()) return false
-  if (form.overlayGifOpacity != null && form.overlayGifOpacity !== 1) return false
-  if (form.overlayGifMode && form.overlayGifMode !== 'cover') return false
+  if (form.overlayUrl && form.overlayUrl.trim()) return false
+  if (form.overlayOpacity != null && form.overlayOpacity !== 1) return false
+  if (form.overlayMode && form.overlayMode !== 'cover') return false
   if (form.buttonSize && form.buttonSize !== 'default') return false
   if (form.borderImage && form.borderImage.trim()) return false
   return true
@@ -635,13 +598,13 @@ function isCardStyleDefault(form: CardStyleFormState): boolean {
 function buildCardStylePayload(form: CardStyleFormState | null): PostCardStyle | undefined {
   if (form == null || isCardStyleDefault(form)) return undefined
   const out: PostCardStyle = {}
-  if (form.shape && form.shape !== 'default') out.shape = form.shape as PostCardStyle['shape']
   if (form.backgroundColor?.trim()) out.backgroundColor = form.backgroundColor.trim()
   if (form.opacity != null && form.opacity !== 1) out.opacity = form.opacity
   if (form.backgroundOpacity != null && form.backgroundOpacity !== 1) out.backgroundOpacity = form.backgroundOpacity
   if (form.borderColor?.trim()) out.borderColor = form.borderColor.trim()
   if (form.borderWidth != null) out.borderWidth = form.borderWidth
-  if (form.borderStyle && form.borderStyle !== 'solid') out.borderStyle = form.borderStyle as PostCardStyle['borderStyle']
+  if (form.borderStyle && form.borderStyle !== 'solid')
+    out.borderStyle = form.borderStyle as PostCardBorderStyle
   const g = form.gradient
   if (g?.colors?.length) {
     out.gradient = {
@@ -651,16 +614,11 @@ function buildCardStylePayload(form: CardStyleFormState | null): PostCardStyle |
       speed: g.speed,
     }
   }
-  if (form.badge && form.badge !== 'none') {
-    out.badge = form.badge as PostCardStyle['badge']
-    if (form.badgePosition && form.badgePosition !== 'top-right') out.badgePosition = form.badgePosition as PostCardStyle['badgePosition']
-    if (form.badgeMovement && form.badgeMovement !== 'none') out.badgeMovement = form.badgeMovement as PostCardStyle['badgeMovement']
-    if (form.badgeImageUrl?.trim()) out.badgeImageUrl = form.badgeImageUrl.trim()
-  }
-  if (form.overlayGifUrl?.trim()) out.overlayGifUrl = form.overlayGifUrl.trim()
-  if (form.overlayGifOpacity != null && form.overlayGifOpacity !== 1) out.overlayGifOpacity = form.overlayGifOpacity
-  if (form.overlayGifMode && form.overlayGifMode !== 'cover') out.overlayGifMode = form.overlayGifMode
-  if (form.buttonSize && form.buttonSize !== 'default') out.buttonSize = form.buttonSize as PostCardStyle['buttonSize']
+  if (form.overlayUrl?.trim()) out.overlayUrl = form.overlayUrl.trim()
+  if (form.overlayOpacity != null && form.overlayOpacity !== 1) out.overlayOpacity = form.overlayOpacity
+  if (form.overlayMode && form.overlayMode !== 'cover') out.overlayMode = form.overlayMode
+  if (form.buttonSize && form.buttonSize !== 'default')
+    out.buttonSize = form.buttonSize as PostCardButtonSize
   if (form.borderImage?.trim()) out.borderImage = form.borderImage.trim()
   return Object.keys(out).length ? out : undefined
 }
@@ -672,22 +630,8 @@ function toggleModifyPostCard() {
   }
 }
 
-const gradientColorsStr = computed({
-  get: () => {
-    const g = cardStyleForm.value?.gradient
-    return Array.isArray(g?.colors) ? g.colors.join(', ') : ''
-  },
-  set: (v: string) => {
-    if (cardStyleForm.value && typeof cardStyleForm.value === 'object') {
-      const colors = v.split(',').map((s) => s.trim()).filter(Boolean)
-      if (!cardStyleForm.value.gradient) (cardStyleForm.value as CardStyleFormState).gradient = { colors: [], conic: false, angle: 180, speed: 1 }
-      cardStyleForm.value.gradient!.colors = colors
-    }
-  },
-})
 
-const badgeFileInputRef = ref<HTMLInputElement | null>(null)
-const overlayGifFileInputRef = ref<HTMLInputElement | null>(null)
+const overlayFileInputRef = ref<HTMLInputElement | null>(null)
 const borderImageFileInputRef = ref<HTMLInputElement | null>(null)
 const editingCardColorKey = ref<string | null>(null)
 const editingCardHex = ref('#000000')
@@ -842,14 +786,12 @@ function onCardGradientAngleInput(e: Event) {
   if (cardStyleForm.value?.gradient) cardStyleForm.value.gradient.angle = val
 }
 
-function triggerBadgeFileInput() {
-  badgeFileInputRef.value?.click()
-}
-function triggerOverlayGifFileInput() {
-  overlayGifFileInputRef.value?.click()
+function triggerOverlayFileInput() {
+  overlayFileInputRef.value?.click()
 }
 
-async function onCardBadgeUpload(e: Event) {
+
+async function onCardOverlayUpload(e: Event) {
   const input = e.target as HTMLInputElement
   const file = input.files?.[0]
   input.value = ''
@@ -858,22 +800,7 @@ async function onCardBadgeUpload(e: Event) {
     const formData = new FormData()
     formData.append('image', file)
     const { data } = await api.post<{ url: string }>('/posts/upload-image', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
-    cardStyleForm.value.badgeImageUrl = data.url
-  } catch (err) {
-    error.value = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Upload failed'
-  }
-}
-
-async function onCardOverlayGifUpload(e: Event) {
-  const input = e.target as HTMLInputElement
-  const file = input.files?.[0]
-  input.value = ''
-  if (!file || !cardStyleForm.value) return
-  try {
-    const formData = new FormData()
-    formData.append('image', file)
-    const { data } = await api.post<{ url: string }>('/posts/upload-image', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
-    cardStyleForm.value.overlayGifUrl = data.url
+    cardStyleForm.value.overlayUrl = data.url
   } catch (err) {
     error.value = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Upload failed'
   }
@@ -905,8 +832,10 @@ function triggerBorderImageFileInput() {
 const previewPost = computed(() => {
   const form = cardStyleForm.value
   // stringify the form to create a deep dependency; ensures preview updates for any field change
-  let _ = ''
-  if (form) _ = JSON.stringify(form)
+  if (form) {
+    // just evaluate JSON.stringify without storing result
+    JSON.stringify(form)
+  }
   const style = form ? ({ ...form } as PostCardStyle) : undefined
   return {
     id: 'preview',
@@ -942,7 +871,7 @@ const versionsLoading = ref(false)
 const wordInputRef = ref<HTMLInputElement | null>(null)
 const imageInputRef = ref<HTMLInputElement | null>(null)
 const editorRef = ref<HTMLTextAreaElement | null>(null)
-const richEditorRef = ref<InstanceType<typeof RichTextEditor> | null>(null)
+// referenced only by template
 const previewHtml = computed(() => renderPreview(content.value, contentType.value))
 
 function countImagesInContent(text: string, type: ContentType): number {
@@ -951,6 +880,13 @@ function countImagesInContent(text: string, type: ContentType): number {
   return (text.match(/<img\s/gi) || []).length
 }
 const imageCountInContent = computed(() => countImagesInContent(content.value, contentType.value))
+
+// handler invoked by the rich text editor when it wants to upload a file
+function onRichEditorImageUpload(file: File) {
+  // delegate to plain textarea upload logic by crafting a fake event
+  const fakeEvent = { target: { files: [file] } } as unknown as Event
+  onImageUpload(fakeEvent)
+}
 
 function tags(): string[] {
   return tagsStr.value.split(',').map((t) => t.trim()).filter(Boolean)
@@ -1221,11 +1157,11 @@ function randomizeCardStyle() {
   if (cardStyleForm.value.gradient && cardStyleForm.value.gradient.colors.length > 0) {
     cardStyleForm.value.gradient.colors = cardStyleForm.value.gradient.colors.map(() => randomHex())
   }
-  // also randomize overlay opacity when GIF is present, to give a quick effect
-  if (cardStyleForm.value.overlayGifUrl) {
-    cardStyleForm.value.overlayGifOpacity = Number(Math.random().toFixed(2))
+  // also randomize overlay opacity when URL is present, to give a quick effect
+  if (cardStyleForm.value.overlayUrl) {
+    cardStyleForm.value.overlayOpacity = Number(Math.random().toFixed(2))
     // occasionally toggle mode
-    cardStyleForm.value.overlayGifMode = Math.random() < 0.5 ? 'cover' : 'background'
+    cardStyleForm.value.overlayMode = Math.random() < 0.5 ? 'cover' : 'background'
   }
 }
 

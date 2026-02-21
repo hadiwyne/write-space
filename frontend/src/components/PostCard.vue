@@ -1,15 +1,15 @@
 <template>
   <article
     class="card"
-    :class="[cardShapeClass, cardButtonSizeClass, { 'card--bg-opacity': cardHasBgOpacity, 'card--overlay-bg': cardStyle?.overlayGifMode === 'background' }]"
+    :class="[cardButtonSizeClass, { 'card--bg-opacity': cardHasBgOpacity, 'card--overlay-bg': cardStyle?.overlayMode === 'background' }]"
     :style="cardWrapperStyle"
   >
-    <div v-if="cardStyle?.overlayGifUrl" class="card-overlay-gif" aria-hidden="true">
+        <div v-if="cardStyle?.overlayUrl" class="card-overlay" aria-hidden="true">
       <img
-        :src="cardStyle.overlayGifUrl"
+        :src="cardStyle.overlayUrl"
         alt=""
-        class="card-overlay-gif-img"
-        :style="{ opacity: cardStyle?.overlayGifOpacity != null ? cardStyle.overlayGifOpacity : 0.5 }"
+        class="card-overlay-img"
+        :style="{ opacity: cardStyle?.overlayOpacity != null ? cardStyle.overlayOpacity : 0.5 }"
       />
     </div>
     <div
@@ -186,7 +186,6 @@ import AvatarFrame from '@/components/AvatarFrame.vue'
 import PollBlock from '@/components/PollBlock.vue'
 import type { AvatarFrame as AvatarFrameType } from '@/types/avatarFrame'
 import type { PostCardStyle } from '@/types/postCardStyle'
-import { BADGE_EMOJI } from '@/types/postCardStyle'
 import { useAuthStore } from '@/stores/auth'
 import { useLikedPostsStore } from '@/stores/likedPosts'
 
@@ -258,7 +257,13 @@ const postForPollBlock = computed(() => props.post as PollBlockPost)
 
 const cardStyle = computed((): PostCardStyle => {
   const raw = (props.post as { cardStyle?: PostCardStyle }).cardStyle
-  return raw && typeof raw === 'object' ? raw : null
+  if (!raw || typeof raw !== 'object') return null
+  // normalize legacy fields
+  const copy: any = { ...raw }
+  if (!copy.overlayUrl && copy.overlayGifUrl) copy.overlayUrl = copy.overlayGifUrl
+  if (copy.overlayGifOpacity != null && copy.overlayOpacity == null) copy.overlayOpacity = copy.overlayGifOpacity
+  if (!copy.overlayMode && copy.overlayGifMode) copy.overlayMode = copy.overlayGifMode
+  return copy
 })
 
 function buildCardBackground(s: NonNullable<PostCardStyle>): string | undefined {
@@ -273,7 +278,7 @@ function buildCardBackground(s: NonNullable<PostCardStyle>): string | undefined 
 
 /** For shimmer/gradient-shift we need a gradient + background-size. If only solid color, use a two-tone gradient. */
 function getBackgroundForAnimation(
-  s: NonNullable<PostCardStyle>,
+  /* unused */ _s: NonNullable<PostCardStyle>,
   bg: string | undefined
 ): { background: string; backgroundSize?: string } {
   return { background: bg ?? '' }
@@ -313,11 +318,6 @@ const cardWrapperStyle = computed(() => {
   return base
 })
 
-const cardShapeClass = computed(() => {
-  const shape = cardStyle.value?.shape
-  if (!shape || shape === 'default') return ''
-  return `card--shape-${shape}`
-})
 
 
 
@@ -524,7 +524,7 @@ function formatDate(s: string | undefined) {
 .card.card--bg-opacity .card-header,
 .card.card--bg-opacity .card-body,
 .card.card--bg-opacity .card-footer,
-.card.card--bg-opacity .card-overlay-gif,
+.card.card--bg-opacity .card-overlay,
 .card.card--bg-opacity .card-badge {
   position: relative;
   z-index: 1;
@@ -536,11 +536,6 @@ function formatDate(s: string | undefined) {
   opacity: 1;
 }
 
-/* Card style: shape */
-.card--shape-rounded { border-radius: 1rem; }
-.card--shape-square { border-radius: 0; }
-.card--shape-squircle { border-radius: 20%; }
-.card--shape-pill { border-radius: 9999px; }
 
 
 
@@ -563,14 +558,14 @@ function formatDate(s: string | undefined) {
 .card--buttons-large .card-footer .action-btn .pi { font-size: 1.25rem; }
 
 /* Overlay GIF (transparent) */
-.card-overlay-gif {
+.card-overlay {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 1;
   overflow: hidden;
 }
-.card--overlay-bg .card-overlay-gif {
+.card--overlay-bg .card-overlay {
   /* move behind card content but still on top of background */
   z-index: 0;
 }
@@ -582,7 +577,7 @@ function formatDate(s: string | undefined) {
   position: relative;
   z-index: 1;
 }
-.card-overlay-gif-img {
+.card-overlay-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
