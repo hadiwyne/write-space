@@ -1,6 +1,7 @@
 <template>
   <article
     class="card"
+    :class="{ 'card--overlay-bg': cardStyle?.overlayMode === 'background' }"
     :style="cardWrapperStyle"
   >
         <div v-if="cardStyle?.overlayUrl" class="card-overlay" aria-hidden="true">
