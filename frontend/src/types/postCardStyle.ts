@@ -1,4 +1,3 @@
-
 /** Border style for the card. */
 export type PostCardBorderStyle = 'solid' | 'dashed' | 'double' | 'none'
 
@@ -9,10 +8,6 @@ export type PostCardButtonSize = 'default' | 'small' | 'large'
 export type PostCardStyle = {
   backgroundColor?: string
   backgroundImage?: string
-  /** Card overall opacity (0–1). */
-  opacity?: number
-  /** Background layer transparency (0–1). */
-  backgroundOpacity?: number
   borderColor?: string
   borderWidth?: number
   borderStyle?: PostCardBorderStyle
@@ -43,7 +38,6 @@ export type PostCardStyle = {
 } | null
 
 export const DEFAULT_POST_CARD_STYLE: PostCardStyle = null
-
 
 export const BORDER_STYLE_LABELS: Record<PostCardBorderStyle, string> = {
   solid: 'Solid',

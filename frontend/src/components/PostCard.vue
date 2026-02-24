@@ -1,7 +1,6 @@
 <template>
   <article
     class="card"
-    :class="[cardButtonSizeClass, { 'card--bg-opacity': cardHasBgOpacity, 'card--overlay-bg': cardStyle?.overlayMode === 'background' }]"
     :style="cardWrapperStyle"
   >
         <div v-if="cardStyle?.overlayUrl" class="card-overlay" aria-hidden="true">
@@ -11,15 +10,6 @@
         class="card-overlay-img"
         :style="{ opacity: cardStyle?.overlayOpacity != null ? cardStyle.overlayOpacity : 0.5 }"
       />
-    </div>
-    <div
-      v-if="cardBadgeDisplay"
-      class="card-badge"
-      :class="['card-badge--' + (cardStyle?.badgePosition || 'top-right'), cardBadgeMovementClass]"
-      aria-hidden="true"
-    >
-      <img v-if="cardBadgeDisplay === 'custom' && cardStyle?.badgeImageUrl" :src="cardStyle.badgeImageUrl" alt="" class="card-badge-img" />
-      <span v-else class="card-badge-emoji">{{ cardBadgeEmoji }}</span>
     </div>
     <div v-if="post.repostData" class="card-repost-header">
       <i class="pi pi-refresh"></i>
@@ -284,28 +274,15 @@ function getBackgroundForAnimation(
   return { background: bg ?? '' }
 }
 
-const cardHasBgOpacity = computed(() => {
-  const s = cardStyle.value
-  return s && s.backgroundOpacity != null && s.backgroundOpacity !== 1
-})
-
 const cardWrapperStyle = computed(() => {
   const s = cardStyle.value
   const base: Record<string, string> = { animationDelay: props.animationDelay }
   if (!s) return base
   let bg = buildCardBackground(s)
   const animBg = getBackgroundForAnimation(s, bg)
-  if (cardHasBgOpacity.value) {
-    base.background = 'transparent'
-    base['--card-bg'] = animBg.background
-    base['--card-bg-opacity'] = String(s.backgroundOpacity)
-    base['--card-bg-size'] = animBg.backgroundSize || 'auto'
-  } else {
-    if (animBg.background) base.background = animBg.background
-    if (animBg.backgroundSize) base.backgroundSize = animBg.backgroundSize
-  }
+  if (animBg.background) base.background = animBg.background
+  if (animBg.backgroundSize) base.backgroundSize = animBg.backgroundSize
   if (s.backgroundImage) base.backgroundImage = s.backgroundImage
-  if (s.opacity != null && s.opacity !== 1) base.opacity = String(s.opacity)
   if (s.borderColor) base.borderColor = s.borderColor
   if (s.borderWidth != null) base.borderWidth = `${s.borderWidth}px`
   if (s.borderStyle) base.borderStyle = s.borderStyle
@@ -321,33 +298,10 @@ const cardWrapperStyle = computed(() => {
 
 
 
-const cardButtonSizeClass = computed(() => {
-  const size = cardStyle.value?.buttonSize
-  if (!size || size === 'default') return ''
-  return `card--buttons-${size}`
-})
-
 const cardFooterSizeClass = computed(() => {
   const size = cardStyle.value?.buttonSize
   if (!size || size === 'default') return ''
   return `card-footer--${size}`
-})
-
-const cardBadgeDisplay = computed(() => {
-  const b = cardStyle.value?.badge
-  return b && b !== 'none' ? b : null
-})
-
-const cardBadgeMovementClass = computed(() => {
-  const m = cardStyle.value?.badgeMovement
-  if (!m || m === 'none') return ''
-  return `card-badge--${m}`
-})
-
-const cardBadgeEmoji = computed(() => {
-  const b = cardBadgeDisplay.value
-  if (!b || b === 'custom') return ''
-  return BADGE_EMOJI[b as keyof typeof BADGE_EMOJI] ?? '✨'
 })
 
 const emit = defineEmits<{
@@ -509,26 +463,6 @@ function formatDate(s: string | undefined) {
   opacity: 0;
   transition: opacity 0.2s ease;
 }
-.card.card--bg-opacity::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  background: var(--card-bg);
-  background-size: var(--card-bg-size, auto);
-  opacity: var(--card-bg-opacity, 1);
-  border-radius: inherit;
-  pointer-events: none;
-}
-.card.card--bg-opacity .card-repost-header,
-.card.card--bg-opacity .card-header,
-.card.card--bg-opacity .card-body,
-.card.card--bg-opacity .card-footer,
-.card.card--bg-opacity .card-overlay,
-.card.card--bg-opacity .card-badge {
-  position: relative;
-  z-index: 1;
-}
 .card:hover {
   border-color: var(--accent-secondary);
 }
@@ -581,44 +515,8 @@ function formatDate(s: string | undefined) {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  /* opacity is controlled dynamically via inline style - fallback to 0.5 when not provided */
 }
 
-/* Card badge (corner) */
-.card-badge {
-  position: absolute;
-  z-index: 3;
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.125rem;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
-}
-.card-badge--top-right { top: 0.75rem; right: 0.75rem; }
-.card-badge--top-left { top: 0.75rem; left: 0.75rem; }
-.card-badge--bottom-right { bottom: 0.75rem; right: 0.75rem; }
-.card-badge--bottom-left { bottom: 0.75rem; left: 0.75rem; }
-.card-badge-img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-.card-badge--float {
-  animation: card-badge-float 2.5s ease-in-out infinite;
-}
-.card-badge--orbit {
-  animation: card-badge-orbit 8s linear infinite;
-}
-@keyframes card-badge-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
-}
-@keyframes card-badge-orbit {
-  from { transform: rotate(0deg) translateX(12px) rotate(0deg); }
-  to { transform: rotate(360deg) translateX(12px) rotate(-360deg); }
-}
 
 .card-author {
   display: flex;

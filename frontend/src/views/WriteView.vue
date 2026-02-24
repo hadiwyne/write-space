@@ -209,20 +209,7 @@
                   </button>
                 </div>
               </div>
-              <div class="card-style-group">
-                <label class="card-style-label">Opacity</label>
-                <div class="card-style-slider-row">
-                  <input v-model.number="cardStyleForm.opacity" type="range" min="0" max="1" step="0.05" class="card-style-slider" />
-                  <span class="card-style-slider-value">{{ Math.round((cardStyleForm.opacity ?? 1) * 100) }}%</span>
-                </div>
-              </div>
-              <div class="card-style-group">
-                <label class="card-style-label">Background transparency</label>
-                <div class="card-style-slider-row">
-                  <input v-model.number="cardStyleForm.backgroundOpacity" type="range" min="0" max="1" step="0.05" class="card-style-slider" />
-                  <span class="card-style-slider-value">{{ Math.round((cardStyleForm.backgroundOpacity ?? 1) * 100) }}%</span>
-                </div>
-              </div>
+              <!-- opacity and background transparency removed per feedback -->
               <div class="card-style-group">
                 <label class="card-style-label">Border</label>
                 <div class="color-input-wrap card-style-border-color">
@@ -552,8 +539,6 @@ type CardStyleFormState = Record<string, unknown> & {
   borderColor?: string
   borderWidth?: number
   borderStyle?: string
-  opacity?: number
-  backgroundOpacity?: number
   gradient?: { colors: string[]; conic?: boolean; angle?: number; speed?: number }
   overlayUrl?: string
   overlayOpacity?: number
@@ -566,8 +551,6 @@ const cardStyleForm = ref<CardStyleFormState | null>(null)
 const DEFAULT_CARD_STYLE_FORM: CardStyleFormState = {
   borderStyle: 'solid',
   buttonSize: 'default',
-  opacity: 1,
-  backgroundOpacity: 1,
   overlayOpacity: 1,
   overlayMode: 'cover',
   borderWidth: 0,
@@ -580,8 +563,6 @@ function getDefaultCardStyleForm(): CardStyleFormState {
 
 function isCardStyleDefault(form: CardStyleFormState): boolean {
   if (form.backgroundColor && form.backgroundColor.trim()) return false
-  if (form.opacity != null && form.opacity !== 1) return false
-  if (form.backgroundOpacity != null && form.backgroundOpacity !== 1) return false
   if (form.borderColor && form.borderColor.trim()) return false
   if (form.borderWidth != null && form.borderWidth !== 0) return false
   if (form.borderStyle && form.borderStyle !== 'solid') return false
@@ -599,8 +580,6 @@ function buildCardStylePayload(form: CardStyleFormState | null): PostCardStyle |
   if (form == null || isCardStyleDefault(form)) return undefined
   const out: PostCardStyle = {}
   if (form.backgroundColor?.trim()) out.backgroundColor = form.backgroundColor.trim()
-  if (form.opacity != null && form.opacity !== 1) out.opacity = form.opacity
-  if (form.backgroundOpacity != null && form.backgroundOpacity !== 1) out.backgroundOpacity = form.backgroundOpacity
   if (form.borderColor?.trim()) out.borderColor = form.borderColor.trim()
   if (form.borderWidth != null) out.borderWidth = form.borderWidth
   if (form.borderStyle && form.borderStyle !== 'solid')
@@ -1456,7 +1435,7 @@ function resetCardStyle() {
   overflow: hidden;
   min-height: 120px;
 }
-/* Color picker row (same pattern as Customization/Settings) */
+/* Color picker */
 .card-style-section .color-input-wrap {
   display: flex;
   align-items: center;
