@@ -17,7 +17,7 @@
     </template>
 
     <template v-else>
-      <!-- GIF: no crop (would lose animation), just preview and confirm -->
+      <!-- No cropping for GIF because that was making it lose animation -->
       <div v-if="cropState.isGif" class="crop-stage">
         <p class="crop-instructions">GIFs are used as-is so the animation is preserved.</p>
         <div class="crop-container crop-container--preview">
@@ -30,7 +30,6 @@
           </button>
         </div>
       </div>
-      <!-- Non-GIF: crop/zoom then export as JPEG -->
       <div v-else class="crop-stage">
         <p class="crop-instructions">Drag to position, use the slider to zoom. The square shows the area that will be used (your avatar shape is applied when displayed).</p>
         <div
@@ -82,7 +81,7 @@ const OUTPUT_SIZE = 256
 
 withDefaults(
   defineProps<{
-    /** Current avatar URL (for showing "current" state when no crop in progress) */
+    /** Current avatar URL for showing "rrent state when no crop */
     currentPreviewUrl?: string | null
   }>(),
   { currentPreviewUrl: null }
@@ -109,7 +108,6 @@ interface CropState {
   dragStartY: number
   dragStartPanX: number
   dragStartPanY: number
-  /** When true, file is a GIF and we use it as-is (no crop) so animation is preserved */
   isGif: boolean
   originalFile: File | null
 }
@@ -258,7 +256,6 @@ function getCroppedBlob(): Promise<Blob> {
     const { scale, panX, panY } = cropState
     const nw = cropState.naturalWidth
     const nh = cropState.naturalHeight
-    // Map the CROP_SIZE x CROP_SIZE view to OUTPUT_SIZE x OUTPUT_SIZE (square crop – no circle clip)
     const canvasScale = (OUTPUT_SIZE / CROP_SIZE) * scale
     const imgCenterX = nw / 2 - panX / scale
     const imgCenterY = nh / 2 - panY / scale
