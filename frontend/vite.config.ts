@@ -222,15 +222,14 @@ export default defineConfig({
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: false, // Keep console logs for debugging
-        drop_debugger: true, // Remove debugger statements
-        pure_funcs: ['console.log', 'console.info'], // Remove specific console methods
+        drop_console: false, 
+        drop_debugger: true, 
+        pure_funcs: ['console.log', 'console.info'], 
       },
       format: {
-        comments: false, // Remove comments
+        comments: false,
       },
     },
-    // Enable source maps for debugging (optional, remove for smaller builds)
     sourcemap: false,
   },
   server: {
@@ -241,7 +240,7 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
-      // Proxy Socket.IO (real-time notifications)
+      // Proxy Socket.IO for real-time notifications
       '/socket.io': { target: 'http://localhost:3000', ws: true },
     },
   },
