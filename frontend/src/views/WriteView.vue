@@ -288,10 +288,6 @@
                   <input :value="cardStyleForm.gradient.angle ?? 180" type="range" min="0" max="360" class="card-style-slider" @input="onCardGradientAngleInput" />
                   <span class="card-style-slider-value">{{ cardStyleForm.gradient.angle ?? 180 }}°</span>
                 </div>
-                <label v-if="cardStyleForm.gradient" class="card-style-check">
-                  <input v-model="cardStyleForm.gradient.conic" type="checkbox" />
-                  <span>Conic gradient</span>
-                </label>
               </div>
               <div class="card-style-group">
                 <label class="card-style-label">Overlay</label>
@@ -539,7 +535,7 @@ type CardStyleFormState = Record<string, unknown> & {
   borderColor?: string
   borderWidth?: number
   borderStyle?: string
-  gradient?: { colors: string[]; conic?: boolean; angle?: number; speed?: number }
+  gradient?: { colors: string[]; angle?: number; speed?: number }
   overlayUrl?: string
   overlayOpacity?: number
   overlayMode?: 'cover' | 'background'
@@ -554,11 +550,11 @@ const DEFAULT_CARD_STYLE_FORM: CardStyleFormState = {
   overlayOpacity: 1,
   overlayMode: 'cover',
   borderWidth: 0,
-  gradient: { colors: [], conic: false, angle: 180, speed: 1 },
+  gradient: { colors: [], angle: 180, speed: 1 },
 }
 
 function getDefaultCardStyleForm(): CardStyleFormState {
-  return { ...DEFAULT_CARD_STYLE_FORM, gradient: { colors: [], conic: false, angle: 180, speed: 1 } }
+  return { ...DEFAULT_CARD_STYLE_FORM, gradient: { colors: [], angle: 180, speed: 1 } }
 }
 
 function isCardStyleDefault(form: CardStyleFormState): boolean {
@@ -588,7 +584,6 @@ function buildCardStylePayload(form: CardStyleFormState | null): PostCardStyle |
   if (g?.colors?.length) {
     out.gradient = {
       colors: g.colors.filter(Boolean),
-      conic: g.conic ?? false,
       angle: g.angle,
       speed: g.speed,
     }
@@ -753,7 +748,7 @@ function onCardGradientHexInput(i: number, e: Event) {
 
 function addGradientColor() {
   if (!cardStyleForm.value) return
-  if (!cardStyleForm.value.gradient) cardStyleForm.value.gradient = { colors: [], conic: false, angle: 180, speed: 1 }
+  if (!cardStyleForm.value.gradient) cardStyleForm.value.gradient = { colors: [], angle: 180, speed: 1 }
   cardStyleForm.value.gradient.colors = [...cardStyleForm.value.gradient.colors, '#888']
 }
 
@@ -1114,14 +1109,10 @@ function resetCardColor(target: 'backgroundColor' | 'borderColor' | { type: 'gra
   } else if (target === 'borderColor') {
     cardStyleForm.value.borderColor = undefined
   } else if (target.type === 'gradient') {
-    // For gradient items, maybe we just set them to a default gray or white?
-    // Or we could remove them? Let's verify what "Reset" does for a single gradient stop. 
-    // In customization it resets to theme default. Here we don't have per-stop defaults really.
-    // Let's set it to valid hex like white or gray if we can't delete it easily here.
     if (cardStyleForm.value.gradient && cardStyleForm.value.gradient.colors) {
       const colors = [...cardStyleForm.value.gradient.colors]
       if (colors[target.index] !== undefined) {
-        colors[target.index] = '#ffffff' // Default to white
+        colors[target.index] = '#ffffff' 
         cardStyleForm.value.gradient.colors = colors
       }
     }

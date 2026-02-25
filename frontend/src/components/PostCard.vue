@@ -260,7 +260,6 @@ const cardStyle = computed((): PostCardStyle => {
 function buildCardBackground(s: NonNullable<PostCardStyle>): string | undefined {
   const g = s.gradient
   if (g?.colors?.length) {
-    if (g.conic) return `conic-gradient(from ${g.angle ?? 0}deg, ${g.colors.join(', ')})`
     return `linear-gradient(${g.angle ?? 180}deg, ${g.colors.join(', ')})`
   }
   if (s.backgroundColor) return s.backgroundColor
