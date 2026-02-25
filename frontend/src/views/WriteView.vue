@@ -594,7 +594,10 @@ function buildCardStylePayload(form: CardStyleFormState | null): PostCardStyle |
     }
   }
   if (form.overlayUrl?.trim()) out.overlayUrl = form.overlayUrl.trim()
-  if (form.overlayOpacity != null && form.overlayOpacity !== 1) out.overlayOpacity = form.overlayOpacity
+  // we must persist even a value of 1; absence on the published post triggers
+  // the component’s 0.5 fallback which makes fully‑opaque overlays look semi‑
+  // transparent. only skip when null/undefined.
+  if (form.overlayOpacity != null) out.overlayOpacity = form.overlayOpacity
   if (form.overlayMode && form.overlayMode !== 'cover') out.overlayMode = form.overlayMode
   if (form.buttonSize && form.buttonSize !== 'default')
     out.buttonSize = form.buttonSize as PostCardButtonSize
