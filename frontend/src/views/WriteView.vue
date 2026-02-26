@@ -263,6 +263,9 @@
                     @keydown.enter.prevent="applyBorderUrl"
                   />
                   <button type="button" class="btn btn-sm btn-outline" :disabled="!manualBorderUrl.trim()" @click="applyBorderUrl">Use URL</button>
+                  <button v-if="cardStyleForm.borderImage" type="button" class="btn btn-sm btn-ghost card-style-remove-btn" @click="clearBorderImage">
+                    <i class="pi pi-times" aria-hidden="true"></i> Remove image
+                  </button>
                 </div>
                 <!-- Optional hint for using border images effectively? -->
                 <p v-if="cardStyleForm.borderImage" class="card-style-hint">Border width behaves as the slice width</p>
@@ -312,6 +315,9 @@
                     @keydown.enter.prevent="applyOverlayUrl"
                   />
                   <button type="button" class="btn btn-sm btn-outline" :disabled="!manualOverlayUrl.trim()" @click="applyOverlayUrl">Use URL</button>
+                  <button v-if="cardStyleForm.overlayUrl" type="button" class="btn btn-sm btn-ghost card-style-remove-btn" @click="clearOverlay">
+                    <i class="pi pi-times" aria-hidden="true"></i> Remove overlay
+                  </button>
                 </div>
                 <div v-if="cardStyleForm.overlayUrl" class="card-style-radio-row">
                   <label class="card-style-label-inline">
@@ -835,6 +841,18 @@ async function onCardBorderImageUpload(e: Event) {
 
 function triggerBorderImageFileInput() {
   borderImageFileInputRef.value?.click()
+}
+
+function clearOverlay() {
+  if (!cardStyleForm.value) return
+  cardStyleForm.value.overlayUrl = undefined
+  manualOverlayUrl.value = ''
+}
+
+function clearBorderImage() {
+  if (!cardStyleForm.value) return
+  cardStyleForm.value.borderImage = undefined
+  manualBorderUrl.value = ''
 }
 
 function applyOverlayUrl() {
@@ -1720,6 +1738,8 @@ function resetCardStyle() {
   flex-wrap: wrap;
 }
 .card-style-input-url { flex: 1; min-width: 10rem; }
+.card-style-remove-btn { color: var(--text-tertiary); }
+.card-style-remove-btn:hover { color: var(--accent-burgundy, #c53030); }
 .card-style-hint { font-size: 0.75rem; color: var(--text-tertiary); margin-top: 0.25rem; }
 
 /* Modal backdrop shared styles (used by Teleported dialogs)
