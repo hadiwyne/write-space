@@ -326,7 +326,7 @@
                 <label class="card-style-label">Overlay transparency</label>
                 <div class="card-style-slider-row">
                   <input v-model.number="cardStyleForm.overlayOpacity" type="range" min="0" max="1" step="0.05" class="card-style-slider" />
-                  <span class="card-style-slider-value">{{ Math.round((cardStyleForm.overlayOpacity ?? 1) * 100) }}%</span>
+                  <span class="card-style-slider-value">{{ Math.round((cardStyleForm.overlayOpacity ?? 0.5) * 100) }}%</span>
                 </div>
               </div>
               <div class="card-style-group">
@@ -345,6 +345,7 @@
                   :show-actions="false"
                   :show-repost="false"
                   :show-like="true"
+                  preview-only
                 />
               </div>
             </div>
@@ -568,7 +569,7 @@ const cardStyleForm = ref<CardStyleFormState | null>(null)
 const DEFAULT_CARD_STYLE_FORM: CardStyleFormState = {
   borderStyle: 'solid',
   buttonSize: 'default',
-  overlayOpacity: 1,
+  overlayOpacity: 0.5,
   overlayMode: 'cover',
   borderWidth: 0,
   gradient: { colors: [], angle: 180, speed: 1 },
@@ -586,7 +587,7 @@ function isCardStyleDefault(form: CardStyleFormState): boolean {
   const g = form.gradient
   if (g?.colors?.length) return false
   if (form.overlayUrl && form.overlayUrl.trim()) return false
-  if (form.overlayOpacity != null && form.overlayOpacity !== 1) return false
+  if (form.overlayOpacity != null && form.overlayOpacity !== 0.5) return false
   if (form.overlayMode && form.overlayMode !== 'cover') return false
   if (form.buttonSize && form.buttonSize !== 'default') return false
   if (form.borderImage && form.borderImage.trim()) return false
@@ -610,9 +611,7 @@ function buildCardStylePayload(form: CardStyleFormState | null): PostCardStyle |
     }
   }
   if (form.overlayUrl?.trim()) out.overlayUrl = form.overlayUrl.trim()
-  // we must persist even a value of 1; absence on the published post triggers
-  // the component’s 0.5 fallback which makes fully‑opaque overlays look semi‑
-  // transparent. only skip when null/undefined.
+  // Persist overlayOpacity when set (default for new overlays is 0.5). Only skip when null/undefined.
   if (form.overlayOpacity != null) out.overlayOpacity = form.overlayOpacity
   if (form.overlayMode && form.overlayMode !== 'cover') out.overlayMode = form.overlayMode
   if (form.buttonSize && form.buttonSize !== 'default')
@@ -800,6 +799,7 @@ async function onCardOverlayUpload(e: Event) {
     const { data } = await api.post<{ url: string }>('/posts/upload-image', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
     // Store raw URL (relative path like /posts/images/xxx); PostCard will resolve via avatarSrc when rendering
     cardStyleForm.value.overlayUrl = data.url
+    cardStyleForm.value.overlayOpacity = 0.5
     manualOverlayUrl.value = ''
   } catch (err) {
     const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Upload failed'
@@ -846,6 +846,7 @@ function applyOverlayUrl() {
   }
   if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url
   cardStyleForm.value.overlayUrl = url
+  cardStyleForm.value.overlayOpacity = 0.5
 }
 
 function applyBorderUrl() {
@@ -1210,7 +1211,6 @@ function resetCardStyle() {
 .title-warning { font-size: 0.8125rem; color: var(--accent-burgundy, #6b2c3e); margin: 0.25rem 0 0; }
 .post-type-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .card-style-radio-row { display: flex; gap: 1rem; align-items: center; margin-top: 0.5rem; }
-.card-style-radio-row label { font-size: 0.875rem; }
 .post-type-btn {
   display: inline-flex;
   align-items: center;
@@ -1244,7 +1244,27 @@ function resetCardStyle() {
 .poll-option-add { margin-top: 0.25rem; }
 .poll-settings { display: flex; flex-direction: column; gap: 0.5rem; }
 .poll-check-wrap { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9375rem; cursor: pointer; }
-.poll-check { width: 1rem; height: 1rem; }
+.poll-check {
+  width: 1.125rem;
+  height: 1.125rem;
+  margin: 0;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 2px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+.poll-check:checked {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  box-shadow: inset 0 0 0 2px var(--bg-card);
+}
+.poll-check:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-primary);
+}
 .editor-toolbar { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
 .dropdown-wrap { position: relative; }
 .dropdown-trigger {
@@ -1478,7 +1498,56 @@ function resetCardStyle() {
   color: var(--text-secondary);
   cursor: pointer;
 }
-.card-style-check input { width: 1rem; height: 1rem; }
+.card-style-check input {
+  width: 1.125rem;
+  height: 1.125rem;
+  margin: 0;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 2px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+.card-style-check input:checked {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  box-shadow: inset 0 0 0 2px var(--bg-card);
+}
+.card-style-check input:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-primary);
+}
+.card-style-radio-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.card-style-radio-row input[type="radio"] {
+  width: 1.125rem;
+  height: 1.125rem;
+  margin: 0;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 2px solid var(--border-medium);
+  border-radius: 50%;
+  background: var(--bg-card);
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+.card-style-radio-row input[type="radio"]:checked {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  box-shadow: inset 0 0 0 2px var(--bg-card);
+}
+.card-style-radio-row input[type="radio"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-primary);
+}
 .card-style-preview-wrap {
   padding-top: 0.75rem;
   border-top: 1px solid var(--border-light);
@@ -1589,11 +1658,41 @@ function resetCardStyle() {
   flex: 1;
   min-width: 80px;
   max-width: 200px;
-  height: 6px;
-  accent-color: var(--accent-primary);
+  height: 0.5rem;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--border-light);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.card-style-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  border: 2px solid var(--bg-card);
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+.card-style-slider::-webkit-slider-thumb:hover {
+  filter: brightness(1.1);
+}
+.card-style-slider::-moz-range-thumb {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  border: 2px solid var(--bg-card);
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+.card-style-slider::-moz-range-thumb:hover {
+  filter: brightness(1.1);
 }
 .card-style-slider-value {
   font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
   color: var(--text-secondary);
   min-width: 2.5rem;
 }
@@ -1698,15 +1797,54 @@ function resetCardStyle() {
 .card-color-editor-modal .color-editor-range {
   flex: 1;
   min-width: 0;
-  height: 8px;
-  accent-color: var(--accent-primary);
+  height: 0.5rem;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--border-light);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.card-color-editor-modal .color-editor-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 2px solid var(--border-medium);
+  cursor: pointer;
+}
+.card-color-editor-modal .color-editor-range::-moz-range-thumb {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 2px solid var(--border-medium);
+  cursor: pointer;
 }
 .card-color-editor-modal .color-editor-range-hue {
   background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
-  border-radius: 4px;
+  border-radius: 999px;
+}
+.card-color-editor-modal .color-editor-range-hue::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 2px solid var(--border-medium);
+  cursor: pointer;
+}
+.card-color-editor-modal .color-editor-range-hue::-moz-range-thumb {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 2px solid var(--border-medium);
+  cursor: pointer;
 }
 .card-color-editor-modal .color-editor-value {
   font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
   color: var(--text-tertiary);
   min-width: 2.5rem;
 }

@@ -1,12 +1,12 @@
 <template>
   <article
     class="card"
-    :class="{ 'card--overlay-bg': cardStyle?.overlayMode === 'background' }"
+    :class="{ 'card--overlay-bg': cardStyle?.overlayMode === 'background', 'card--preview-only': previewOnly }"
     :style="cardWrapperStyle"
   >
         <div v-if="cardStyle?.overlayUrl" class="card-overlay" aria-hidden="true">
       <img
-        :src="cardStyle.overlayUrl"
+        :src="avatarSrc(cardStyle.overlayUrl)"
         alt=""
         class="card-overlay-img"
         :style="{ opacity: cardStyle?.overlayOpacity != null ? cardStyle.overlayOpacity : 0.5 }"
@@ -19,9 +19,10 @@
       </router-link>
     </div>
     <header class="card-header">
-      <router-link
+      <component
+        :is="previewOnly ? 'div' : 'router-link'"
         v-if="!post.isAnonymous && post.author?.username"
-        :to="'/u/' + post.author.username"
+        :to="previewOnly ? undefined : '/u/' + post.author.username"
         class="card-author"
       >
         <AvatarFrame :frame="authorFrame(post.author)" :shape-class="avatarShapeClass(post.author?.avatarShape)" :badge-url="authorBadgeUrl(post.author)">
@@ -38,7 +39,7 @@
             <span class="meta-read">{{ readTime }} min read</span>
           </div>
         </div>
-      </router-link>
+      </component>
       <div v-else class="card-author card-author-anonymous">
         <div class="author-avatar author-avatar-anonymous">
           <img v-if="anonAvatarUrl" :src="anonAvatarUrl" alt="" class="avatar-img" />
@@ -58,7 +59,11 @@
       </button>
     </header>
 
-    <router-link :to="'/posts/' + post.id" class="card-body">
+    <component
+      :is="previewOnly ? 'div' : 'router-link'"
+      :to="previewOnly ? undefined : '/posts/' + post.id"
+      class="card-body"
+    >
       <h2 class="card-title">{{ post.title }}</h2>
       <p v-if="excerpt" class="card-excerpt">{{ excerpt }}</p>
       <div v-if="postImageUrls.length" class="card-thumbnails" :class="'card-thumbnails--' + postImageUrls.length">
@@ -72,7 +77,7 @@
         />
       </div>
       <a
-        v-if="linkPreview"
+        v-if="linkPreview && !previewOnly"
         :href="linkPreview.url"
         target="_blank"
         rel="noopener noreferrer"
@@ -91,18 +96,29 @@
           </span>
         </div>
       </a>
+      <div v-else-if="linkPreview && previewOnly" class="card-link-preview card-link-preview--preview">
+        <div v-if="linkPreview.image" class="card-link-preview-media">
+          <img :src="linkPreview.image" alt="" class="card-link-preview-img" loading="lazy" />
+        </div>
+        <div class="card-link-preview-body">
+          <span v-if="linkPreview.siteName" class="card-link-preview-site">{{ linkPreview.siteName }}</span>
+          <span class="card-link-preview-title">{{ linkPreview.title || 'Link' }}</span>
+          <p v-if="linkPreview.description" class="card-link-preview-desc">{{ linkPreviewDescription }}</p>
+        </div>
+      </div>
       <div v-if="post.tags && post.tags.length" class="card-tags">
-        <router-link
+        <component
           v-for="t in post.tags"
           :key="t"
-          :to="`/feed?tag=${t}`"
+          :is="previewOnly ? 'span' : 'router-link'"
+          :to="previewOnly ? undefined : `/feed?tag=${t}`"
           class="tag"
           @click.stop
         >
           #{{ t }}
-        </router-link>
+        </component>
       </div>
-    </router-link>
+    </component>
     <div v-if="post.poll && post.poll.options?.length" class="card-poll-wrap">
       <PollBlock
         :post="postForPollBlock"
@@ -127,14 +143,15 @@
         <i class="pi pi-heart"></i>
         {{ likeCount }}
       </span>
-      <router-link
-        :to="'/posts/' + post.id + '#comments'"
+      <component
+        :is="previewOnly ? 'span' : 'router-link'"
+        :to="previewOnly ? undefined : '/posts/' + post.id + '#comments'"
         class="action-stat action-comment-link"
-        v-tooltip.bottom="'View and add comments'"
+        v-tooltip.bottom="previewOnly ? undefined : 'View and add comments'"
       >
         <i class="pi pi-comment"></i>
         {{ (post._count && post._count.comments) || 0 }}
-      </router-link>
+      </component>
       <span class="action-stat" v-tooltip.bottom="'Reposts'">
         <i class="pi pi-refresh"></i>
         {{ (post._count && post._count.reposts) || 0 }}
@@ -210,6 +227,8 @@ const props = defineProps({
   reposted: { type: Boolean, default: false },
   showLike: { type: Boolean, default: true },
   animationDelay: { type: String, default: '0s' },
+  /** When true, card is non-clickable (e.g. live preview in editor). No router-links, no navigation. */
+  previewOnly: { type: Boolean, default: false },
 })
 const canLike = computed(() => props.showLike && !!auth.token)
 
@@ -287,7 +306,7 @@ const cardWrapperStyle = computed(() => {
   if (s.borderWidth != null) base.borderWidth = `${s.borderWidth}px`
   if (s.borderStyle) base.borderStyle = s.borderStyle
   if (s.borderImage) {
-    base.borderImageSource = `url(${s.borderImage})`
+    base.borderImageSource = `url(${avatarSrc(s.borderImage)})`
     base.borderImageSlice = '30'
     base.borderImageRepeat = 'stretch'
   }
@@ -511,6 +530,12 @@ function formatDate(s: string | undefined) {
   position: relative;
   z-index: 1;
 }
+.card--preview-only .card-body,
+.card--preview-only .card-author {
+  cursor: default;
+  pointer-events: none;
+}
+.card--preview-only .card-body { pointer-events: auto; }
 .card-overlay-img {
   width: 100%;
   height: 100%;
