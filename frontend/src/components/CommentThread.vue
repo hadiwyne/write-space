@@ -182,12 +182,12 @@ function onReplyContentInput(e: Event) {
   margin-left: clamp(1rem, 4vw, 1.5rem);
   padding-left: 0;
 }
-/* Curved connector from vertical line to this reply */
+
 .comment-thread.comment-reply::before {
   content: '';
   position: absolute;
-  left: -2.5rem; /* back to vertical line (padding-left 1rem + margin-left 1.5rem) */
-  top: 0.875rem; /* align with avatar vertical center (28px / 2) */
+  left: -2.5rem; 
+  top: 0.875rem;
   width: 2.5rem;
   height: 2px;
   background: var(--border-medium);
@@ -349,7 +349,7 @@ function onReplyContentInput(e: Event) {
 
 .reply-form-wrap {
   margin-top: 0.5rem;
-  margin-left: 2.5rem; /* align with comment content (avatar + gap) */
+  margin-left: 2.5rem;
 }
 .reply-form-wrap.reply-form-in-thread { margin-left: 0; }
 .comment-replies {

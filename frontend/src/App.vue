@@ -164,7 +164,7 @@ body::before {
 a { color: var(--accent-primary); text-decoration: none; transition: color 0.2s ease; }
 a:hover { text-decoration: underline; color: var(--accent-burgundy); }
 
-/* PrimeVue tooltip – literary styling */
+/* Tooltip */
 .p-tooltip {
   position: absolute;
   z-index: 9999;
@@ -227,7 +227,7 @@ a:hover { text-decoration: underline; color: var(--accent-burgundy); }
   vertical-align: top !important;
 }
 
-/* Avatar frame: gradient/glow/preset border around avatar. Use !important so shape wins over component scoped styles. */
+/* Avatar frame */
 .avatar-frame {
   overflow: hidden;
 }
@@ -343,7 +343,7 @@ a:hover { text-decoration: underline; color: var(--accent-burgundy); }
   to { opacity: 1; }
 }
 
-/* Dark Void UI theme – background image set via --dark-void-bg-image in script (local stardust.png or fallback) */
+/* Dark Void UI theme */
 html.ui-theme-dark-void body {
   font-family: 'Space Grotesk', sans-serif;
   background-color: #0d0d0f;
@@ -376,7 +376,6 @@ html.ui-theme-dark-void {
   max-width: none;
 }
 
-/* Dark Void: landing (home) page – same aesthetic as rest of theme */
 html.ui-theme-dark-void .dark-void-standalone .home .hero h1 {
   font-family: 'Space Grotesk', sans-serif;
   font-weight: 700;
@@ -460,7 +459,7 @@ html.ui-theme-dark-void .dark-void-standalone .auth-page .footer a:hover {
   color: var(--dark-void-text-muted);
 }
 
-/* Dark Void: PostCard – sharp corners, serif italic title, dark card, light grey actions */
+/* Dark Void PostCard */
 html.ui-theme-dark-void .card {
   background: var(--dark-void-card);
   border: 1px solid var(--dark-void-border);
@@ -538,7 +537,7 @@ html.ui-theme-dark-void .card-link-preview-body .card-link-preview-site {
   color: var(--dark-void-text-muted);
 }
 
-/* Dark Void: feed – only post list centered; filter bar full width with theme typography */
+/* Dark Void feed */
 html.ui-theme-dark-void .dark-void-main .feed .feed-content {
   max-width: 640px;
   margin: 0 auto;
@@ -641,7 +640,7 @@ html.ui-theme-dark-void .dark-void-main .feed .view-btn.active {
   color: var(--dark-void-text);
 }
 
-/* Dark Void: poll block (feed, profile, post view) */
+/* Dark Void poll block */
 html.ui-theme-dark-void .dark-void-main .poll-block {
   background: var(--dark-void-bg);
   border: 1px solid var(--dark-void-border);
@@ -724,7 +723,7 @@ html.ui-theme-dark-void .dark-void-main .poll-block .poll-add-btn:hover:not(:dis
   }
 }
 
-/* Dark Void: profile page – same aesthetic as feed (sharp corners, dark cards, Space Grotesk) */
+/* Dark Void profile page */
 html.ui-theme-dark-void .dark-void-main .profile-page .profile-header,
 html.ui-theme-dark-void .dark-void-main .profile-page .posts-section {
   max-width: 640px;
@@ -833,7 +832,7 @@ html.ui-theme-dark-void .dark-void-main .profile-page .loading,
 html.ui-theme-dark-void .dark-void-main .profile-page .error {
   color: var(--dark-void-text-muted);
 }
-/* Dark Void: modals (profile followers/following + any teleported modal) */
+/* Dark Void modals */
 html.ui-theme-dark-void .modal-backdrop {
   background: rgba(0, 0, 0, 0.7);
 }
@@ -895,7 +894,7 @@ html.ui-theme-dark-void .dark-void-main .profile-page .avatar-placeholder {
   box-shadow: none;
 }
 
-/* Dark Void: post view (single post) – same aesthetic as feed/profile */
+/* Dark Void post view */
 html.ui-theme-dark-void .dark-void-main .post-page {
   max-width: 640px;
   margin: 0 auto;
@@ -1106,7 +1105,7 @@ html.ui-theme-dark-void .dark-void-main .post-page .btn-reply-ghost:hover {
   color: var(--dark-void-text);
 }
 
-/* Dark Void: archived posts page */
+/* Dark Void archived posts page */
 html.ui-theme-dark-void .dark-void-main .archived-page {
   max-width: 640px;
   margin: 0 auto;
@@ -1128,7 +1127,7 @@ html.ui-theme-dark-void .dark-void-main .archived-page .empty {
   font-family: 'Space Grotesk', sans-serif;
 }
 
-/* Dark Void: bookmarks page */
+/* Dark Void bookmarks page */
 html.ui-theme-dark-void .dark-void-main .bookmarks-page {
   max-width: 640px;
   margin: 0 auto;
@@ -1222,7 +1221,7 @@ html.ui-theme-dark-void .dark-void-main .search-page .user-handle {
   font-family: 'Space Grotesk', sans-serif;
 }
 
-/* Dark Void: notifications page */
+/* Dark Void notifications page */
 html.ui-theme-dark-void .dark-void-main .notifications-page {
   max-width: 640px;
   margin: 0 auto;
@@ -1270,7 +1269,7 @@ html.ui-theme-dark-void .dark-void-main .notifications-page .mark-all:hover {
   color: var(--dark-void-text);
 }
 
-/* Dark Void: collections list page */
+/* Dark Void collections list page */
 html.ui-theme-dark-void .dark-void-main .collections-page {
   max-width: 640px;
   margin: 0 auto;
@@ -1374,7 +1373,7 @@ html.ui-theme-dark-void .dark-void-main .collections-page .modal-actions .btn-pr
   border-radius: 0;
 }
 
-/* Dark Void: settings page */
+/* Dark Void settings page */
 html.ui-theme-dark-void .dark-void-main .settings-page {
   max-width: 640px;
   margin: 0 auto;
@@ -1542,7 +1541,7 @@ html.ui-theme-dark-void .dark-void-main .settings-page .frame-check input[type="
   background-repeat: no-repeat;
 }
 
-/* Dark Void: privacy settings page – dropdowns, save button, follow-request actions */
+/* Dark Void privacy settings page */
 html.ui-theme-dark-void .dark-void-main .privacy-page h1 {
   font-family: 'Space Grotesk', sans-serif;
   font-weight: 700;
@@ -1589,7 +1588,7 @@ html.ui-theme-dark-void .dark-void-main .privacy-page .success {
   color: #86efac;
 }
 
-/* Dark Void: follow requests page */
+/* Dark Void follow requests page */
 html.ui-theme-dark-void .dark-void-main .follow-requests-page h1 {
   font-family: 'Space Grotesk', sans-serif;
   font-weight: 700;
@@ -1637,7 +1636,7 @@ html.ui-theme-dark-void .dark-void-main .follow-requests-page .btn-ghost:hover:n
   background: rgba(255, 255, 255, 0.06);
 }
 
-/* Dark Void: customization page – sections as cards, centered, sharp corners */
+/* Dark Void customization page */
 html.ui-theme-dark-void .dark-void-main .customization-page {
   max-width: 640px;
   margin: 0 auto;
@@ -1810,7 +1809,7 @@ html.ui-theme-dark-void .dark-void-main .customization-page .btn-outline:hover:n
   background: rgba(255, 255, 255, 0.06);
 }
 
-/* Dark Void: teleported modals (color editor, save theme) */
+/* Dark Void teleported modals */
 html.ui-theme-dark-void .color-editor-backdrop {
   background: rgba(0, 0, 0, 0.7);
 }
@@ -1904,7 +1903,7 @@ html.ui-theme-dark-void .save-theme-modal .btn-outline {
   font-family: 'Space Grotesk', sans-serif;
 }
 
-/* Dark Void: write post & edit post – focused writing experience, sharp corners, dark cards */
+/* Dark Void write & edit post */
 html.ui-theme-dark-void .dark-void-main .write-page,
 html.ui-theme-dark-void .dark-void-main .edit-page {
   max-width: 720px;
@@ -2341,7 +2340,7 @@ html.ui-theme-dark-void .dark-void-main .edit-page > div {
   font-family: 'Space Grotesk', sans-serif;
 }
 
-/* Dark Void: single collection page */
+/* Dark Void single collection page */
 html.ui-theme-dark-void .dark-void-main .collection-page {
   max-width: 640px;
   margin: 0 auto;
@@ -2370,7 +2369,7 @@ html.ui-theme-dark-void .dark-void-main .collection-page .error {
   font-family: 'Space Grotesk', sans-serif;
 }
 
-/* Dark Void: FAB – right edge of feed (left of sidebar), sharp edges to match theme */
+/* Dark Void floating action button */
 html.ui-theme-dark-void .fab--dark-void.fab,
 html.ui-theme-dark-void .fab.fab--dark-void {
   background: #fff;
@@ -2388,13 +2387,11 @@ html.ui-theme-dark-void .fab.fab--dark-void {
   html.ui-theme-dark-void .fab--dark-void.fab,
   html.ui-theme-dark-void .fab.fab--dark-void {
     right: max(1.5rem, env(safe-area-inset-right, 0px));
-    /* Sit above the fixed status bar when visible; moves down with bar when bar hides */
     bottom: max(6rem, calc(env(safe-area-inset-bottom, 0px) + 5.5rem));
     transition: bottom 0.25s ease-out;
   }
   html.ui-theme-dark-void .app.status-bar-hidden .fab--dark-void.fab,
   html.ui-theme-dark-void .app.status-bar-hidden .fab.fab--dark-void {
-    /* Same distance from bottom edge as the gap above the bar when visible */
     bottom: max(2rem, calc(env(safe-area-inset-bottom, 0px) + 1.5rem));
   }
 }

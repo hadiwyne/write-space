@@ -7,7 +7,7 @@
       'hamburgers-extended': hamburgersExtended
     }"
   >
-    <!-- Mobile-only: fixed trigger to open left nav (peeks from left edge; pop out on hover/touch) -->
+    <!-- Mobile-only -->
     <button
       type="button"
       class="dark-void-nav-trigger"
@@ -18,7 +18,6 @@
       <i class="pi pi-bars" aria-hidden="true"></i>
     </button>
 
-    <!-- Mobile-only: fixed trigger on right to open sidebar (peeks from right edge; pop out on hover/touch) -->
     <button
       type="button"
       class="dark-void-sidebar-trigger"
@@ -205,8 +204,7 @@ const SCROLL_THRESHOLD = 10
 const avatarWrapRef = ref<HTMLElement | null>(null)
 const trendingTags = ref<{ tag: string; count: number }[]>([])
 
-/** Configurable status bar text via env: VITE_DARK_VOID_STATUS_LEFT, VITE_DARK_VOID_STATUS_RIGHT */
-const statusLeft = computed(() => import.meta.env.VITE_DARK_VOID_STATUS_LEFT ?? 'SERVER STATUS: NOGGING THE JOGGING – CURRENT MOOD: JOLLY')
+const statusLeft = computed(() => import.meta.env.VITE_DARK_VOID_STATUS_LEFT ?? 'SERVER STATUS: FASTING – CURRENT MOOD: HOLY')
 const statusRight = computed(() => import.meta.env.VITE_DARK_VOID_STATUS_RIGHT ?? 'JOIN THE SWARM')
 
 const profileStats = computed(() => {
@@ -296,13 +294,11 @@ function onSidebarSearch() {
 
 async function fetchOnlineCount() {
   try {
-    // Add cache-busting timestamp to bypass browser/disk cache
     const response = await api.get<{ count: number }>(`/presence/online-count?t=${Date.now()}`, {
       // @ts-ignore - axios-cache-interceptor bypass
       cache: false
     })
     
-    // Check if we got HTML back (Netlify 404/index.html fallback)
     if (typeof response.data === 'string' && (response.data as string).startsWith('<!DOCTYPE html>')) {
       console.error('[Presence] Received HTML instead of JSON. VITE_API_URL is likely missing or incorrect.')
       onlineCount.value = 0
@@ -408,7 +404,6 @@ onUnmounted(() => {
 }
 @media (max-width: 1024px) {
   .dark-void-sidebar-toggle {
-    /* Align hamburger center with status bar center (bar ~3.5rem: 2.5min + 0.5*2 padding) */
     margin-bottom: 0.5rem;
   }
 }
@@ -448,7 +443,6 @@ onUnmounted(() => {
   padding-bottom: 4.5rem;
   scrollbar-width: none;
   -ms-overflow-style: none;
- /* space above fixed status bar so last items don’t sit under it */
 }
 .dark-void-main::-webkit-scrollbar {
   display: none;
@@ -702,7 +696,7 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 
-/* Hamburger triggers: default peeking (only a tab visible), pop out on hover/extended, hide when panel open */
+/* Hamburger */
 .dark-void-nav-trigger {
   display: none;
   position: fixed;

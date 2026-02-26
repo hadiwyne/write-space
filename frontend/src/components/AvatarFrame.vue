@@ -30,11 +30,9 @@ import { avatarSrc } from '@/api/client'
 const props = withDefaults(
   defineProps<{
     frame?: AvatarFrameType | null
-    /** Shape class so frame border-radius matches avatar (e.g. avatar-shape-circle) */
     shapeClass?: string
-    /** URL for custom badge image when frame.badge === 'custom'. Use avatarSrc(badgeUrl) for full URL. */
+    /** URL for custom badge image when frame.badge === 'custom'. */
     badgeUrl?: string | null
-    /** Optional cache-bust (e.g. auth.avatarVersion) so badge image refetches after upload. */
     badgeCacheBust?: string | number
   }>(),
   { frame: null, shapeClass: 'avatar-shape-circle', badgeUrl: null, badgeCacheBust: undefined }
@@ -129,7 +127,6 @@ const frameStyle = computed(() => {
   display: inline-flex;
   position: relative;
 }
-/* Do not set border-radius here – global .avatar-frame.avatar-shape-* in App.vue controls it */
 .avatar-frame-root .avatar-frame {
   padding: 4px;
   display: inline-flex;

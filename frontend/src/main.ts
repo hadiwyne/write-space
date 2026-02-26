@@ -19,7 +19,6 @@ pinia.use(piniaPluginPersistedstate)
 
 const app = createApp(App)
 app.use(pinia)
-// Apply saved theme before mounting so first paint uses it
 import { useThemeStore } from './stores/theme'
 const theme = useThemeStore()
 theme.init()

@@ -3,10 +3,9 @@ import { setupCache } from 'axios-cache-interceptor'
 
 const baseURL = import.meta.env.VITE_API_URL || '/api'
 
-/** Base URL for API (use for avatar/image URLs that are relative, e.g. /uploads/avatars/...) */
+/** Base URL for API */
 export const apiBaseUrl = baseURL
 
-/** Resolve avatar or upload URL: relative path -> baseURL + path; full URL -> as-is. Optional cacheBust (e.g. after upload) appends ?v= so the browser refetches. */
 export function avatarSrc(url: string | null | undefined, cacheBust?: string | number): string {
   if (!url) return ''
   let out: string
@@ -32,12 +31,12 @@ const axiosInstance = axios.create({
   baseURL,
 })
 
-// Wrap with cache interceptor
+// Cache interceptor
 export const api = setupCache(axiosInstance, {
   ttl: 5 * 60 * 1000, // 5 minutes default cache
-  methods: ['get'], // Only cache GET requests
+  methods: ['get'],
   cachePredicate: {
-    statusCheck: (status) => (status as number) >= 200 && (status as number) < 400, // Cache successful responses
+    statusCheck: (status) => (status as number) >= 200 && (status as number) < 400,
   },
 })
 
@@ -48,14 +47,10 @@ declare module 'axios' {
   }
 }
 
-// Add manual bypass in interceptor or check if we can use 'cache: false' in requests
-// Actually, axios-cache-interceptor allows passing cache: false in the request config.
-// But we want to do it globally for these endpoints.
-
 api.interceptors.request.use((config) => {
   const url = config.url || ''
   if (REAL_TIME_ENDPOINTS.some(path => url.includes(path))) {
-    // @ts-ignore - axios-cache-interceptor adds this property
+    // @ts-ignore
     config.cache = false
   }
 
@@ -67,7 +62,7 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-/** Clears all cached API responses. Use on logout. */
+/** Clears all cached API responses on logout. */
 export async function clearApiCache() {
   await api.storage.remove('all')
 }
