@@ -1,5 +1,5 @@
 # Base image
-FROM node:18-alpine As development
+FROM node:20-alpine As development
 
 # Create app directory
 WORKDIR /usr/src/app
@@ -15,6 +15,9 @@ RUN npm ci
 # Bundle app source
 COPY . .
 
+# Add OpenSSL for secure environment variable handling
+RUN apk add --no-cache openssl
+
 # Generate Prisma Client
 RUN npx prisma generate
 
@@ -22,7 +25,10 @@ RUN npx prisma generate
 RUN npm run build
 
 # Production image
-FROM node:18-alpine As production
+FROM node:20-alpine As production
+
+# OpenSSL 3 required at runtime for Prisma query engine (linux-musl-openssl-3.0.x)
+RUN apk add --no-cache openssl
 
 WORKDIR /usr/src/app
 
@@ -34,9 +40,8 @@ COPY --from=development /usr/src/app/prisma ./prisma
 # Add strict host checking for sensitive environment variables if needed
 # ENV NODE_ENV production
 
-# HF Spaces documentation recommends creating a user with ID 1000
-RUN adduser -D -u 1000 user
-USER user
+# HF Spaces recommends UID 1000; node:alpine already has a "node" user with UID 1000
+USER node
 
 # Expose port (Hugging Face uses 7860 by default)
 EXPOSE 7860

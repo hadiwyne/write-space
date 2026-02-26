@@ -1,5 +1,5 @@
-import { IsString, IsOptional, IsBoolean, IsArray, IsEnum, MinLength, MaxLength } from 'class-validator';
-import { ContentType, PostVisibility } from '@prisma/client';
+import { IsString, IsOptional, IsBoolean, IsArray, IsEnum, MinLength, MaxLength, IsObject } from 'class-validator';
+import { ContentType, PostVisibility, Prisma } from '@prisma/client';
 
 export class UpdatePostDto {
   @IsOptional()
@@ -28,4 +28,8 @@ export class UpdatePostDto {
   @IsOptional()
   @IsEnum(PostVisibility)
   visibility?: PostVisibility;
+
+  @IsOptional()
+  @IsObject()
+  cardStyle?: Prisma.InputJsonValue;
 }

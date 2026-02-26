@@ -5,7 +5,7 @@
 
     <section class="theme-section ui-theme-section">
       <h2 class="section-title">Interface theme</h2>
-      <p class="section-hint">Change the </p>
+      <p class="section-hint">Change how the interface looks with one of the themes.</p>
       <div class="ui-theme-options" role="group" aria-label="Interface theme">
         <label class="ui-theme-option">
           <input type="radio" value="default" :checked="theme.uiTheme === 'default'" @change="theme.setUiTheme('default')" />
