@@ -252,9 +252,17 @@
                   <option v-for="(label, key) in BORDER_STYLE_LABELS" :key="key" :value="key">{{ label }}</option>
                 </select>
                 <div class="card-style-upload-row">
-                  <input ref="borderImageFileInputRef" type="file" accept="image/*" class="hidden" @change="onCardBorderImageUpload" />
+                  <input ref="borderImageFileInputRef" type="file" accept="image/*" class="file-input-hidden" aria-label="Upload image for border" @change="onCardBorderImageUpload" />
                   <button type="button" class="btn btn-sm btn-outline" @click="triggerBorderImageFileInput">Image border</button>
-                  <input v-model="cardStyleForm.borderImage" type="url" placeholder="Image URL for border" class="card-style-input card-style-input-url" />
+                  <span class="card-style-or">or</span>
+                  <input
+                    v-model="manualBorderUrl"
+                    type="text"
+                    placeholder="Paste image URL"
+                    class="card-style-input card-style-input-url"
+                    @keydown.enter.prevent="applyBorderUrl"
+                  />
+                  <button type="button" class="btn btn-sm btn-outline" :disabled="!manualBorderUrl.trim()" @click="applyBorderUrl">Use URL</button>
                 </div>
                 <!-- Optional hint for using border images effectively? -->
                 <p v-if="cardStyleForm.borderImage" class="card-style-hint">Border width behaves as the slice width</p>
@@ -293,9 +301,17 @@
                 <label class="card-style-label">Overlay</label>
                 <p class="card-style-hint">Image or GIF (transparent recommended)</p>
                 <div class="card-style-upload-row">
-                  <input ref="overlayFileInputRef" type="file" accept="image/*" class="hidden" @change="onCardOverlayUpload" />
+                  <input ref="overlayFileInputRef" type="file" accept="image/*" class="file-input-hidden" aria-label="Upload overlay image" @change="onCardOverlayUpload" />
                   <button type="button" class="btn btn-sm btn-outline" @click="triggerOverlayFileInput">Upload overlay</button>
-                  <input v-model="cardStyleForm.overlayUrl" type="url" placeholder="Or paste URL (image or GIF)" class="card-style-input card-style-input-url" />
+                  <span class="card-style-or">or</span>
+                  <input
+                    v-model="manualOverlayUrl"
+                    type="text"
+                    placeholder="Paste image or GIF URL"
+                    class="card-style-input card-style-input-url"
+                    @keydown.enter.prevent="applyOverlayUrl"
+                  />
+                  <button type="button" class="btn btn-sm btn-outline" :disabled="!manualOverlayUrl.trim()" @click="applyOverlayUrl">Use URL</button>
                 </div>
                 <div v-if="cardStyleForm.overlayUrl" class="card-style-radio-row">
                   <label class="card-style-label-inline">
@@ -485,6 +501,11 @@ const titleWarningMessage = computed(() => {
   if (titleWarningReason.value === 'chars') return 'Maximum 120 characters for title.'
   return ''
 })
+
+// manual URL inputs separate from the actual style value. when a file is uploaded
+// we update the style directly and leave these blank so the form doesn't complain.
+const manualOverlayUrl = ref('')
+const manualBorderUrl = ref('')
 
 function onTitleInput(e: Event) {
   const target = e.target as HTMLInputElement
@@ -777,9 +798,14 @@ async function onCardOverlayUpload(e: Event) {
     const formData = new FormData()
     formData.append('image', file)
     const { data } = await api.post<{ url: string }>('/posts/upload-image', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+    // Store raw URL (relative path like /posts/images/xxx); PostCard will resolve via avatarSrc when rendering
     cardStyleForm.value.overlayUrl = data.url
+    manualOverlayUrl.value = ''
   } catch (err) {
-    error.value = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Upload failed'
+    const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Upload failed'
+    error.value = msg
+    if (cardStyleForm.value) cardStyleForm.value.overlayUrl = undefined
+    console.error('overlay upload error', err)
   }
 }
 
@@ -796,14 +822,41 @@ async function onCardBorderImageUpload(e: Event) {
     const formData = new FormData()
     formData.append('image', file)
     const { data } = await api.post<{ url: string }>('/posts/upload-image', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+    // Store raw URL (relative path like /posts/images/xxx); PostCard will resolve via avatarSrc when rendering
     cardStyleForm.value.borderImage = data.url
+    manualBorderUrl.value = ''
   } catch (err) {
-    error.value = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Upload failed'
+    const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Upload failed'
+    error.value = msg
+    if (cardStyleForm.value) cardStyleForm.value.borderImage = undefined
+    console.error('border image upload error', err)
   }
 }
 
 function triggerBorderImageFileInput() {
   borderImageFileInputRef.value?.click()
+}
+
+function applyOverlayUrl() {
+  if (!cardStyleForm.value) return
+  let url = manualOverlayUrl.value.trim()
+  if (!url) {
+    cardStyleForm.value.overlayUrl = undefined
+    return
+  }
+  if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url
+  cardStyleForm.value.overlayUrl = url
+}
+
+function applyBorderUrl() {
+  if (!cardStyleForm.value) return
+  let url = manualBorderUrl.value.trim()
+  if (!url) {
+    cardStyleForm.value.borderImage = undefined
+    return
+  }
+  if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url
+  cardStyleForm.value.borderImage = url
 }
 
 const previewPost = computed(() => {
@@ -1136,10 +1189,15 @@ function randomizeCardStyle() {
     // occasionally toggle mode
     cardStyleForm.value.overlayMode = Math.random() < 0.5 ? 'cover' : 'background'
   }
+  // clear manual inputs so validation doesn't trip
+  manualOverlayUrl.value = ''
+  manualBorderUrl.value = ''
 }
 
 function resetCardStyle() {
   cardStyleForm.value = getDefaultCardStyleForm()
+  manualOverlayUrl.value = ''
+  manualBorderUrl.value = ''
 }
 </script>
 
@@ -1253,6 +1311,15 @@ function resetCardStyle() {
 .dropdown-enter-from,
 .dropdown-leave-to { opacity: 0; transform: translateY(-4px); }
 .hidden { display: none; }
+.file-input-hidden {
+  /* visually hidden but still focusable/clickable so programmatic .click() opens the file picker */
+  position: absolute;
+  opacity: 0;
+  width: 0.01px;
+  height: 0.01px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
 .btn-sm { padding: 0.375rem 0.75rem; font-size: 0.875rem; }
 .saved-hint { font-size: 0.75rem; color: var(--gray-700); }
 .editor-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; min-height: 420px; }
