@@ -3,7 +3,7 @@
     <div class="comment">
       <router-link v-if="comment.author?.username" :to="`/u/${comment.author.username}`" class="comment-avatar-link">
         <AvatarFrame :frame="comment.author?.avatarFrame ?? null" :shape-class="avatarShapeClass(comment.author?.avatarShape)" :badge-url="comment.author?.badgeUrl ?? null">
-          <img v-if="comment.author?.avatarUrl" :src="avatarSrc(comment.author.avatarUrl, comment.author?.id)" alt="" class="comment-avatar" :class="avatarShapeClass(comment.author?.avatarShape)" />
+          <img v-if="comment.author?.avatarUrl" :src="avatarSrc(comment.author.avatarUrl, comment.author?.id ?? undefined)" alt="" class="comment-avatar" :class="avatarShapeClass(comment.author?.avatarShape)" />
           <span v-else class="comment-avatar-placeholder" :class="avatarShapeClass(comment.author?.avatarShape)">{{ (comment.author?.displayName || comment.author?.username || '?')[0] }}</span>
         </AvatarFrame>
       </router-link>
