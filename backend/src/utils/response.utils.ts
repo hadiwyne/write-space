@@ -4,6 +4,7 @@ export type StandardPost = Post & {
     isLiked?: boolean;
     isBookmarked?: boolean;
     isReposted?: boolean;
+    isOwnPost?: boolean;
     _count?: {
         likes?: number;
         comments?: number;
@@ -11,6 +12,20 @@ export type StandardPost = Post & {
     };
     repostData?: any;
 };
+
+/** Masked author for anonymous posts: no real user id/username is ever sent. */
+function maskedAnonymousAuthor(post: { id: string; anonymousAlias?: string | null }) {
+    const alias = post.anonymousAlias || 'Anonymous';
+    return {
+        id: post.id,
+        username: null,
+        displayName: alias,
+        avatarUrl: null,
+        avatarShape: null,
+        avatarFrame: null,
+        badgeUrl: null,
+    };
+}
 
 export function mapPost(post: any, userId?: string | null): StandardPost {
     const result = { ...post };
@@ -24,6 +39,13 @@ export function mapPost(post: any, userId?: string | null): StandardPost {
         result.isLiked = false;
         result.isBookmarked = false;
         result.isReposted = false;
+    }
+
+    // True anonymity: never expose real author for anonymous posts
+    if (post.isAnonymous) {
+        result.author = maskedAnonymousAuthor(post);
+        result.authorId = post.id;
+        result.isOwnPost = userId != null && post.authorId === userId;
     }
 
     // Remove the underlying arrays to keep the response lean

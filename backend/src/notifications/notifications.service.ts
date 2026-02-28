@@ -16,6 +16,7 @@ export class NotificationsService {
     userId: string;
     type: NotificationType;
     actorId?: string;
+    actorAnonymousAlias?: string | null;
     postId?: string;
     commentId?: string;
   }) {
@@ -25,6 +26,7 @@ export class NotificationsService {
         userId: data.userId,
         type: data.type,
         actorId: data.actorId,
+        actorAnonymousAlias: data.actorAnonymousAlias ?? undefined,
         postId: data.postId,
         commentId: data.commentId,
       },
@@ -33,11 +35,23 @@ export class NotificationsService {
         post: { select: { id: true, title: true } },
       },
     });
-    if (notification.actor) {
-      (notification as any).actor = mapUser(notification.actor, data.userId);
+    const out = this.maskNotificationActor(notification as any, data.userId);
+    this.gateway.emitToUser(data.userId, 'notification', out);
+    return out;
+  }
+
+  private maskNotificationActor(n: { actor?: any; actorAnonymousAlias?: string | null; postId?: string | null }, userId?: string): any {
+    if (n.actorAnonymousAlias) {
+      return {
+        ...n,
+        actor: { displayName: n.actorAnonymousAlias, username: null, avatarUrl: null, avatarShape: null, avatarFrame: null, badgeUrl: null },
+        isAnonymousActor: true,
+      };
     }
-    this.gateway.emitToUser(data.userId, 'notification', notification);
-    return notification;
+    if (n.actor && userId != null) {
+      (n as any).actor = mapUser(n.actor, userId);
+    }
+    return n;
   }
 
   async findByUser(userId: string, limit = 20, offset = 0, unreadOnly = false) {
@@ -54,11 +68,15 @@ export class NotificationsService {
         post: { select: { id: true, title: true } },
       },
     });
-    return list.map(n => {
-      if (n.actor) {
-        (n as any).actor = mapUser(n.actor, userId);
+    return list.map((n) => {
+      const mapped = n as any;
+      if (mapped.actorAnonymousAlias) {
+        mapped.actor = { displayName: mapped.actorAnonymousAlias, username: null, avatarUrl: null, avatarShape: null, avatarFrame: null, badgeUrl: null };
+        mapped.isAnonymousActor = true;
+      } else if (mapped.actor) {
+        mapped.actor = mapUser(mapped.actor, userId);
       }
-      return n;
+      return mapped;
     });
   }
 

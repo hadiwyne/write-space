@@ -6,10 +6,26 @@ import { NotificationsService } from '../notifications/notifications.service';
 
 const authorSelect = { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true };
 
+/** Masked author for comment by post author on anonymous post. */
+function maskedCommentAuthor(anonymousAlias: string | null) {
+  const alias = anonymousAlias || 'Anonymous';
+  return {
+    id: null,
+    username: null,
+    displayName: alias,
+    avatarUrl: null,
+    avatarShape: null,
+    avatarFrame: null,
+    badgeUrl: null,
+  };
+}
+
 export type CommentWithReplies = {
   id: string;
   parentId: string | null;
   createdAt: string;
+  isAnonymousReply?: boolean;
+  isOwnComment?: boolean;
   [k: string]: unknown;
   replies: CommentWithReplies[];
 };
@@ -22,7 +38,7 @@ export class CommentsService {
   ) {}
 
   async create(postId: string, authorId: string, dto: CreateCommentDto) {
-    const post = await this.prisma.post.findUnique({ where: { id: postId } });
+    const post = await this.prisma.post.findUnique({ where: { id: postId }, select: { authorId: true, isAnonymous: true, anonymousAlias: true } });
     if (!post) throw new NotFoundException('Post not found');
 
     let parentId: string | null = null;
@@ -39,12 +55,22 @@ export class CommentsService {
       data: { postId, authorId, content: dto.content, parentId },
       include: { author: { select: authorSelect }, reactions: { select: { type: true, userId: true } } },
     });
-    const withCounts = this.attachReactionCounts([comment], authorId)[0];
+    const counted = this.attachReactionCounts([comment], authorId)[0];
+    let withCounts: CommentWithReplies & { authorId?: string } = {
+      ...counted,
+      replies: [],
+    } as unknown as CommentWithReplies & { authorId?: string };
+    if (post.isAnonymous && post.authorId === authorId) {
+      withCounts = { ...withCounts, author: maskedCommentAuthor(post.anonymousAlias), isAnonymousReply: true, isOwnComment: true };
+      withCounts.authorId = comment.id;
+    }
 
+    const isAnonymousReply = post.isAnonymous && post.authorId === authorId;
     await this.notifications.create({
       userId: post.authorId,
       type: parentId ? 'COMMENT_REPLY' : 'COMMENT',
       actorId: authorId,
+      ...(isAnonymousReply ? { actorAnonymousAlias: post.anonymousAlias ?? null } : {}),
       postId,
       commentId: withCounts.id,
     });
@@ -58,6 +84,7 @@ export class CommentsService {
           userId: parent.authorId,
           type: 'COMMENT_REPLY',
           actorId: authorId,
+          ...(isAnonymousReply ? { actorAnonymousAlias: post.anonymousAlias ?? null } : {}),
           postId,
           commentId: withCounts.id,
         });
@@ -84,6 +111,12 @@ export class CommentsService {
   }
 
   async findByPost(postId: string, limit = 200, offset = 0, userId?: string | null) {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      select: { isAnonymous: true, authorId: true, anonymousAlias: true },
+    });
+    if (!post) throw new NotFoundException('Post not found');
+
     const all = await this.prisma.comment.findMany({
       where: { postId },
       orderBy: { createdAt: 'asc' },
@@ -95,10 +128,36 @@ export class CommentsService {
       },
     });
     const withCounts = this.attachReactionCounts(
-      all as { id: string; reactions?: { type: string; userId: string }[] }[],
+      all as { id: string; authorId: string; reactions?: { type: string; userId: string }[] }[],
       userId ?? null,
     );
-    return this.buildCommentTree(withCounts as unknown as { id: string; parentId: string | null; createdAt: unknown; [k: string]: unknown }[], null);
+    const tree = this.buildCommentTree(withCounts as unknown as { id: string; parentId: string | null; createdAt: unknown; authorId?: string; [k: string]: unknown }[], null);
+    if (post.isAnonymous) {
+      return this.maskAnonymousReplies(tree, post.authorId, post.anonymousAlias ?? null, userId ?? null);
+    }
+    return tree;
+  }
+
+  private maskAnonymousReplies(
+    comments: CommentWithReplies[],
+    postAuthorId: string,
+    anonymousAlias: string | null,
+    userId: string | null,
+  ): CommentWithReplies[] {
+    return comments.map((c) => {
+      const isPostAuthorReply = (c as { authorId?: string }).authorId === postAuthorId;
+      const reply: CommentWithReplies = {
+        ...c,
+        replies: this.maskAnonymousReplies(c.replies ?? [], postAuthorId, anonymousAlias, userId),
+      };
+      if (isPostAuthorReply) {
+        reply.author = maskedCommentAuthor(anonymousAlias);
+        reply.isAnonymousReply = true;
+        reply.isOwnComment = userId === postAuthorId;
+        (reply as { authorId?: string }).authorId = c.id;
+      }
+      return reply;
+    });
   }
 
   private buildCommentTree(
