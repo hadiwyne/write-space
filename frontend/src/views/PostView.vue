@@ -498,7 +498,7 @@ async function addComment(parentId?: string) {
     const body = parentId ? { content: text, parentId } : { content: text }
     const { data } = await api.post(`/posts/${route.params.id}/comments`, body)
     
-    const merged = { ...data, replies: (data as CommentNode).replies ?? [] }
+    const merged: CommentNode = { ...data, replies: (data as CommentNode).replies ?? [] } as CommentNode
     if (parentId) {
       const parent = findCommentInTree(comments.value, parentId)
       if (parent && parent.replies) {
