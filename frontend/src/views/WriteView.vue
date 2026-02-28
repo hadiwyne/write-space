@@ -319,12 +319,14 @@
                     <i class="pi pi-times" aria-hidden="true"></i> Remove overlay
                   </button>
                 </div>
-                <div v-if="cardStyleForm.overlayUrl" class="card-style-radio-row">
-                  <label class="card-style-label-inline">
-                    <input type="radio" v-model="cardStyleForm.overlayMode" value="cover" /> Cover card (default)
+                <div v-if="cardStyleForm.overlayUrl" class="ui-theme-options" role="group" aria-label="Overlay mode">
+                  <label class="ui-theme-option">
+                    <input type="radio" v-model="cardStyleForm.overlayMode" value="cover" />
+                    <span>Cover card</span>
                   </label>
-                  <label class="card-style-label-inline">
-                    <input type="radio" v-model="cardStyleForm.overlayMode" value="background" /> Background only
+                  <label class="ui-theme-option">
+                    <input type="radio" v-model="cardStyleForm.overlayMode" value="background" />
+                    <span>Background only</span>
                   </label>
                 </div>
               </div>
@@ -1194,6 +1196,30 @@ function resetCardColor(target: 'backgroundColor' | 'borderColor' | { type: 'gra
 .title-warning { font-size: 0.8125rem; color: var(--accent-burgundy, #6b2c3e); margin: 0.25rem 0 0; }
 .post-type-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .card-style-radio-row { display: flex; gap: 1rem; align-items: center; margin-top: 0.5rem; }
+.ui-theme-options { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; margin-top: 0.5rem; }
+.ui-theme-option { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.9375rem; cursor: pointer; }
+.ui-theme-option input { cursor: pointer; }
+.ui-theme-option input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 2px solid var(--border-medium);
+  border-radius: 2px;
+  background: var(--bg-card);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.2s, background 0.2s;
+}
+.ui-theme-option input[type="radio"]:checked {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  box-shadow: inset 0 0 0 2px var(--bg-card);
+}
+.ui-theme-option input[type="radio"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-primary);
+}
 .post-type-btn {
   display: inline-flex;
   align-items: center;
