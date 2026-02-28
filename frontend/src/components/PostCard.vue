@@ -431,8 +431,9 @@ const readTime = computed(() => {
   return Math.max(1, Math.ceil(words / 200))
 })
 function formatDate(s: string | undefined) {
-  if (!s) return ''
+  if (s == null || typeof s !== 'string') return ''
   const d = new Date(s)
+  if (Number.isNaN(d.getTime())) return ''
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 </script>

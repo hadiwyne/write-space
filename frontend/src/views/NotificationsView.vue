@@ -97,14 +97,15 @@ function notificationLink(n: NotifRecord) {
 }
 
 function formatDate(s: string | undefined) {
-  if (!s) return ''
+  if (s == null || typeof s !== 'string') return ''
   const d = new Date(s)
+  if (Number.isNaN(d.getTime())) return ''
   const now = new Date()
   const diff = now.getTime() - d.getTime()
   if (diff < 60000) return 'just now'
   if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago'
   if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago'
-  return d.toLocaleDateString()
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 async function markRead(id: string) {
