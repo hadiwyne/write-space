@@ -94,6 +94,7 @@ const props = withDefaults(
       id: string
       author?: { id?: string } | null
       authorId?: string
+      isOwnPost?: boolean
       poll?: {
         id: string
         isOpen: boolean
@@ -141,9 +142,10 @@ const isOptionClickable = computed(() => {
   return !hasVoted.value
 })
 const isPollAuthor = computed(() => {
+  const post = props.post as { authorId?: string; author?: { id?: string }; isOwnPost?: boolean }
+  if (post.isOwnPost === true) return true
   const uid = auth.user?.id
   if (!uid) return false
-  const post = props.post as { authorId?: string; author?: { id?: string } }
   return post.authorId === uid || post.author?.id === uid
 })
 const canAddOption = computed(() => {

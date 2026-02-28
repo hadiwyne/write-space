@@ -113,6 +113,7 @@
             :can-delete-fn="canDeleteComment"
             :can-edit-fn="canEditComment"
             :avatar-src="(url, userId) => avatarSrc(url, userId === auth.user?.id ? auth.avatarVersion : undefined)"
+            :anonymous-post-avatar-url="post?.isAnonymous && post?.id ? getAnonAvatarUrl(post.id) : ''"
             @reply="replyToId = replyToId === $event ? null : $event"
             @update:reply-content="replyContent = $event"
             @submit-reply="addComment($event)"
@@ -148,6 +149,7 @@ import { api, avatarSrc, resolveContentImageUrls } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import { useLikedPostsStore } from '@/stores/likedPosts'
 import { getCachedPost, setCachedPost } from '@/utils/indexedDBCache'
+import { getAnonAvatarUrl } from '@/utils/anonAvatar'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import CommentThread from '@/components/CommentThread.vue'
 import PollBlock from '@/components/PollBlock.vue'
@@ -172,6 +174,7 @@ const post = ref<{
   author?: { id?: string; username?: string; displayName?: string | null }
   isAnonymous?: boolean
   anonymousAlias?: string | null
+  isOwnPost?: boolean
   poll?: {
     id: string
     isOpen: boolean
@@ -192,6 +195,7 @@ function onPollUpdate(updated: Record<string, unknown>) {
 const resolvedPostHtml = computed(() => resolveContentImageUrls(post.value?.renderedHTML ?? ''))
 
 const isOwnPost = computed(() => {
+  if (post.value?.isOwnPost === true) return true
   const u = auth.user
   const a = post.value?.author
   return !!(u?.id && a?.id && u.id === a.id)
@@ -204,20 +208,24 @@ type CommentNode = {
   content: string
   createdAt?: string
   editedAt?: string | null
-  author?: { id?: string; username?: string; displayName?: string | null; avatarUrl?: string | null; avatarShape?: string | null; avatarFrame?: unknown; badgeUrl?: string | null }
+  author?: { id?: string | null; username?: string | null; displayName?: string | null; avatarUrl?: string | null; avatarShape?: string | null; avatarFrame?: unknown; badgeUrl?: string | null }
   replies?: CommentNode[]
   likeCount?: number
   dislikeCount?: number
   myReaction?: 'LIKE' | 'DISLIKE' | null
+  isAnonymousReply?: boolean
+  isOwnComment?: boolean
 }
 function canDeleteComment(c: CommentNode): boolean {
   const u = auth.user
   if (!u?.id) return false
+  if (c.isOwnComment === true) return true
   return (c.author?.id && c.author.id === u.id) || !!u.isSuperadmin
 }
 function canEditComment(c: CommentNode): boolean {
   const u = auth.user
   if (!u?.id) return false
+  if (c.isOwnComment === true) return true
   return !!(c.author?.id && c.author.id === u.id)
 }
 const loading = ref(true)
@@ -446,25 +454,30 @@ function findCommentInTree(tree: CommentNode[], id: string): CommentNode | null 
 async function addComment(parentId?: string) {
   const text = parentId ? replyContent.value.trim() : newComment.value.trim()
   if (!text || !auth.isLoggedIn) return
-  
-  // Create an optimistic comment object
+
+  const isAnonymousPostAuthor = !!(post.value?.isAnonymous && post.value?.isOwnPost)
+  const alias = post.value?.anonymousAlias || 'Anonymous'
+
   const tempId = `temp-${Date.now()}`
   const optimisticComment: CommentNode = {
     id: tempId,
     content: text,
     createdAt: new Date().toISOString(),
-    author: {
-      id: auth.user?.id,
-      username: auth.user?.username,
-      displayName: auth.user?.displayName,
-      avatarUrl: auth.user?.avatarUrl,
-      avatarFrame: (auth.user as any)?.avatarFrame,
-      badgeUrl: (auth.user as any)?.badgeUrl,
-    },
+    author: isAnonymousPostAuthor
+      ? { id: null, username: null, displayName: alias, avatarUrl: null, avatarShape: null, avatarFrame: null, badgeUrl: null }
+      : {
+          id: auth.user?.id,
+          username: auth.user?.username,
+          displayName: auth.user?.displayName,
+          avatarUrl: auth.user?.avatarUrl,
+          avatarFrame: (auth.user as any)?.avatarFrame,
+          badgeUrl: (auth.user as any)?.badgeUrl,
+        },
     replies: [],
     likeCount: 0,
     dislikeCount: 0,
-    myReaction: null
+    myReaction: null,
+    ...(isAnonymousPostAuthor ? { isAnonymousReply: true, isOwnComment: true } : {}),
   }
 
   // Optimistic Update
@@ -485,16 +498,16 @@ async function addComment(parentId?: string) {
     const body = parentId ? { content: text, parentId } : { content: text }
     const { data } = await api.post(`/posts/${route.params.id}/comments`, body)
     
-    // Replace optimistic comment with real one
+    const merged = { ...data, replies: (data as CommentNode).replies ?? [] }
     if (parentId) {
       const parent = findCommentInTree(comments.value, parentId)
       if (parent && parent.replies) {
         const idx = parent.replies.findIndex(c => c.id === tempId)
-        if (idx !== -1) parent.replies[idx] = data
+        if (idx !== -1) parent.replies[idx] = merged
       }
     } else {
       const idx = comments.value.findIndex(c => c.id === tempId)
-      if (idx !== -1) comments.value[idx] = data
+      if (idx !== -1) comments.value[idx] = merged
     }
   } catch (err) {
     // Rollback

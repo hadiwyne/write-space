@@ -8,7 +8,7 @@
         <router-link :to="notificationLink(n)" class="notification-link" @click="markRead(notifId(n))">
           <div class="notif-avatar-wrap">
             <AvatarFrame :frame="n.actor?.avatarFrame ?? null" :shape-class="avatarShapeClass(n.actor?.avatarShape)" :badge-url="actorBadgeUrl(n.actor)">
-              <img v-if="n.actor?.avatarUrl" :src="actorAvatarSrc(n.actor)" alt="" class="notif-avatar" :class="avatarShapeClass(n.actor?.avatarShape)" />
+              <img v-if="notifAvatarUrl(n)" :src="notifAvatarUrl(n)" alt="" class="notif-avatar" :class="avatarShapeClass(n.actor?.avatarShape)" />
               <span v-else class="notif-avatar-placeholder" :class="avatarShapeClass(n.actor?.avatarShape)">{{ (n.actor?.displayName || n.actor?.username || '?')[0] }}</span>
             </AvatarFrame>
           </div>
@@ -27,6 +27,7 @@
 import { ref, onMounted } from 'vue'
 import { api, avatarSrc } from '@/api/client'
 import { avatarShapeClass } from '@/utils/avatar'
+import { getAnonAvatarUrl } from '@/utils/anonAvatar'
 import AvatarFrame from '@/components/AvatarFrame.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationsStore } from '@/stores/notifications'
@@ -40,6 +41,7 @@ type NotifRecord = Record<string, unknown> & {
   createdAt?: string
   actor?: { id?: string; displayName?: string; username?: string; avatarUrl?: string | null; avatarShape?: string | null; avatarFrame?: unknown; badgeUrl?: string | null }
   postId?: string
+  isAnonymousActor?: boolean
 }
 
 const notifications = ref<NotifRecord[]>([])
@@ -63,6 +65,11 @@ function actorAvatarSrc(actor: NotifRecord['actor']) {
   if (!actor?.avatarUrl) return ''
   const id = (actor as { id?: string }).id
   return avatarSrc(actor.avatarUrl, id === auth.user?.id ? auth.avatarVersion : undefined)
+}
+
+function notifAvatarUrl(n: NotifRecord): string {
+  if (n.isAnonymousActor && n.postId) return getAnonAvatarUrl(String(n.postId))
+  return actorAvatarSrc(n.actor)
 }
 
 function notifId(n: NotifRecord) {
@@ -91,6 +98,7 @@ function notificationLink(n: NotifRecord) {
   if (n.type === 'FOLLOW_REQUEST') return '/follow-requests'
   const postId = n.postId as string | undefined
   if (postId) return `/posts/${postId}`
+  if (n.isAnonymousActor) return '/feed'
   const username = n.actor?.username
   if (username) return `/u/${username}`
   return '/feed'

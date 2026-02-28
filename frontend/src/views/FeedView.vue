@@ -182,6 +182,7 @@ function handleLike(postId: string, isLiked: boolean) {
 function canShowActions(p: FeedPost): boolean {
   const u = auth.user
   if (!u?.id) return false
+  if ((p as { isOwnPost?: boolean }).isOwnPost === true) return true
   const authorId = (p as { author?: { id?: string } }).author?.id
   return authorId === u.id || !!u.isSuperadmin
 }
