@@ -77,14 +77,16 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Handle 401 unauthorized
 let handling401 = false
+const AUTH_PERSIST_KEY = 'auth'
+
 api.interceptors.response.use(
   (r) => r,
   (err) => {
     if (err.response?.status === 401 && !handling401) {
       handling401 = true
       localStorage.removeItem('writespace_token')
+      localStorage.removeItem(AUTH_PERSIST_KEY)
       const path = typeof window !== 'undefined' ? window.location.pathname : ''
       if (!path.startsWith('/login') && !path.startsWith('/register')) {
         window.location.assign('/login')
