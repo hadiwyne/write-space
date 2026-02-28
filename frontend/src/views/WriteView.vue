@@ -319,27 +319,23 @@
                     <i class="pi pi-times" aria-hidden="true"></i> Remove overlay
                   </button>
                 </div>
-                <div v-if="cardStyleForm.overlayUrl" class="card-style-radio-row">
-                  <label class="card-style-label-inline">
-                    <input type="radio" v-model="cardStyleForm.overlayMode" value="cover" /> Cover card (default)
+                <div v-if="cardStyleForm.overlayUrl" class="ui-theme-options" role="group" aria-label="Overlay mode">
+                  <label class="ui-theme-option">
+                    <input type="radio" v-model="cardStyleForm.overlayMode" value="cover" />
+                    <span>Cover card</span>
                   </label>
-                  <label class="card-style-label-inline">
-                    <input type="radio" v-model="cardStyleForm.overlayMode" value="background" /> Background only
+                  <label class="ui-theme-option">
+                    <input type="radio" v-model="cardStyleForm.overlayMode" value="background" />
+                    <span>Background only</span>
                   </label>
                 </div>
               </div>
               <div v-if="cardStyleForm.overlayUrl" class="card-style-group">
                 <label class="card-style-label">Overlay transparency</label>
                 <div class="card-style-slider-row">
-                  <input v-model.number="cardStyleForm.overlayOpacity" type="range" min="0" max="1" step="0.05" class="card-style-slider" />
-                  <span class="card-style-slider-value">{{ Math.round((cardStyleForm.overlayOpacity ?? 0.5) * 100) }}%</span>
+                  <input v-model.number="overlayTransparency" type="range" min="0" max="1" step="0.05" class="card-style-slider" />
+                  <span class="card-style-slider-value">{{ Math.round((overlayTransparency ?? 0.5) * 100) }}%</span>
                 </div>
-              </div>
-              <div class="card-style-group">
-                <label class="card-style-label">Footer button size</label>
-                <select v-model="cardStyleForm.buttonSize" class="card-style-select">
-                  <option v-for="(label, key) in BUTTON_SIZE_LABELS" :key="key" :value="key">{{ label }}</option>
-                </select>
               </div>
 
             </div>
@@ -356,13 +352,6 @@
               </div>
             </div>
             
-            <div class="actions">
-              <div class="actions-group">
-                <button type="button" class="btn btn-primary" @click="randomizeCardStyle">Randomize</button>
-                <button type="button" class="btn btn-outline" @click="resetCardStyle">Reset to default</button>
-              </div>
-            </div>
-
           </div>
         </Transition>
       </div>
@@ -471,15 +460,8 @@ import { api } from '@/api/client'
 import { renderPreview, type ContentType } from '@/utils/preview'
 import RichTextEditor from '@/components/RichTextEditor.vue'
 import PostCard from '@/components/PostCard.vue'
-import type {
-  PostCardStyle,
-  PostCardBorderStyle,
-  PostCardButtonSize,
-} from '@/types/postCardStyle'
-import {
-  BORDER_STYLE_LABELS,
-  BUTTON_SIZE_LABELS,
-} from '@/types/postCardStyle'
+import type { PostCardStyle, PostCardBorderStyle } from '@/types/postCardStyle'
+import { BORDER_STYLE_LABELS } from '@/types/postCardStyle'
 
 const MAX_IMAGES_PER_POST = 5
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
@@ -567,14 +549,12 @@ type CardStyleFormState = Record<string, unknown> & {
   overlayUrl?: string
   overlayOpacity?: number
   overlayMode?: 'cover' | 'background'
-  buttonSize?: string
   borderImage?: string
 }
 const cardStyleForm = ref<CardStyleFormState | null>(null)
 
 const DEFAULT_CARD_STYLE_FORM: CardStyleFormState = {
   borderStyle: 'solid',
-  buttonSize: 'default',
   overlayOpacity: 0.5,
   overlayMode: 'cover',
   borderWidth: 0,
@@ -595,7 +575,6 @@ function isCardStyleDefault(form: CardStyleFormState): boolean {
   if (form.overlayUrl && form.overlayUrl.trim()) return false
   if (form.overlayOpacity != null && form.overlayOpacity !== 0.5) return false
   if (form.overlayMode && form.overlayMode !== 'cover') return false
-  if (form.buttonSize && form.buttonSize !== 'default') return false
   if (form.borderImage && form.borderImage.trim()) return false
   return true
 }
@@ -620,8 +599,6 @@ function buildCardStylePayload(form: CardStyleFormState | null): PostCardStyle |
   // Persist overlayOpacity when set (default for new overlays is 0.5). Only skip when null/undefined.
   if (form.overlayOpacity != null) out.overlayOpacity = form.overlayOpacity
   if (form.overlayMode && form.overlayMode !== 'cover') out.overlayMode = form.overlayMode
-  if (form.buttonSize && form.buttonSize !== 'default')
-    out.buttonSize = form.buttonSize as PostCardButtonSize
   if (form.borderImage?.trim()) out.borderImage = form.borderImage.trim()
   return Object.keys(out).length ? out : undefined
 }
@@ -633,6 +610,13 @@ function toggleModifyPostCard() {
   }
 }
 
+// Transparency
+const overlayTransparency = computed({
+  get: () => 1 - (cardStyleForm.value?.overlayOpacity ?? 0.5),
+  set: (v: number) => {
+    if (cardStyleForm.value) cardStyleForm.value.overlayOpacity = 1 - v
+  },
+})
 
 const overlayFileInputRef = ref<HTMLInputElement | null>(null)
 const borderImageFileInputRef = ref<HTMLInputElement | null>(null)
@@ -1190,34 +1174,6 @@ function resetCardColor(target: 'backgroundColor' | 'borderColor' | { type: 'gra
     }
   }
 }
-
-function randomizeCardStyle() {
-  if (!cardStyleForm.value) {
-    cardStyleForm.value = getDefaultCardStyleForm()
-  }
-  cardStyleForm.value.backgroundColor = randomHex()
-  cardStyleForm.value.borderColor = randomHex()
-  // Randomize gradient if it exists, or maybe add some? 
-  // Let's just randomize existing gradient colors if any
-  if (cardStyleForm.value.gradient && cardStyleForm.value.gradient.colors.length > 0) {
-    cardStyleForm.value.gradient.colors = cardStyleForm.value.gradient.colors.map(() => randomHex())
-  }
-  // also randomize overlay opacity when URL is present, to give a quick effect
-  if (cardStyleForm.value.overlayUrl) {
-    cardStyleForm.value.overlayOpacity = Number(Math.random().toFixed(2))
-    // occasionally toggle mode
-    cardStyleForm.value.overlayMode = Math.random() < 0.5 ? 'cover' : 'background'
-  }
-  // clear manual inputs so validation doesn't trip
-  manualOverlayUrl.value = ''
-  manualBorderUrl.value = ''
-}
-
-function resetCardStyle() {
-  cardStyleForm.value = getDefaultCardStyleForm()
-  manualOverlayUrl.value = ''
-  manualBorderUrl.value = ''
-}
 </script>
 
 <style scoped>
@@ -1229,6 +1185,30 @@ function resetCardStyle() {
 .title-warning { font-size: 0.8125rem; color: var(--accent-burgundy, #6b2c3e); margin: 0.25rem 0 0; }
 .post-type-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .card-style-radio-row { display: flex; gap: 1rem; align-items: center; margin-top: 0.5rem; }
+.ui-theme-options { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; margin-top: 0.5rem; }
+.ui-theme-option { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.9375rem; cursor: pointer; }
+.ui-theme-option input { cursor: pointer; }
+.ui-theme-option input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 2px solid var(--border-medium);
+  border-radius: 2px;
+  background: var(--bg-card);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.2s, background 0.2s;
+}
+.ui-theme-option input[type="radio"]:checked {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  box-shadow: inset 0 0 0 2px var(--bg-card);
+}
+.ui-theme-option input[type="radio"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-primary);
+}
 .post-type-btn {
   display: inline-flex;
   align-items: center;
