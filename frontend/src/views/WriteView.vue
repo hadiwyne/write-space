@@ -356,13 +356,6 @@
               </div>
             </div>
             
-            <div class="actions">
-              <div class="actions-group">
-                <button type="button" class="btn btn-primary" @click="randomizeCardStyle">Randomize</button>
-                <button type="button" class="btn btn-outline" @click="resetCardStyle">Reset to default</button>
-              </div>
-            </div>
-
           </div>
         </Transition>
       </div>
@@ -1189,34 +1182,6 @@ function resetCardColor(target: 'backgroundColor' | 'borderColor' | { type: 'gra
       }
     }
   }
-}
-
-function randomizeCardStyle() {
-  if (!cardStyleForm.value) {
-    cardStyleForm.value = getDefaultCardStyleForm()
-  }
-  cardStyleForm.value.backgroundColor = randomHex()
-  cardStyleForm.value.borderColor = randomHex()
-  // Randomize gradient if it exists, or maybe add some? 
-  // Let's just randomize existing gradient colors if any
-  if (cardStyleForm.value.gradient && cardStyleForm.value.gradient.colors.length > 0) {
-    cardStyleForm.value.gradient.colors = cardStyleForm.value.gradient.colors.map(() => randomHex())
-  }
-  // also randomize overlay opacity when URL is present, to give a quick effect
-  if (cardStyleForm.value.overlayUrl) {
-    cardStyleForm.value.overlayOpacity = Number(Math.random().toFixed(2))
-    // occasionally toggle mode
-    cardStyleForm.value.overlayMode = Math.random() < 0.5 ? 'cover' : 'background'
-  }
-  // clear manual inputs so validation doesn't trip
-  manualOverlayUrl.value = ''
-  manualBorderUrl.value = ''
-}
-
-function resetCardStyle() {
-  cardStyleForm.value = getDefaultCardStyleForm()
-  manualOverlayUrl.value = ''
-  manualBorderUrl.value = ''
 }
 </script>
 
