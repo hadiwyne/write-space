@@ -22,7 +22,6 @@ export class AbsoluteUrlInterceptor implements NestInterceptor {
   private normalizePostImageUrls(value: unknown): unknown {
     if (value === null || value === undefined) return value;
     if (value instanceof StreamableFile) return value;
-    // Preserve Date and other built-in types: iterating over them would produce {} and break date display
     if (value instanceof Date) return value;
     if (typeof value === 'string') {
       if (!value.includes('/posts/images/')) return value;
