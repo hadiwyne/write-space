@@ -11,6 +11,8 @@ export type NotificationItem = {
   createdAt: string
   actor?: { id: string; username: string; displayName: string | null; avatarUrl: string | null; avatarShape?: string | null }
   post?: { id: string; title: string }
+  postId?: string
+  isAnonymousActor?: boolean
 }
 
 export const useNotificationsStore = defineStore('notifications', () => {

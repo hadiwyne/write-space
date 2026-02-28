@@ -51,7 +51,7 @@
                   <span class="notif-dot" :class="{ unread: !n.readAt }" aria-hidden="true"></span>
                   <div class="notif-avatar-wrap">
                     <AvatarFrame :frame="actorFrame(n.actor)" :shape-class="avatarShapeClass(n.actor?.avatarShape)" :badge-url="actorBadgeUrl(n.actor)">
-                      <img v-if="n.actor?.avatarUrl" :src="avatarSrc(n.actor.avatarUrl, n.actor?.id === auth.user?.id ? auth.avatarVersion : undefined)" alt="" class="notif-avatar" :class="avatarShapeClass(n.actor?.avatarShape)" />
+                      <img v-if="notifAvatarUrl(n)" :src="notifAvatarUrl(n)" alt="" class="notif-avatar" :class="avatarShapeClass(n.actor?.avatarShape)" />
                       <span v-else class="notif-avatar-placeholder" :class="avatarShapeClass(n.actor?.avatarShape)">{{ (n.actor?.displayName || n.actor?.username || '?')[0] }}</span>
                     </AvatarFrame>
                   </div>
@@ -132,6 +132,7 @@ import { useThemeStore } from '@/stores/theme'
 import { useNotificationsStore } from '@/stores/notifications'
 import { avatarSrc } from '@/api/client'
 import { avatarShapeClass } from '@/utils/avatar'
+import { getAnonAvatarUrl } from '@/utils/anonAvatar'
 import AvatarFrame from '@/components/AvatarFrame.vue'
 import type { AvatarFrame as AvatarFrameType } from '@/types/avatarFrame'
 import type { NotificationItem } from '@/stores/notifications'
@@ -243,8 +244,16 @@ function notifTime(createdAt: string) {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+function notifAvatarUrl(n: NotificationItem): string {
+  if (n.isAnonymousActor && (n.post?.id ?? n.postId)) return getAnonAvatarUrl(String(n.post?.id ?? n.postId))
+  if (n.actor?.avatarUrl) return avatarSrc(n.actor.avatarUrl, n.actor?.id === auth.user?.id ? auth.avatarVersion : undefined)
+  return ''
+}
+
 function notifLink(n: NotificationItem) {
   if (n.post?.id) return `/posts/${n.post.id}`
+  if (n.postId) return `/posts/${n.postId}`
+  if (n.isAnonymousActor) return '/feed'
   if (n.actor?.username) return `/u/${n.actor.username}`
   return '/feed'
 }

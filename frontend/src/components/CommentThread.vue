@@ -1,15 +1,22 @@
 <template>
   <div class="comment-thread" :class="{ 'comment-reply': depth > 0 }">
     <div class="comment">
-      <router-link :to="`/u/${comment.author?.username}`" class="comment-avatar-link">
+      <router-link v-if="comment.author?.username" :to="`/u/${comment.author.username}`" class="comment-avatar-link">
         <AvatarFrame :frame="comment.author?.avatarFrame ?? null" :shape-class="avatarShapeClass(comment.author?.avatarShape)" :badge-url="comment.author?.badgeUrl ?? null">
-          <img v-if="comment.author?.avatarUrl" :src="avatarSrc(comment.author.avatarUrl, comment.author?.id)" alt="" class="comment-avatar" :class="avatarShapeClass(comment.author?.avatarShape)" />
+          <img v-if="comment.author?.avatarUrl" :src="avatarSrc(comment.author.avatarUrl, comment.author?.id ?? undefined)" alt="" class="comment-avatar" :class="avatarShapeClass(comment.author?.avatarShape)" />
           <span v-else class="comment-avatar-placeholder" :class="avatarShapeClass(comment.author?.avatarShape)">{{ (comment.author?.displayName || comment.author?.username || '?')[0] }}</span>
         </AvatarFrame>
       </router-link>
+      <span v-else class="comment-avatar-link comment-avatar-link--anonymous">
+        <AvatarFrame :frame="comment.author?.avatarFrame ?? null" :shape-class="avatarShapeClass(comment.author?.avatarShape)" :badge-url="comment.author?.badgeUrl ?? null">
+          <img v-if="anonymousPostAvatarUrl" :src="anonymousPostAvatarUrl" alt="" class="comment-avatar" :class="avatarShapeClass(comment.author?.avatarShape)" />
+          <span v-else class="comment-avatar-placeholder" :class="avatarShapeClass(comment.author?.avatarShape)">{{ (comment.author?.displayName || comment.author?.username || '?')[0] }}</span>
+        </AvatarFrame>
+      </span>
       <div class="comment-content">
         <span class="comment-meta">
-          <router-link :to="`/u/${comment.author?.username}`" class="comment-author">{{ comment.author?.displayName || comment.author?.username }}</router-link>
+          <router-link v-if="comment.author?.username" :to="`/u/${comment.author.username}`" class="comment-author">{{ comment.author?.displayName || comment.author?.username }}</router-link>
+          <span v-else class="comment-author comment-author--anonymous">{{ comment.author?.displayName || comment.author?.username || '?' }}</span>
           <time v-if="comment.createdAt" :datetime="comment.createdAt" class="comment-time">{{ formatCommentDate(comment.createdAt) }}</time>
           <span v-if="comment.editedAt" class="comment-edited">(Edited)</span>
         </span>
@@ -77,6 +84,7 @@
         :can-delete-fn="canDeleteFn"
         :can-edit-fn="canEditFn"
         :avatar-src="avatarSrc"
+        :anonymous-post-avatar-url="anonymousPostAvatarUrl"
         @reply="$emit('reply', $event)"
         @update:reply-content="$emit('update:replyContent', $event)"
         @submit-reply="$emit('submitReply', $event)"
@@ -101,11 +109,13 @@ export type CommentNode = {
   content: string
   createdAt?: string
   editedAt?: string | null
-  author?: { id?: string; username?: string; displayName?: string | null; avatarUrl?: string | null; avatarShape?: string | null; avatarFrame?: unknown; badgeUrl?: string | null }
+  author?: { id?: string | null; username?: string | null; displayName?: string | null; avatarUrl?: string | null; avatarShape?: string | null; avatarFrame?: unknown; badgeUrl?: string | null }
   replies?: CommentNode[]
   likeCount?: number
   dislikeCount?: number
   myReaction?: 'LIKE' | 'DISLIKE' | null
+  isAnonymousReply?: boolean
+  isOwnComment?: boolean
 }
 
 function formatCommentDate(iso: string): string {
@@ -122,16 +132,21 @@ function formatCommentDate(iso: string): string {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-const props = defineProps<{
-  comment: CommentNode
-  depth: number
-  replyToId: string | null
-  replyContent: string
-  isLoggedIn: boolean
-  canDeleteFn?: (c: CommentNode) => boolean
-  canEditFn?: (c: CommentNode) => boolean
-  avatarSrc: (url: string | null | undefined, userId?: string) => string
-}>()
+const props = withDefaults(
+  defineProps<{
+    comment: CommentNode
+    depth: number
+    replyToId: string | null
+    replyContent: string
+    isLoggedIn: boolean
+    canDeleteFn?: (c: CommentNode) => boolean
+    canEditFn?: (c: CommentNode) => boolean
+    avatarSrc: (url: string | null | undefined, userId?: string) => string
+    /** When the post is anonymous, pass the avatar URL for the post so anonymous replies show the same avatar. */
+    anonymousPostAvatarUrl?: string
+  }>(),
+  { anonymousPostAvatarUrl: '' }
+)
 
 const canDelete = computed(() => (props.canDeleteFn ? props.canDeleteFn(props.comment) : false))
 const canEdit = computed(() => (props.canEditFn ? props.canEditFn(props.comment) : false))
@@ -259,6 +274,9 @@ function onReplyContentInput(e: Event) {
   flex-wrap: wrap;
 }
 .comment-author { font-weight: 600; font-size: 0.875rem; color: var(--text-primary); }
+.comment-author--anonymous { cursor: default; text-decoration: none; pointer-events: none; }
+.comment-author--anonymous:hover { text-decoration: none; color: inherit; }
+.comment-avatar-link--anonymous { cursor: default; pointer-events: none; }
 .comment-reply .comment-author { font-size: 0.8125rem; }
 .comment-time {
   font-size: 0.8125rem;

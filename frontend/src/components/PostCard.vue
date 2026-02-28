@@ -200,16 +200,7 @@ import { useLikedPostsStore } from '@/stores/likedPosts'
 const auth = useAuthStore()
 const likedStore = useLikedPostsStore()
 
-const anonAvatarModules = import.meta.glob<{ default: string }>('@/assets/anonavatars/*', { eager: true })
-const anonAvatarUrls = Object.values(anonAvatarModules).map((m) => m.default).filter(Boolean)
-
-function getAnonAvatarUrl(postId: string): string {
-  if (anonAvatarUrls.length === 0) return ''
-  let hash = 0
-  for (let i = 0; i < postId.length; i++) hash = (hash << 5) - hash + postId.charCodeAt(i)
-  const index = Math.abs(hash) % anonAvatarUrls.length
-  return anonAvatarUrls[index]
-}
+import { getAnonAvatarUrl } from '@/utils/anonAvatar'
 
 function authorFrame(author: unknown): AvatarFrameType | null {
   return ((author as { avatarFrame?: AvatarFrameType } | null)?.avatarFrame ?? null) as AvatarFrameType | null
