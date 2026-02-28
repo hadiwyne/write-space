@@ -333,15 +333,9 @@
               <div v-if="cardStyleForm.overlayUrl" class="card-style-group">
                 <label class="card-style-label">Overlay transparency</label>
                 <div class="card-style-slider-row">
-                  <input v-model.number="cardStyleForm.overlayOpacity" type="range" min="0" max="1" step="0.05" class="card-style-slider" />
-                  <span class="card-style-slider-value">{{ Math.round((cardStyleForm.overlayOpacity ?? 0.5) * 100) }}%</span>
+                  <input v-model.number="overlayTransparency" type="range" min="0" max="1" step="0.05" class="card-style-slider" />
+                  <span class="card-style-slider-value">{{ Math.round((overlayTransparency ?? 0.5) * 100) }}%</span>
                 </div>
-              </div>
-              <div class="card-style-group">
-                <label class="card-style-label">Footer button size</label>
-                <select v-model="cardStyleForm.buttonSize" class="card-style-select">
-                  <option v-for="(label, key) in BUTTON_SIZE_LABELS" :key="key" :value="key">{{ label }}</option>
-                </select>
               </div>
 
             </div>
@@ -466,15 +460,8 @@ import { api } from '@/api/client'
 import { renderPreview, type ContentType } from '@/utils/preview'
 import RichTextEditor from '@/components/RichTextEditor.vue'
 import PostCard from '@/components/PostCard.vue'
-import type {
-  PostCardStyle,
-  PostCardBorderStyle,
-  PostCardButtonSize,
-} from '@/types/postCardStyle'
-import {
-  BORDER_STYLE_LABELS,
-  BUTTON_SIZE_LABELS,
-} from '@/types/postCardStyle'
+import type { PostCardStyle, PostCardBorderStyle } from '@/types/postCardStyle'
+import { BORDER_STYLE_LABELS } from '@/types/postCardStyle'
 
 const MAX_IMAGES_PER_POST = 5
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
@@ -562,14 +549,12 @@ type CardStyleFormState = Record<string, unknown> & {
   overlayUrl?: string
   overlayOpacity?: number
   overlayMode?: 'cover' | 'background'
-  buttonSize?: string
   borderImage?: string
 }
 const cardStyleForm = ref<CardStyleFormState | null>(null)
 
 const DEFAULT_CARD_STYLE_FORM: CardStyleFormState = {
   borderStyle: 'solid',
-  buttonSize: 'default',
   overlayOpacity: 0.5,
   overlayMode: 'cover',
   borderWidth: 0,
@@ -590,7 +575,6 @@ function isCardStyleDefault(form: CardStyleFormState): boolean {
   if (form.overlayUrl && form.overlayUrl.trim()) return false
   if (form.overlayOpacity != null && form.overlayOpacity !== 0.5) return false
   if (form.overlayMode && form.overlayMode !== 'cover') return false
-  if (form.buttonSize && form.buttonSize !== 'default') return false
   if (form.borderImage && form.borderImage.trim()) return false
   return true
 }
@@ -615,8 +599,6 @@ function buildCardStylePayload(form: CardStyleFormState | null): PostCardStyle |
   // Persist overlayOpacity when set (default for new overlays is 0.5). Only skip when null/undefined.
   if (form.overlayOpacity != null) out.overlayOpacity = form.overlayOpacity
   if (form.overlayMode && form.overlayMode !== 'cover') out.overlayMode = form.overlayMode
-  if (form.buttonSize && form.buttonSize !== 'default')
-    out.buttonSize = form.buttonSize as PostCardButtonSize
   if (form.borderImage?.trim()) out.borderImage = form.borderImage.trim()
   return Object.keys(out).length ? out : undefined
 }
@@ -628,6 +610,13 @@ function toggleModifyPostCard() {
   }
 }
 
+// Transparency
+const overlayTransparency = computed({
+  get: () => 1 - (cardStyleForm.value?.overlayOpacity ?? 0.5),
+  set: (v: number) => {
+    if (cardStyleForm.value) cardStyleForm.value.overlayOpacity = 1 - v
+  },
+})
 
 const overlayFileInputRef = ref<HTMLInputElement | null>(null)
 const borderImageFileInputRef = ref<HTMLInputElement | null>(null)
