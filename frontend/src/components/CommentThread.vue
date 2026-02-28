@@ -109,11 +109,13 @@ export type CommentNode = {
   content: string
   createdAt?: string
   editedAt?: string | null
-  author?: { id?: string; username?: string; displayName?: string | null; avatarUrl?: string | null; avatarShape?: string | null; avatarFrame?: unknown; badgeUrl?: string | null }
+  author?: { id?: string | null; username?: string | null; displayName?: string | null; avatarUrl?: string | null; avatarShape?: string | null; avatarFrame?: unknown; badgeUrl?: string | null }
   replies?: CommentNode[]
   likeCount?: number
   dislikeCount?: number
   myReaction?: 'LIKE' | 'DISLIKE' | null
+  isAnonymousReply?: boolean
+  isOwnComment?: boolean
 }
 
 function formatCommentDate(iso: string): string {

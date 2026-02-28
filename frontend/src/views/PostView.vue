@@ -151,7 +151,7 @@ import { useLikedPostsStore } from '@/stores/likedPosts'
 import { getCachedPost, setCachedPost } from '@/utils/indexedDBCache'
 import { getAnonAvatarUrl } from '@/utils/anonAvatar'
 import ConfirmModal from '@/components/ConfirmModal.vue'
-import CommentThread from '@/components/CommentThread.vue'
+import CommentThread, { type CommentNode } from '@/components/CommentThread.vue'
 import PollBlock from '@/components/PollBlock.vue'
 
 function collectionId(c: { id: string; title: string }) {
@@ -203,19 +203,6 @@ const isOwnPost = computed(() => {
 const showPostActions = computed(() => isOwnPost.value || !!auth.user?.isSuperadmin)
 const comments = ref<CommentNode[]>([])
 
-type CommentNode = {
-  id: string
-  content: string
-  createdAt?: string
-  editedAt?: string | null
-  author?: { id?: string | null; username?: string | null; displayName?: string | null; avatarUrl?: string | null; avatarShape?: string | null; avatarFrame?: unknown; badgeUrl?: string | null }
-  replies?: CommentNode[]
-  likeCount?: number
-  dislikeCount?: number
-  myReaction?: 'LIKE' | 'DISLIKE' | null
-  isAnonymousReply?: boolean
-  isOwnComment?: boolean
-}
 function canDeleteComment(c: CommentNode): boolean {
   const u = auth.user
   if (!u?.id) return false
