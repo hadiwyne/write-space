@@ -232,7 +232,9 @@ function notifText(n: NotificationItem) {
 }
 
 function notifTime(createdAt: string) {
+  if (createdAt == null || typeof createdAt !== 'string') return ''
   const d = new Date(createdAt)
+  if (Number.isNaN(d.getTime())) return ''
   const now = new Date()
   const diff = now.getTime() - d.getTime()
   if (diff < 60000) return 'now'

@@ -109,7 +109,9 @@ export type CommentNode = {
 }
 
 function formatCommentDate(iso: string): string {
+  if (iso == null || typeof iso !== 'string') return ''
   const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
   const now = new Date()
   const diffMs = now.getTime() - d.getTime()
   const diffMins = Math.floor(diffMs / 60000)

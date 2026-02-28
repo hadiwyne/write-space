@@ -292,8 +292,10 @@ async function load() {
 }
 
 function formatDate(s: string | null | undefined) {
-  if (!s) return ''
-  return new Date(s).toLocaleDateString(undefined, { dateStyle: 'long' })
+  if (s == null || typeof s !== 'string') return ''
+  const d = new Date(s)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleDateString(undefined, { dateStyle: 'long' })
 }
 
 async function toggleLike() {
