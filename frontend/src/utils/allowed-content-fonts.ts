@@ -52,6 +52,16 @@ export function fontFamilyCss(font: string): string {
   return font.includes(' ') ? `"${font}"` : font
 }
 
+/** Decode common HTML entities in a string (e.g. &quot; in attribute values). */
+function decodeHtmlEntities(s: string): string {
+  return s
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+}
+
 /** Extract allowlisted font family names from HTML (e.g. from style="font-family: Manrope"). */
 export function extractContentFontFamiliesFromHtml(html: string): string[] {
   const seen = new Set<string>()
@@ -60,11 +70,12 @@ export function extractContentFontFamiliesFromHtml(html: string): string[] {
   const fontRegex = /font-family\s*:\s*([^;]+)/gi
   let styleMatch: RegExpExecArray | null
   while ((styleMatch = styleRegex.exec(html)) !== null) {
-    const styleContent = styleMatch[1]
+    const styleContent = decodeHtmlEntities(styleMatch[1])
     let fontMatch: RegExpExecArray | null
     fontRegex.lastIndex = 0
     while ((fontMatch = fontRegex.exec(styleContent)) !== null) {
-      const raw = fontMatch[1].split(',')[0].trim().replace(/^["']|["']$/g, '')
+      let raw = fontMatch[1].split(',')[0].trim()
+      raw = decodeHtmlEntities(raw).replace(/^["']+|["']+$/g, '').trim()
       if (raw && ALLOWED_CONTENT_FONT_FAMILIES.has(raw) && !seen.has(raw)) {
         seen.add(raw)
         out.push(raw)

@@ -38,6 +38,11 @@ export function ensureFontLoaded(fontFamily: string): void {
   link.rel = 'stylesheet'
   link.href = `https://fonts.googleapis.com/css2?family=${id}&display=swap`
   document.head.appendChild(link)
+  // Prompt the browser to load the font so card/preview text repaints when ready
+  const quoted = key.includes(' ') ? `"${key}"` : key
+  if (typeof document.fonts?.load === 'function') {
+    document.fonts.load(`16px ${quoted}`).catch(() => {})
+  }
 }
 
 /** Load all allowlisted content fonts that appear in the given HTML. */

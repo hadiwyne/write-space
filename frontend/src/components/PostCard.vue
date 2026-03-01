@@ -203,7 +203,7 @@ const auth = useAuthStore()
 const likedStore = useLikedPostsStore()
 
 import { getAnonAvatarUrl } from '@/utils/anonAvatar'
-import { getAllowedContentFontFamily, fontFamilyCss } from '@/utils/allowed-content-fonts'
+import { getAllowedContentFontFamily, fontFamilyCss, extractContentFontFamiliesFromHtml } from '@/utils/allowed-content-fonts'
 import { ensureFontLoaded } from '@/utils/load-fonts'
 
 function authorFrame(author: unknown): AvatarFrameType | null {
@@ -315,12 +315,15 @@ const cardFooterSizeClass = computed(() => {
 })
 
 const cardBodyFontStyle = computed(() => {
-  const font = getAllowedContentFontFamily((props.post as { contentFontFamily?: string | null }).contentFontFamily)
+  const post = props.post as { contentFontFamily?: string | null; renderedHTML?: string | null }
+  const explicit = getAllowedContentFontFamily(post.contentFontFamily)
+  const fromHtml = (post.renderedHTML && extractContentFontFamiliesFromHtml(post.renderedHTML)[0]) || null
+  const font = explicit ?? fromHtml
   return font ? { fontFamily: fontFamilyCss(font) } : undefined
 })
 
 watch(cardBodyFontStyle, (style) => {
-  const font = style?.fontFamily?.replace(/^["']|["']$/g, '')
+  const font = style?.fontFamily?.replace(/^["']+|["']+$/g, '').trim()
   if (font) ensureFontLoaded(font)
 }, { immediate: true })
 
