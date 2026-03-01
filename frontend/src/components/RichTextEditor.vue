@@ -19,6 +19,11 @@
         <span class="toolbar-highlight-icon">H</span>
       </button>
       <span class="toolbar-divider"></span>
+      <!-- Font family (selection) -->
+      <select class="toolbar-select toolbar-select-font" title="Font" :value="currentFontFamily" @change="onFontFamilyChange">
+        <option value="">Font</option>
+        <option v-for="f in CONTENT_FONT_FAMILY_OPTIONS" :key="f" :value="f">{{ f }}</option>
+      </select>
       <!-- Font size -->
       <select class="toolbar-select" title="Font size" :value="currentFontSize" @change="onFontSizeChange">
         <option value="">Size</option>
@@ -72,17 +77,38 @@
       >
         🖼
       </button>
+      <template v-if="editor.isActive('image')">
+        <span class="toolbar-divider"></span>
+        <select class="toolbar-select" title="Image size" :value="currentImageWidth" @change="onImageSizeChange">
+          <option value="">Size</option>
+          <option value="100%">Full width</option>
+          <option value="75%">Large</option>
+          <option value="50%">Medium</option>
+          <option value="33%">Small</option>
+        </select>
+        <button type="button" class="toolbar-btn" title="Crop image" @click="openCropModal">
+          Crop
+        </button>
+      </template>
       <input ref="imageInputRef" type="file" accept="image/*" class="hidden" @change="onImageSelect" />
       </template>
       <span v-else class="toolbar-loading">Loading editor…</span>
     </div>
-    <editor-content :editor="editor" class="editor-content" />
+    <ImageCropModal
+      :open="cropModalOpen"
+      :image-src="cropImageSrc"
+      @close="cropModalOpen = false"
+      @crop-apply="onCropApply"
+    />
+    <div class="editor-content">
+      <editor-content :editor="editor" />
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
-import { useEditor, EditorContent } from '@tiptap/vue-3'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { useEditor, EditorContent, VueNodeViewRenderer } from '@tiptap/vue-3'
 import { Extension } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
@@ -90,7 +116,32 @@ import Highlight from '@tiptap/extension-highlight'
 import TextAlign from '@tiptap/extension-text-align'
 import Image from '@tiptap/extension-image'
 import Link from '@tiptap/extension-link'
+import ResizableImageNodeView from './ResizableImageNodeView.vue'
+import ImageCropModal from './ImageCropModal.vue'
+
+const ImageWithSize = Image.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      width: {
+        default: null,
+        parseHTML: (el) => (el as HTMLElement).getAttribute('data-width') || (el as HTMLElement).style?.maxWidth || null,
+        renderHTML: (attrs: Record<string, unknown>) => {
+          if (!attrs.width) return {}
+          const v = typeof attrs.width === 'number' ? `${attrs.width}px` : String(attrs.width)
+          return { 'data-width': attrs.width, style: `max-width: ${v}; width: ${v}; height: auto; display: block;` }
+        },
+      },
+    }
+  },
+  addNodeView() {
+    return VueNodeViewRenderer(ResizableImageNodeView)
+  },
+})
 import TextStyle from '@tiptap/extension-text-style'
+
+import { CONTENT_FONT_FAMILY_OPTIONS } from '../utils/allowed-content-fonts'
+import { ensureFontLoaded } from '../utils/load-fonts'
 
 const props = withDefaults(
   defineProps<{
@@ -103,6 +154,7 @@ const props = withDefaults(
 const emit = defineEmits<{
   'update:modelValue': [value: string]
   'image-upload': [file: File]
+  'image-crop-apply': [file: File]
 }>()
 
 const imageInputRef = ref<HTMLInputElement | null>(null)
@@ -147,6 +199,49 @@ const FontSizeExtension = Extension.create({
   },
 })
 
+const FontFamilyExtension = Extension.create({
+  name: 'fontFamily',
+  addOptions() {
+    return { types: ['textStyle'] }
+  },
+  addGlobalAttributes() {
+    return [
+      {
+        types: this.options.types,
+        attributes: {
+          fontFamily: {
+            default: null,
+            parseHTML: (el) => {
+              const v = (el as HTMLElement).style.fontFamily
+              if (!v) return null
+              return v.replace(/^["']|["']$/g, '')
+            },
+            renderHTML: (attrs: { fontFamily?: string | null }) => {
+              if (!attrs.fontFamily) return {}
+              const q = attrs.fontFamily.includes(' ') ? `"${attrs.fontFamily}"` : attrs.fontFamily
+              return { style: `font-family: ${q}` }
+            },
+          },
+        },
+      },
+    ]
+  },
+  addCommands() {
+    return {
+      setFontFamily:
+        (fontFamily: string) =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ({ chain }: { chain: () => any }) =>
+          chain().setMark('textStyle', { fontFamily }).run(),
+      unsetFontFamily:
+        () =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ({ chain }: { chain: () => any }) =>
+          chain().setMark('textStyle', { fontFamily: null }).run(),
+    } as Record<string, unknown>
+  },
+})
+
 const editor = useEditor({
   content: props.modelValue || '',
   extensions: [
@@ -159,9 +254,9 @@ const editor = useEditor({
       types: ['heading', 'paragraph'],
       alignments: ['left', 'center', 'right', 'justify'],
     }),
-    Image.configure({
+    ImageWithSize.configure({
       inline: false,
-      allowBase64: false,
+      allowBase64: true,
     }),
     Link.configure({
       openOnClick: false,
@@ -169,6 +264,7 @@ const editor = useEditor({
     }),
     TextStyle,
     FontSizeExtension,
+    FontFamilyExtension,
   ],
   editorProps: {
     attributes: {
@@ -182,17 +278,23 @@ const editor = useEditor({
 })
 
 const currentFontSize = ref('')
+const currentFontFamily = ref('')
 const currentHeading = ref('')
+const currentImageWidth = ref('')
+const cropModalOpen = ref(false)
+const cropImageSrc = ref('')
 
 watch(
   () => editor.value,
   (e) => {
     if (!e) return
     const updateAttrs = () => {
-      const textStyle = e.getAttributes('textStyle') as { fontSize?: string }
+      const textStyle = e.getAttributes('textStyle') as { fontSize?: string; fontFamily?: string }
       currentFontSize.value = textStyle?.fontSize || ''
+      currentFontFamily.value = textStyle?.fontFamily || ''
       const heading = e.getAttributes('heading') as { level?: number }
       currentHeading.value = heading?.level ? String(heading.level) : 'paragraph'
+      currentImageWidth.value = e.isActive('image') ? (e.getAttributes('image').width as string) || '' : ''
     }
     e.on('selectionUpdate', updateAttrs)
     e.on('transaction', updateAttrs)
@@ -209,6 +311,16 @@ function onFontSizeChange(e: Event) {
 function onHeadingChange(e: Event) {
   const value = (e.target as HTMLSelectElement)?.value ?? ''
   setHeading(value)
+}
+
+function onFontFamilyChange(e: Event) {
+  const value = (e.target as HTMLSelectElement)?.value ?? ''
+  if (!value.trim()) {
+    ;(editor.value?.chain().focus() as unknown as { unsetFontFamily: () => { run: () => void } })?.unsetFontFamily().run()
+    return
+  }
+  ensureFontLoaded(value.trim())
+  ;(editor.value?.chain().focus() as unknown as { setFontFamily: (f: string) => { run: () => void } })?.setFontFamily(value.trim()).run()
 }
 
 function setFontSize(value: string) {
@@ -244,9 +356,33 @@ async function onImageSelect(e: Event) {
   emit('image-upload', file)
 }
 
+function onImageSizeChange(e: Event) {
+  const value = (e.target as HTMLSelectElement)?.value ?? ''
+  if (!value) return
+  editor.value?.chain().focus().updateAttributes('image', { width: value }).run()
+}
+
+function openCropModal() {
+  if (!editor.value?.isActive('image')) return
+  const attrs = editor.value.getAttributes('image')
+  if (attrs.src) {
+    cropImageSrc.value = attrs.src
+    cropModalOpen.value = true
+  }
+}
+
+function onCropApply(blob: Blob) {
+  cropModalOpen.value = false
+  const file = new File([blob], 'cropped.png', { type: blob.type || 'image/png' })
+  emit('image-crop-apply', file)
+}
+
 defineExpose({
   addImage: (url: string) => {
     editor.value?.chain().focus().setImage({ src: url }).run()
+  },
+  replaceSelectedImage: (url: string) => {
+    editor.value?.chain().focus().updateAttributes('image', { src: url }).run()
   },
 })
 
@@ -331,6 +467,10 @@ onBeforeUnmount(() => {
   font-size: 0.8125rem;
   background: #fff;
   min-width: 4rem;
+}
+.toolbar-select-font {
+  min-width: 10rem;
+  max-width: 12rem;
 }
 .hidden {
   position: absolute;

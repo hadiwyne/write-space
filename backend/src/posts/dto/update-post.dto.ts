@@ -32,4 +32,9 @@ export class UpdatePostDto {
   @IsOptional()
   @IsObject()
   cardStyle?: Prisma.InputJsonValue;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  contentFontFamily?: string;
 }

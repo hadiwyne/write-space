@@ -19,7 +19,12 @@ export function avatarSrc(url: string | null | undefined, cacheBust?: string | n
 export function resolveContentImageUrls(html: string | null | undefined): string {
   if (!html) return ''
   const base = baseURL.replace(/\/$/, '')
-  return html.replace(/src=(["'])(\/[^"']*)\1/g, (_m, q, path) => `src=${q}${base}${path}${q}`)
+  const basePath = base.replace(/^\//, '')
+  return html.replace(/src=(["'])(\/[^"']*)\1/g, (m, q, path) => {
+    const pathNorm = path.replace(/^\//, '')
+    if (basePath && (pathNorm === basePath || pathNorm.startsWith(basePath + '/'))) return m
+    return `src=${q}${base}${path}${q}`
+  })
 }
 
 const REAL_TIME_ENDPOINTS = [

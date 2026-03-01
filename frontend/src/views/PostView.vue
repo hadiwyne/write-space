@@ -12,7 +12,7 @@
           <span v-else class="author author-anonymous">{{ post.anonymousAlias || 'Anonymous' }}</span>
           <span class="date">{{ formatDate(post.publishedAt) }}</span>
         </div>
-        <div class="post-content" v-html="resolvedPostHtml"></div>
+        <div class="post-content" :style="postContentStyle" v-html="resolvedPostHtml"></div>
         <div v-if="(post.tags?.length || 0) > 0" class="post-tags">
           <router-link v-for="t in post.tags" :key="t" :to="`/feed?tag=${t}`" class="tag">#{{ t }}</router-link>
         </div>
@@ -148,6 +148,8 @@ import { useRouter } from 'vue-router'
 import { useRoute } from 'vue-router'
 import { api, avatarSrc, resolveContentImageUrls } from '@/api/client'
 import { linkifyMentionsInHtml } from '@/utils/linkifyMentions'
+import { getAllowedContentFontFamily, fontFamilyCss } from '@/utils/allowed-content-fonts'
+import { ensureFontLoaded, ensureFontsInHtmlLoaded } from '@/utils/load-fonts'
 import { useAuthStore } from '@/stores/auth'
 import { useLikedPostsStore } from '@/stores/likedPosts'
 import { getCachedPost, setCachedPost } from '@/utils/indexedDBCache'
@@ -189,7 +191,25 @@ const post = ref<{
   isLiked?: boolean
   isBookmarked?: boolean
   isReposted?: boolean
+  contentFontFamily?: string | null
 } | null>(null)
+
+const postContentStyle = computed(() => {
+  const font = getAllowedContentFontFamily(post.value?.contentFontFamily)
+  return font ? { fontFamily: fontFamilyCss(font) } : undefined
+})
+watch(postContentStyle, (style) => {
+  const font = style?.fontFamily
+  if (font) ensureFontLoaded(font.replace(/^["']|["']$/g, ''))
+}, { immediate: true })
+
+watch(
+  () => post.value?.renderedHTML,
+  (html) => {
+    if (html) ensureFontsInHtmlLoaded(html)
+  },
+  { immediate: true }
+)
 
 function onPollUpdate(updated: Record<string, unknown>) {
   if (post.value) post.value = updated as typeof post.value

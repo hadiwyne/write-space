@@ -73,13 +73,15 @@
         <p v-else>No past versions.</p>
         <button type="button" class="btn btn-sm btn-ghost" @click="versionsOpen = false">Close</button>
       </div>
-      <div v-if="postType === 'post'" class="form-group editor-row">
+      <div v-if="postType === 'post'" class="form-group editor-row" :class="{ 'editor-row--wysiwyg': contentType === 'WYSIWYG' }">
         <div class="editor-pane">
           <RichTextEditor
             v-if="contentType === 'WYSIWYG'"
+            ref="richTextEditorRef"
             v-model="content"
             :can-add-image="imageCountInContent < MAX_IMAGES_PER_POST"
             @image-upload="onRichEditorImageUpload"
+            @image-crop-apply="onRichEditorCropApply"
           />
           <div v-else class="editor-mention-wrap">
             <textarea
@@ -117,7 +119,7 @@
             </Transition>
           </div>
         </div>
-        <div class="preview-pane">
+        <div v-if="contentType !== 'WYSIWYG'" class="preview-pane">
           <div class="preview-label">Preview</div>
           <div class="preview-content" v-html="previewHtml"></div>
         </div>
@@ -497,6 +499,14 @@ const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
 const MAX_TITLE_WORDS = 20
 const MAX_TITLE_CHARS = 120
 
+/** Normalize image src in post HTML to relative /posts/images/ID so they resolve correctly when viewing. */
+function normalizePostContentImageUrls(html: string): string {
+  return html.replace(
+    /src=(["'])(?:(?:https?:)?\/\/[^"']*|\/api)?(\/posts\/images\/[a-zA-Z0-9_-]+)(?:\?[^"']*)?\1/g,
+    (_m, q, path) => `src=${q}${path}${q}`
+  )
+}
+
 function countWords(s: string): number {
   return s.trim() ? s.trim().split(/\s+/).filter(Boolean).length : 0
 }
@@ -542,6 +552,7 @@ function onTitleInput(e: Event) {
 }
 const content = ref('')
 const contentType = ref<ContentType>('MARKDOWN')
+const richTextEditorRef = ref<{ addImage: (url: string) => void; replaceSelectedImage: (url: string) => void } | null>(null)
 const tagsStr = ref('')
 const visibility = ref<'PUBLIC' | 'FOLLOWERS_ONLY'>('PUBLIC')
 const postType = ref<'post' | 'poll'>('post')
@@ -955,9 +966,21 @@ const imageCountInContent = computed(() => countImagesInContent(content.value, c
 
 // handler invoked by the rich text editor when it wants to upload a file
 function onRichEditorImageUpload(file: File) {
-  // delegate to plain textarea upload logic by crafting a fake event
   const fakeEvent = { target: { files: [file] } } as unknown as Event
   onImageUpload(fakeEvent)
+}
+
+async function onRichEditorCropApply(file: File) {
+  error.value = ''
+  try {
+    const formData = new FormData()
+    formData.append('image', file)
+    const { data } = await api.post<{ url: string }>('/posts/upload-image', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+    const absoluteUrl = avatarSrc(data.url)
+    richTextEditorRef.value?.replaceSelectedImage(absoluteUrl)
+  } catch (err) {
+    error.value = getUploadErrorMessage(err)
+  }
 }
 
 function tags(): string[] {
@@ -1047,7 +1070,10 @@ async function doPublish(anonymous: boolean) {
   try {
     const payload: Record<string, unknown> = {
       title: title.value,
-      content: postType.value === 'poll' ? content.value : content.value,
+      content:
+        postType.value === 'post' && contentType.value === 'WYSIWYG'
+          ? normalizePostContentImageUrls(content.value)
+          : content.value,
       contentType: contentType.value,
       tags: postType.value === 'post' ? tags() : [],
       isPublished: true,
@@ -1158,7 +1184,12 @@ async function onImageUpload(e: Event) {
     const formData = new FormData()
     formData.append('image', file)
     const { data } = await api.post<{ url: string }>('/posts/upload-image', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
-    const insert = contentType.value === 'MARKDOWN' ? `![image](${data.url})` : `<img src="${data.url}" alt="uploaded" />`
+    if (contentType.value === 'WYSIWYG') {
+      const absoluteUrl = avatarSrc(data.url)
+      richTextEditorRef.value?.addImage(absoluteUrl)
+      return
+    }
+    const insert = `![image](${data.url})`
     const el = editorRef.value
     if (el) {
       const start = el.selectionStart
@@ -1380,6 +1411,7 @@ function resetCardColor(target: 'backgroundColor' | 'borderColor' | { type: 'gra
 .btn-sm { padding: 0.375rem 0.75rem; font-size: 0.875rem; }
 .saved-hint { font-size: 0.75rem; color: var(--gray-700); }
 .editor-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; min-height: 420px; }
+.editor-row--wysiwyg { grid-template-columns: 1fr; }
 @media (max-width: 768px) { .editor-row { grid-template-columns: 1fr; min-height: 340px; } }
 @media (max-width: 640px) {
   .post-type-btn { padding: 0.5rem 0.75rem; font-size: 0.875rem; }
