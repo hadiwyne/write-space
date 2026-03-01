@@ -33,16 +33,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, inject } from 'vue'
+import { ref, computed, onMounted, inject } from 'vue'
 import { NodeViewWrapper } from '@tiptap/vue-3'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
-import { NodeSelection } from 'prosemirror-state'
+import { NodeSelection, type Transaction } from 'prosemirror-state'
 
 const props = defineProps<{
   node: ProseMirrorNode
   updateAttributes: (attrs: Record<string, unknown>) => void
   getPos?: () => number | undefined
-  editor?: { view: { state: { doc: { resolve: (p: number) => { nodeBefore: ProseMirrorNode | null }; nodeAt: (p: number) => ProseMirrorNode | null }; tr: { delete: (a: number, b: number) => unknown; insert: (p: number, n: ProseMirrorNode) => unknown } }; dispatch: (tr: unknown) => void } }
+  editor?: { view: { state: { doc: ProseMirrorNode; tr: Transaction }; dispatch: (tr: Transaction) => void } }
 }>()
 
 const onImageDoubleClick = inject<() => void>('onImageDoubleClick')
@@ -61,9 +61,8 @@ function selectImageNode() {
   const view = props.editor?.view
   if (typeof pos === 'number' && view) {
     const { state } = view
-    const doc = state.doc as Parameters<typeof NodeSelection.create>[0]
-    const tr = (state.tr as unknown as { setSelection: (s: unknown) => unknown }).setSelection(NodeSelection.create(doc, pos))
-    view.dispatch(tr as unknown as Parameters<typeof view.dispatch>[0])
+    const tr = state.tr.setSelection(NodeSelection.create(state.doc, pos))
+    view.dispatch(tr)
   }
   onImageDoubleClick?.()
 }
@@ -78,10 +77,7 @@ function onImageMouseDown(e: MouseEvent) {
 }
 
 /** Find position of the first image node with this src (survives node view recreation). */
-function findImagePos(
-  doc: { descendants: (f: (node: ProseMirrorNode, pos: number) => void) => void },
-  src: string
-): number | null {
+function findImagePos(doc: ProseMirrorNode, src: string): number | null {
   let found: number | null = null
   doc.descendants((node, pos) => {
     if (found !== null) return
@@ -102,7 +98,7 @@ function moveImageUp(editor: NonNullable<typeof props.editor>, imageSrc: string)
   const before = $pos.nodeBefore
   if (!before) return
   const beforeStart = pos - before.nodeSize
-  const newTr = tr.delete(pos, pos + node.nodeSize).insert(beforeStart, node)
+  const newTr = tr.delete(pos, pos + node.nodeSize).insert(beforeStart, node) as Transaction
   editor.view.dispatch(newTr)
 }
 
@@ -119,7 +115,7 @@ function moveImageDown(editor: NonNullable<typeof props.editor>, imageSrc: strin
   const after = $after.nodeAfter
   if (!after) return
   const insertPos = pos + after.nodeSize
-  const newTr = tr.delete(pos, pos + node.nodeSize).insert(insertPos, node)
+  const newTr = tr.delete(pos, pos + node.nodeSize).insert(insertPos, node) as Transaction
   editor.view.dispatch(newTr)
 }
 

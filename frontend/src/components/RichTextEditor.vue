@@ -208,7 +208,7 @@ const ImageWithSize = Image.extend({
     }
   },
   addNodeView() {
-    return VueNodeViewRenderer(ResizableImageNodeView)
+    return VueNodeViewRenderer(ResizableImageNodeView as any)
   },
 })
 import TextStyle from '@tiptap/extension-text-style'
