@@ -2288,52 +2288,30 @@ html.ui-theme-dark-void .dark-void-main .edit-page .card-style-preview-inner {
   border-color: var(--dark-void-border);
   border-radius: 0 !important;
 }
-/* Rich text editor (Write view) – Dark Void */
-html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor {
+/* Rich text editor (Write & Edit) – Dark Void: sharp corners and Space Grotesk */
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor,
+html.ui-theme-dark-void .dark-void-main .edit-page .rich-text-editor {
   font-family: 'Space Grotesk', sans-serif;
-  background: var(--dark-void-card);
-  border: 1px solid var(--dark-void-border);
   border-radius: 0 !important;
 }
-html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .editor-toolbar {
-  background: var(--dark-void-bg);
-  border-color: var(--dark-void-border);
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .editor-toolbar,
+html.ui-theme-dark-void .dark-void-main .edit-page .rich-text-editor .editor-toolbar {
   border-radius: 0 !important;
 }
 html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-btn,
-html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-select {
-  background: var(--dark-void-card);
-  border-color: var(--dark-void-border);
-  color: var(--dark-void-text);
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-dropdown-trigger,
+html.ui-theme-dark-void .dark-void-main .edit-page .rich-text-editor .toolbar-btn,
+html.ui-theme-dark-void .dark-void-main .edit-page .rich-text-editor .toolbar-dropdown-trigger {
   border-radius: 0 !important;
   font-family: 'Space Grotesk', sans-serif;
 }
-html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-btn:hover,
-html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-btn.active {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: var(--dark-void-text-muted);
-  color: var(--dark-void-text);
-}
-html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-select {
-  background: var(--dark-void-bg);
-  border-color: var(--dark-void-border);
-  color: var(--dark-void-text);
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-dropdown-panel,
+html.ui-theme-dark-void .dark-void-main .edit-page .rich-text-editor .toolbar-dropdown-panel {
   border-radius: 0 !important;
 }
-html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-divider {
-  background: var(--dark-void-border);
-}
-html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-loading {
-  color: var(--dark-void-text-muted);
-}
-html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .ProseMirror {
-  background: var(--dark-void-bg);
-  color: var(--dark-void-text);
-  border-color: var(--dark-void-border);
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .ProseMirror,
+html.ui-theme-dark-void .dark-void-main .edit-page .rich-text-editor .ProseMirror {
   border-radius: 0 !important;
-}
-html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .ProseMirror p.is-editor-empty:first-child::before {
-  color: var(--dark-void-text-muted);
 }
 html.ui-theme-dark-void .dark-void-main .edit-page > div {
   color: var(--dark-void-text-muted);

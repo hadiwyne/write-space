@@ -19,24 +19,44 @@
         <span class="toolbar-highlight-icon">H</span>
       </button>
       <span class="toolbar-divider"></span>
-      <!-- Font family (selection) -->
-      <select class="toolbar-select toolbar-select-font" title="Font" :value="currentFontFamily" @change="onFontFamilyChange">
-        <option value="">Font</option>
-        <option v-for="f in CONTENT_FONT_FAMILY_OPTIONS" :key="f" :value="f">{{ f }}</option>
-      </select>
+      <!-- Font family -->
+      <div class="toolbar-dropdown-wrap" ref="fontDropdownRef">
+        <button type="button" class="toolbar-dropdown-trigger toolbar-dropdown-trigger--font" title="Font" :aria-expanded="fontDropdownOpen" @click="fontDropdownOpen = !fontDropdownOpen">
+          <span class="toolbar-dropdown-label">{{ currentFontFamily || 'Font' }}</span>
+          <i class="pi pi-chevron-down toolbar-dropdown-chevron" aria-hidden="true"></i>
+        </button>
+        <Transition name="toolbar-dropdown">
+          <div v-if="fontDropdownOpen" class="toolbar-dropdown-panel toolbar-dropdown-panel--font" role="menu">
+            <button type="button" class="toolbar-dropdown-option" role="menuitem" :class="{ active: !currentFontFamily }" @click="selectFontFamily(''); fontDropdownOpen = false">Font</button>
+            <button v-for="f in CONTENT_FONT_FAMILY_OPTIONS" :key="f" type="button" class="toolbar-dropdown-option" role="menuitem" :class="{ active: currentFontFamily === f }" :style="fontOptionStyle(f)" @click="selectFontFamily(f); fontDropdownOpen = false">{{ f }}</button>
+          </div>
+        </Transition>
+      </div>
       <!-- Font size -->
-      <select class="toolbar-select" title="Font size" :value="currentFontSize" @change="onFontSizeChange">
-        <option value="">Size</option>
-        <option v-for="s in fontSizes" :key="s" :value="s">{{ s }}</option>
-      </select>
-      <!-- Headings -->
-      <select class="toolbar-select" title="Paragraph style" :value="currentHeading" @change="onHeadingChange">
-        <option value="">Style</option>
-        <option value="paragraph">Paragraph</option>
-        <option value="1">Heading 1</option>
-        <option value="2">Heading 2</option>
-        <option value="3">Heading 3</option>
-      </select>
+      <div class="toolbar-dropdown-wrap" ref="sizeDropdownRef">
+        <button type="button" class="toolbar-dropdown-trigger" title="Font size" :aria-expanded="sizeDropdownOpen" @click="sizeDropdownOpen = !sizeDropdownOpen">
+          <span class="toolbar-dropdown-label">{{ currentFontSize || 'Size' }}</span>
+          <i class="pi pi-chevron-down toolbar-dropdown-chevron" aria-hidden="true"></i>
+        </button>
+        <Transition name="toolbar-dropdown">
+          <div v-if="sizeDropdownOpen" class="toolbar-dropdown-panel" role="menu">
+            <button type="button" class="toolbar-dropdown-option" role="menuitem" :class="{ active: !currentFontSize }" @click="selectFontSize(''); sizeDropdownOpen = false">Size</button>
+            <button v-for="s in fontSizes" :key="s" type="button" class="toolbar-dropdown-option" role="menuitem" :class="{ active: currentFontSize === s }" @click="selectFontSize(s); sizeDropdownOpen = false">{{ s }}</button>
+          </div>
+        </Transition>
+      </div>
+      <!-- Paragraph style -->
+      <div class="toolbar-dropdown-wrap" ref="headingDropdownRef">
+        <button type="button" class="toolbar-dropdown-trigger" title="Paragraph style" :aria-expanded="headingDropdownOpen" @click="headingDropdownOpen = !headingDropdownOpen">
+          <span class="toolbar-dropdown-label">{{ headingLabel }}</span>
+          <i class="pi pi-chevron-down toolbar-dropdown-chevron" aria-hidden="true"></i>
+        </button>
+        <Transition name="toolbar-dropdown">
+          <div v-if="headingDropdownOpen" class="toolbar-dropdown-panel" role="menu">
+            <button v-for="opt in headingOptions" :key="opt.value" type="button" class="toolbar-dropdown-option" role="menuitem" :class="{ active: currentHeading === opt.value }" @click="selectHeading(opt.value); headingDropdownOpen = false">{{ opt.label }}</button>
+          </div>
+        </Transition>
+      </div>
       <span class="toolbar-divider"></span>
       <!-- Alignment -->
       <button type="button" class="toolbar-btn" :class="{ active: editor.isActive({ textAlign: 'left' }) }" @click="editor.chain().focus().setTextAlign('left').run()" title="Align left">
@@ -79,13 +99,17 @@
       </button>
       <template v-if="editor.isActive('image')">
         <span class="toolbar-divider"></span>
-        <select class="toolbar-select" title="Image size" :value="currentImageWidth" @change="onImageSizeChange">
-          <option value="">Size</option>
-          <option value="100%">Full width</option>
-          <option value="75%">Large</option>
-          <option value="50%">Medium</option>
-          <option value="33%">Small</option>
-        </select>
+        <div class="toolbar-dropdown-wrap" ref="imageSizeDropdownRef">
+          <button type="button" class="toolbar-dropdown-trigger" title="Image size" :aria-expanded="imageSizeDropdownOpen" @click="imageSizeDropdownOpen = !imageSizeDropdownOpen">
+            <span class="toolbar-dropdown-label">{{ imageSizeLabel }}</span>
+            <i class="pi pi-chevron-down toolbar-dropdown-chevron" aria-hidden="true"></i>
+          </button>
+          <Transition name="toolbar-dropdown">
+            <div v-if="imageSizeDropdownOpen" class="toolbar-dropdown-panel" role="menu">
+              <button v-for="opt in imageSizeOptions" :key="opt.value" type="button" class="toolbar-dropdown-option" role="menuitem" :class="{ active: currentImageWidth === opt.value }" @click="selectImageSize(opt.value); imageSizeDropdownOpen = false">{{ opt.label }}</button>
+            </div>
+          </Transition>
+        </div>
         <button type="button" class="toolbar-btn" title="Crop image" @click="openCropModal">
           Crop
         </button>
@@ -160,6 +184,18 @@ const emit = defineEmits<{
 const imageInputRef = ref<HTMLInputElement | null>(null)
 
 const fontSizes = ['12px', '14px', '16px', '18px', '20px', '24px', '28px', '32px']
+const headingOptions = [
+  { value: 'paragraph', label: 'Paragraph' },
+  { value: '1', label: 'Heading 1' },
+  { value: '2', label: 'Heading 2' },
+  { value: '3', label: 'Heading 3' },
+] as const
+const imageSizeOptions = [
+  { value: '100%', label: 'Full width' },
+  { value: '75%', label: 'Large' },
+  { value: '50%', label: 'Medium' },
+  { value: '33%', label: 'Small' },
+] as const
 
 const FontSizeExtension = Extension.create({
   name: 'fontSize',
@@ -284,6 +320,24 @@ const currentImageWidth = ref('')
 const cropModalOpen = ref(false)
 const cropImageSrc = ref('')
 
+const fontDropdownOpen = ref(false)
+const sizeDropdownOpen = ref(false)
+const headingDropdownOpen = ref(false)
+const imageSizeDropdownOpen = ref(false)
+const fontDropdownRef = ref<HTMLElement | null>(null)
+const sizeDropdownRef = ref<HTMLElement | null>(null)
+const headingDropdownRef = ref<HTMLElement | null>(null)
+const imageSizeDropdownRef = ref<HTMLElement | null>(null)
+
+const headingLabel = computed(() => {
+  const o = headingOptions.find((x) => x.value === currentHeading.value)
+  return o ? o.label : 'Style'
+})
+const imageSizeLabel = computed(() => {
+  const o = imageSizeOptions.find((x) => x.value === currentImageWidth.value)
+  return o ? o.label : 'Size'
+})
+
 watch(
   () => editor.value,
   (e) => {
@@ -303,24 +357,43 @@ watch(
   { immediate: true }
 )
 
-function onFontSizeChange(e: Event) {
-  const value = (e.target as HTMLSelectElement)?.value ?? ''
-  setFontSize(value)
+function fontOptionStyle(fontName: string): { fontFamily: string } {
+  const q = fontName.includes(' ') ? `"${fontName}"` : fontName
+  return { fontFamily: q }
 }
 
-function onHeadingChange(e: Event) {
-  const value = (e.target as HTMLSelectElement)?.value ?? ''
-  setHeading(value)
-}
-
-function onFontFamilyChange(e: Event) {
-  const value = (e.target as HTMLSelectElement)?.value ?? ''
+function selectFontFamily(value: string) {
   if (!value.trim()) {
     ;(editor.value?.chain().focus() as unknown as { unsetFontFamily: () => { run: () => void } })?.unsetFontFamily().run()
     return
   }
   ensureFontLoaded(value.trim())
   ;(editor.value?.chain().focus() as unknown as { setFontFamily: (f: string) => { run: () => void } })?.setFontFamily(value.trim()).run()
+}
+
+function selectFontSize(value: string) {
+  setFontSize(value)
+}
+
+function selectHeading(value: string) {
+  setHeading(value)
+}
+
+function selectImageSize(value: string) {
+  if (!value) return
+  editor.value?.chain().focus().updateAttributes('image', { width: value }).run()
+}
+
+function closeToolbarDropdowns(e: MouseEvent) {
+  const target = e.target as Node
+  if (fontDropdownRef.value?.contains(target)) return
+  if (sizeDropdownRef.value?.contains(target)) return
+  if (headingDropdownRef.value?.contains(target)) return
+  if (imageSizeDropdownRef.value?.contains(target)) return
+  fontDropdownOpen.value = false
+  sizeDropdownOpen.value = false
+  headingDropdownOpen.value = false
+  imageSizeDropdownOpen.value = false
 }
 
 function setFontSize(value: string) {
@@ -356,11 +429,6 @@ async function onImageSelect(e: Event) {
   emit('image-upload', file)
 }
 
-function onImageSizeChange(e: Event) {
-  const value = (e.target as HTMLSelectElement)?.value ?? ''
-  if (!value) return
-  editor.value?.chain().focus().updateAttributes('image', { width: value }).run()
-}
 
 function openCropModal() {
   if (!editor.value?.isActive('image')) return
@@ -399,33 +467,37 @@ onMounted(() => {
   if (props.modelValue && editor.value) {
     editor.value.commands.setContent(props.modelValue, false)
   }
+  document.addEventListener('click', closeToolbarDropdowns)
 })
 
 onBeforeUnmount(() => {
+  document.removeEventListener('click', closeToolbarDropdowns)
   editor.value?.destroy()
 })
 </script>
 
 <style scoped>
 .rich-text-editor {
-  border: 1px solid var(--gray-300);
-  border-radius: var(--radius);
-  background: #fff;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
   min-height: 360px;
+  box-shadow: var(--shadow-sm);
 }
 .editor-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 2px;
+  gap: 0.25rem;
   padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid var(--gray-200);
-  background: #f1f5f9;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--bg-secondary);
   min-height: 48px;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
 }
 .toolbar-loading {
   font-size: 0.875rem;
-  color: var(--gray-700);
+  color: var(--text-tertiary);
 }
 .toolbar-btn {
   width: 32px;
@@ -433,45 +505,127 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: none;
-  border-radius: 4px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   background: transparent;
   cursor: pointer;
   font-size: 0.875rem;
-  color: var(--gray-900);
+  color: var(--text-primary);
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 .toolbar-btn:hover {
-  background: var(--gray-200);
+  background: var(--border-light);
 }
 .toolbar-btn.active {
-  background: var(--gray-300);
-  color: var(--primary);
+  background: var(--border-medium);
+  color: var(--accent-primary);
 }
 .toolbar-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 .toolbar-highlight-icon {
-  background: linear-gradient(transparent 60%, #fef08a 60%);
+  background: linear-gradient(transparent 60%, var(--accent-tertiary) 60%);
+  opacity: 0.9;
 }
 .toolbar-divider {
   width: 1px;
   height: 24px;
-  background: var(--gray-300);
-  margin: 0 4px;
+  background: var(--border-medium);
+  margin: 0 2px;
+  border-radius: 1px;
 }
-.toolbar-select {
-  padding: 0.25rem 0.5rem;
-  border: 1px solid var(--gray-300);
-  border-radius: 4px;
+/* Custom dropdowns – match WriteView format dropdown */
+.toolbar-dropdown-wrap {
+  position: relative;
+}
+.toolbar-dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.6rem;
+  border: 2px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-primary);
   font-size: 0.8125rem;
-  background: #fff;
+  font-family: inherit;
+  cursor: pointer;
   min-width: 4rem;
+  width: 100%;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
-.toolbar-select-font {
-  min-width: 10rem;
-  max-width: 12rem;
+.toolbar-dropdown-trigger:hover {
+  border-color: var(--border-medium);
 }
+.toolbar-dropdown-trigger:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px var(--border-medium);
+}
+.toolbar-dropdown-label {
+  flex: 1;
+  min-width: 0;
+  max-width: 8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+.toolbar-dropdown-trigger--font { min-width: 10rem; }
+.toolbar-dropdown-trigger--font .toolbar-dropdown-label { max-width: none; }
+.toolbar-dropdown-chevron {
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.toolbar-dropdown-panel {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  min-width: 100%;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 0.25rem 0;
+  background: var(--bg-card);
+  border: 2px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.toolbar-dropdown-panel::-webkit-scrollbar {
+  display: none;
+}
+.toolbar-dropdown-panel--font { min-width: 12rem; }
+.toolbar-dropdown-option {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0.45rem 0.75rem;
+  border: none;
+  background: none;
+  color: var(--text-primary);
+  font-size: 0.8125rem;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s ease;
+}
+.toolbar-dropdown-option:hover {
+  background: var(--bg-primary);
+}
+.toolbar-dropdown-option.active {
+  background: var(--bg-primary);
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+.toolbar-dropdown-enter-active,
+.toolbar-dropdown-leave-active { transition: opacity 0.15s ease, transform 0.15s ease; }
+.toolbar-dropdown-enter-from,
+.toolbar-dropdown-leave-to { opacity: 0; transform: translateY(-4px); }
 .hidden {
   position: absolute;
   width: 0;
@@ -481,15 +635,18 @@ onBeforeUnmount(() => {
 }
 .editor-content {
   min-height: 320px;
+  background: var(--bg-card);
 }
 .editor-content :deep(.ProseMirror) {
   min-height: 320px;
   padding: 0.75rem 1rem;
   outline: none;
+  color: var(--text-primary);
+  background: var(--bg-card);
 }
 .editor-content :deep(.ProseMirror p.is-editor-empty:first-child::before) {
   content: attr(data-placeholder);
-  color: var(--gray-300);
+  color: var(--text-tertiary);
   float: left;
   height: 0;
   pointer-events: none;
@@ -499,9 +656,9 @@ onBeforeUnmount(() => {
   height: auto;
 }
 .editor-content :deep(.ProseMirror blockquote) {
-  border-left: 4px solid var(--gray-300);
+  border-left: 4px solid var(--border-medium);
   padding-left: 1rem;
   margin-left: 0;
-  color: var(--gray-700);
+  color: var(--text-secondary);
 }
 </style>
