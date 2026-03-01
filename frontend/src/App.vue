@@ -2289,30 +2289,171 @@ html.ui-theme-dark-void .dark-void-main .edit-page .card-style-preview-inner {
   border-radius: 0 !important;
 }
 /* Rich text editor (Write & Edit) – Dark Void: sharp corners and Space Grotesk */
+/* Rich text editor – Dark Void: dark background and text throughout */
 html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor,
 html.ui-theme-dark-void .dark-void-main .edit-page .rich-text-editor {
+  background: var(--dark-void-card) !important;
+  border-color: var(--dark-void-border) !important;
   font-family: 'Space Grotesk', sans-serif;
   border-radius: 0 !important;
 }
 html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .editor-toolbar,
 html.ui-theme-dark-void .dark-void-main .edit-page .rich-text-editor .editor-toolbar {
+  background: var(--dark-void-bg) !important;
+  border-color: var(--dark-void-border) !important;
   border-radius: 0 !important;
 }
 html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-btn,
 html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-dropdown-trigger,
 html.ui-theme-dark-void .dark-void-main .edit-page .rich-text-editor .toolbar-btn,
 html.ui-theme-dark-void .dark-void-main .edit-page .rich-text-editor .toolbar-dropdown-trigger {
+  background: var(--dark-void-card) !important;
+  border-color: var(--dark-void-border) !important;
+  color: var(--dark-void-text) !important;
   border-radius: 0 !important;
   font-family: 'Space Grotesk', sans-serif;
 }
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-btn:hover,
+html.ui-theme-dark-void .dark-void-main .edit-page .rich-text-editor .toolbar-btn:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: var(--dark-void-text-muted) !important;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-btn.active,
+html.ui-theme-dark-void .dark-void-main .edit-page .rich-text-editor .toolbar-btn.active {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: var(--dark-void-text) !important;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-dropdown-trigger:hover,
+html.ui-theme-dark-void .dark-void-main .edit-page .rich-text-editor .toolbar-dropdown-trigger:hover {
+  border-color: var(--dark-void-text-muted) !important;
+}
 html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-dropdown-panel,
 html.ui-theme-dark-void .dark-void-main .edit-page .rich-text-editor .toolbar-dropdown-panel {
+  background: var(--dark-void-card) !important;
+  border-color: var(--dark-void-border) !important;
   border-radius: 0 !important;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-dropdown-option,
+html.ui-theme-dark-void .dark-void-main .edit-page .rich-text-editor .toolbar-dropdown-option {
+  color: var(--dark-void-text) !important;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-dropdown-option:hover,
+html.ui-theme-dark-void .dark-void-main .edit-page .rich-text-editor .toolbar-dropdown-option:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-dropdown-option.active,
+html.ui-theme-dark-void .dark-void-main .edit-page .rich-text-editor .toolbar-dropdown-option.active {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: var(--dark-void-text) !important;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-divider,
+html.ui-theme-dark-void .dark-void-main .edit-page .rich-text-editor .toolbar-divider {
+  background: var(--dark-void-border) !important;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .editor-fullscreen-btn,
+html.ui-theme-dark-void .dark-void-main .edit-page .rich-text-editor .editor-fullscreen-btn {
+  background: var(--dark-void-card) !important;
+  border-color: var(--dark-void-border) !important;
+  color: var(--dark-void-text) !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .editor-fullscreen-btn:hover,
+html.ui-theme-dark-void .dark-void-main .edit-page .rich-text-editor .editor-fullscreen-btn:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: var(--dark-void-text-muted) !important;
+  color: var(--dark-void-text) !important;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-loading,
+html.ui-theme-dark-void .dark-void-main .edit-page .rich-text-editor .toolbar-loading {
+  color: var(--dark-void-text-muted) !important;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .toolbar-dropdown-chevron,
+html.ui-theme-dark-void .dark-void-main .edit-page .rich-text-editor .toolbar-dropdown-chevron {
+  color: var(--dark-void-text-muted) !important;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .editor-content,
+html.ui-theme-dark-void .dark-void-main .edit-page .rich-text-editor .editor-content {
+  background: var(--dark-void-card) !important;
 }
 html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .ProseMirror,
 html.ui-theme-dark-void .dark-void-main .edit-page .rich-text-editor .ProseMirror {
+  background: var(--dark-void-bg) !important;
+  color: var(--dark-void-text) !important;
+  border-color: var(--dark-void-border) !important;
   border-radius: 0 !important;
 }
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .ProseMirror p.is-editor-empty:first-child::before,
+html.ui-theme-dark-void .dark-void-main .edit-page .rich-text-editor .ProseMirror p.is-editor-empty:first-child::before {
+  color: var(--dark-void-text-muted) !important;
+}
+html.ui-theme-dark-void .dark-void-main .write-page .rich-text-editor .ProseMirror blockquote,
+html.ui-theme-dark-void .dark-void-main .edit-page .rich-text-editor .ProseMirror blockquote {
+  color: var(--dark-void-text-muted) !important;
+  border-left-color: var(--dark-void-border) !important;
+}
+
+/* Rich text editor fullscreen (teleported to body) – Dark Void */
+html.ui-theme-dark-void .rich-text-editor--fullscreen {
+  background: var(--dark-void-bg) !important;
+}
+html.ui-theme-dark-void .rich-text-editor--fullscreen .editor-toolbar {
+  background: var(--dark-void-bg) !important;
+  border-color: var(--dark-void-border) !important;
+}
+html.ui-theme-dark-void .rich-text-editor--fullscreen .editor-fullscreen-btn {
+  background: var(--dark-void-card) !important;
+  border-color: var(--dark-void-border) !important;
+  color: var(--dark-void-text) !important;
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .rich-text-editor--fullscreen .editor-fullscreen-btn:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: var(--dark-void-text-muted) !important;
+  color: var(--dark-void-text) !important;
+}
+html.ui-theme-dark-void .rich-text-editor--fullscreen .editor-content,
+html.ui-theme-dark-void .rich-text-editor--fullscreen .ProseMirror {
+  background: var(--dark-void-bg) !important;
+  color: var(--dark-void-text) !important;
+}
+html.ui-theme-dark-void .rich-text-editor--fullscreen .toolbar-btn,
+html.ui-theme-dark-void .rich-text-editor--fullscreen .toolbar-dropdown-trigger {
+  background: var(--dark-void-card) !important;
+  border-color: var(--dark-void-border) !important;
+  color: var(--dark-void-text) !important;
+}
+html.ui-theme-dark-void .rich-text-editor--fullscreen .toolbar-btn:hover,
+html.ui-theme-dark-void .rich-text-editor--fullscreen .toolbar-btn.active {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: var(--dark-void-text) !important;
+}
+html.ui-theme-dark-void .rich-text-editor--fullscreen .toolbar-dropdown-panel {
+  background: var(--dark-void-card) !important;
+  border-color: var(--dark-void-border) !important;
+}
+html.ui-theme-dark-void .rich-text-editor--fullscreen .toolbar-dropdown-option {
+  color: var(--dark-void-text) !important;
+}
+html.ui-theme-dark-void .rich-text-editor--fullscreen .toolbar-dropdown-option:hover,
+html.ui-theme-dark-void .rich-text-editor--fullscreen .toolbar-dropdown-option.active {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--dark-void-text) !important;
+}
+html.ui-theme-dark-void .rich-text-editor--fullscreen .toolbar-divider {
+  background: var(--dark-void-border) !important;
+}
+html.ui-theme-dark-void .rich-text-editor--fullscreen .toolbar-loading,
+html.ui-theme-dark-void .rich-text-editor--fullscreen .toolbar-dropdown-chevron {
+  color: var(--dark-void-text-muted) !important;
+}
+html.ui-theme-dark-void .rich-text-editor--fullscreen .ProseMirror p.is-editor-empty:first-child::before {
+  color: var(--dark-void-text-muted) !important;
+}
+html.ui-theme-dark-void .rich-text-editor--fullscreen .ProseMirror blockquote {
+  color: var(--dark-void-text-muted) !important;
+  border-left-color: var(--dark-void-border) !important;
+}
+
 html.ui-theme-dark-void .dark-void-main .edit-page > div {
   color: var(--dark-void-text-muted);
   font-family: 'Space Grotesk', sans-serif;

@@ -11,7 +11,7 @@
           <textarea v-model="content" placeholder="Content" class="editor" rows="16"></textarea>
         </div>
         <div class="form-group">
-          <input v-model="tagsStr" type="text" placeholder="Tags (comma-separated)" class="tags-input" />
+          <input :value="tagsStr" type="text" placeholder="Tags (comma-separated)" class="tags-input" @input="tagsStr = ($event.target as HTMLInputElement).value" @blur="normalizeTagsStr" />
         </div>
         <div class="form-group visibility-row">
           <div class="dropdown-wrap" ref="visibilityDropdownRef">
@@ -60,7 +60,23 @@ const error = ref('')
 const visibilityDropdownOpen = ref(false)
 const visibilityDropdownRef = ref<HTMLElement | null>(null)
 
-const tags = computed(() => tagsStr.value.split(',').map((t) => t.trim()).filter(Boolean))
+function normalizeTag(t: string): string {
+  return t.trim().replace(/\s+/g, '-')
+}
+const tags = computed(() =>
+  tagsStr.value
+    .split(',')
+    .map((t) => normalizeTag(t))
+    .filter(Boolean)
+)
+function normalizeTagsStr() {
+  const normalized = tagsStr.value
+    .split(',')
+    .map((t) => normalizeTag(t))
+    .filter(Boolean)
+    .join(', ')
+  if (normalized !== tagsStr.value) tagsStr.value = normalized
+}
 const visibilityLabel = computed(() => (visibility.value === 'PUBLIC' ? 'Public' : 'Followers'))
 const visibilityIcon = computed(() => (visibility.value === 'PUBLIC' ? 'pi pi-globe' : 'pi pi-users'))
 
@@ -111,9 +127,44 @@ async function save() {
 .edit-page { padding: 0; max-width: 720px; margin: 0 auto; width: 100%; }
 .edit-page h1 { font-size: clamp(1.25rem, 4vw, 1.5rem); margin: 0 0 1.25rem; font-weight: 700; }
 .form { display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
-.title-input { width: 100%; min-width: 0; font-size: clamp(1.125rem, 4vw, 1.25rem); padding: 0.5rem 0; border: none; border-bottom: 1px solid var(--gray-200); background: transparent; }
+.title-input {
+  width: 100%;
+  min-width: 0;
+  font-size: clamp(1.125rem, 4vw, 1.25rem);
+  padding: 0.5rem 0;
+  border: none;
+  border-bottom: 1px solid var(--border-light);
+  background: transparent;
+  color: var(--text-primary);
+  font-family: inherit;
+}
+.title-input::placeholder {
+  color: var(--text-tertiary);
+}
+.title-input:focus {
+  outline: none;
+  border-bottom-color: var(--border-medium);
+}
 .editor { width: 100%; min-width: 0; min-height: 320px; padding: 1rem; border: 1px solid var(--gray-300); border-radius: var(--radius); font-family: inherit; resize: vertical; box-sizing: border-box; font-size: 0.9375rem; line-height: 1.6; }
-.tags-input { width: 100%; min-width: 0; padding: 0.5rem 0.75rem; border: 1px solid var(--gray-300); border-radius: var(--radius); }
+.tags-input {
+  width: 100%;
+  min-width: 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.9375rem;
+}
+.tags-input::placeholder {
+  color: var(--text-tertiary);
+}
+.tags-input:focus {
+  outline: none;
+  border-color: var(--border-medium);
+  box-shadow: 0 0 0 2px var(--border-light);
+}
 .visibility-row { display: flex; align-items: center; gap: 0.75rem; }
 .dropdown-wrap { position: relative; }
 .dropdown-trigger {

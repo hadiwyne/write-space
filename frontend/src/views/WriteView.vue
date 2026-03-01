@@ -130,7 +130,7 @@
       </div>
       <template v-if="postType === 'post'">
       <div class="form-group">
-        <input v-model="tagsStr" type="text" placeholder="Tags (comma-separated)" class="tags-input" />
+        <input :value="tagsStr" type="text" placeholder="Tags (comma-separated)" class="tags-input" @input="onTagsInput" @blur="normalizeTagsStr" />
       </div>
       </template>
       <template v-if="postType === 'poll'">
@@ -983,8 +983,29 @@ async function onRichEditorCropApply(file: File) {
   }
 }
 
+/** Normalize a single tag: trim and replace spaces with dashes. */
+function normalizeTag(t: string): string {
+  return t.trim().replace(/\s+/g, '-')
+}
+
 function tags(): string[] {
-  return tagsStr.value.split(',').map((t) => t.trim()).filter(Boolean)
+  return tagsStr.value
+    .split(',')
+    .map((t) => normalizeTag(t))
+    .filter(Boolean)
+}
+
+function onTagsInput(e: Event) {
+  tagsStr.value = (e.target as HTMLInputElement).value ?? ''
+}
+
+function normalizeTagsStr() {
+  const normalized = tagsStr.value
+    .split(',')
+    .map((t) => normalizeTag(t))
+    .filter(Boolean)
+    .join(', ')
+  if (normalized !== tagsStr.value) tagsStr.value = normalized
 }
 
 function addPollOption() {
@@ -1251,7 +1272,24 @@ function resetCardColor(target: 'backgroundColor' | 'borderColor' | { type: 'gra
 .write-page h1 { font-size: clamp(1.25rem, 4vw, 1.5rem); margin: 0 0 1.25rem; font-weight: 700; }
 .form { display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
 .form-group:first-of-type { margin-bottom: 0.25rem; }
-.title-input { width: 100%; min-width: 0; font-size: clamp(1.125rem, 4vw, 1.5rem); padding: 0.5rem 0; border: none; border-bottom: 1px solid var(--gray-200); background: transparent; }
+.title-input {
+  width: 100%;
+  min-width: 0;
+  font-size: clamp(1.125rem, 4vw, 1.5rem);
+  padding: 0.5rem 0;
+  border: none;
+  border-bottom: 1px solid var(--border-light);
+  background: transparent;
+  color: var(--text-primary);
+  font-family: inherit;
+}
+.title-input::placeholder {
+  color: var(--text-tertiary);
+}
+.title-input:focus {
+  outline: none;
+  border-bottom-color: var(--border-medium);
+}
 .title-warning { font-size: 0.8125rem; color: var(--accent-burgundy, #6b2c3e); margin: 0.25rem 0 0; }
 .post-type-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .card-style-radio-row { display: flex; gap: 1rem; align-items: center; margin-top: 0.5rem; }
@@ -1442,7 +1480,25 @@ function resetCardColor(target: 'backgroundColor' | 'borderColor' | { type: 'gra
 .preview-label { font-size: 0.75rem; color: var(--gray-700); padding: 0.25rem 0.5rem; border-bottom: 1px solid var(--gray-200); }
 .preview-content { padding: 0.75rem; font-size: 0.9375rem; line-height: 1.6; }
 .preview-content :deep(img) { max-width: 100%; }
-.tags-input { width: 100%; min-width: 0; padding: 0.5rem 0.75rem; border: 1px solid var(--gray-300); border-radius: var(--radius); }
+.tags-input {
+  width: 100%;
+  min-width: 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.9375rem;
+}
+.tags-input::placeholder {
+  color: var(--text-tertiary);
+}
+.tags-input:focus {
+  outline: none;
+  border-color: var(--border-medium);
+  box-shadow: 0 0 0 2px var(--border-light);
+}
 .visibility-row { display: flex; align-items: center; gap: 0.75rem; }
 .error { color: #dc2626; font-size: 0.875rem; margin: 0; }
 .conflict-banner { padding: 0.75rem; background: #fef3c7; border: 1px solid #f59e0b; border-radius: var(--radius); }

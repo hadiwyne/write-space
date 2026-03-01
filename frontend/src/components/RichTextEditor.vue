@@ -1,5 +1,13 @@
 <template>
-  <div class="rich-text-editor">
+  <Teleport to="body" :disabled="!fullscreen && !fullscreenExiting">
+    <div
+      class="rich-text-editor"
+      :class="{
+        'rich-text-editor--fullscreen': fullscreen || fullscreenExiting,
+        'rich-text-editor--fullscreen-entering': fullscreen && !fullscreenExiting,
+        'rich-text-editor--fullscreen-exiting': fullscreenExiting,
+      }"
+    >
     <div class="editor-toolbar" role="toolbar">
       <template v-if="editor">
       <!-- Text formatting -->
@@ -127,7 +135,18 @@
     <div class="editor-content">
       <editor-content :editor="editor" />
     </div>
-  </div>
+    <button
+      type="button"
+      class="editor-fullscreen-btn"
+      :title="fullscreen ? 'Exit full screen' : 'Full screen'"
+      :aria-label="fullscreen ? 'Exit full screen' : 'Full screen'"
+      @click="toggleFullscreen"
+    >
+      <i :class="fullscreen ? 'pi pi-window-minimize' : 'pi pi-window-maximize'" aria-hidden="true"></i>
+      <span class="editor-fullscreen-btn-label">{{ fullscreen ? 'Exit full screen' : 'Full screen' }}</span>
+    </button>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -463,26 +482,153 @@ watch(
   }
 )
 
+const fullscreen = ref(false)
+const fullscreenExiting = ref(false)
+const FULLSCREEN_EXIT_MS = 280
+
+function toggleFullscreen() {
+  if (fullscreen.value) {
+    fullscreenExiting.value = true
+    document.body.style.overflow = ''
+    setTimeout(() => {
+      fullscreen.value = false
+      fullscreenExiting.value = false
+    }, FULLSCREEN_EXIT_MS)
+  } else {
+    fullscreen.value = true
+    document.body.style.overflow = 'hidden'
+  }
+}
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape' && fullscreen.value && !fullscreenExiting.value) {
+    fullscreenExiting.value = true
+    document.body.style.overflow = ''
+    setTimeout(() => {
+      fullscreen.value = false
+      fullscreenExiting.value = false
+    }, FULLSCREEN_EXIT_MS)
+  }
+}
 onMounted(() => {
   if (props.modelValue && editor.value) {
     editor.value.commands.setContent(props.modelValue, false)
   }
   document.addEventListener('click', closeToolbarDropdowns)
+  document.addEventListener('keydown', onKeydown)
 })
-
 onBeforeUnmount(() => {
   document.removeEventListener('click', closeToolbarDropdowns)
+  document.removeEventListener('keydown', onKeydown)
+  if (fullscreen.value || fullscreenExiting.value) document.body.style.overflow = ''
+  fullscreen.value = false
+  fullscreenExiting.value = false
   editor.value?.destroy()
 })
 </script>
 
 <style scoped>
 .rich-text-editor {
+  position: relative;
   border: 1px solid var(--border-medium);
   border-radius: var(--radius-md);
   background: var(--bg-card);
   min-height: 360px;
   box-shadow: var(--shadow-sm);
+  padding-bottom: 2.5rem;
+}
+@keyframes editorFullscreenIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes editorFullscreenOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+.rich-text-editor--fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  max-width: 100vw;
+  max-height: 100vh;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  overflow: hidden;
+  border-radius: 0;
+  border: none;
+  min-height: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+.rich-text-editor--fullscreen-entering {
+  animation: editorFullscreenIn 0.3s ease-out;
+}
+.rich-text-editor--fullscreen-exiting {
+  animation: editorFullscreenOut 0.28s ease-in forwards;
+}
+.rich-text-editor--fullscreen .editor-toolbar {
+  flex-shrink: 0;
+  width: 100%;
+  margin: 0;
+  align-self: stretch;
+  border-radius: 0;
+}
+.rich-text-editor--fullscreen .editor-content {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+  width: 100%;
+  margin: 0;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+}
+.rich-text-editor--fullscreen .editor-content :deep(.ProseMirror) {
+  flex: 1;
+  min-height: 200px;
+}
+.rich-text-editor--fullscreen .editor-fullscreen-btn {
+  right: 2.5rem;
+  bottom: 1rem;
+}
+@media (max-width: 768px) {
+  .rich-text-editor--fullscreen .editor-fullscreen-btn {
+    right: 1rem;
+  }
+}
+.editor-fullscreen-btn {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 0.8125rem;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.editor-fullscreen-btn:hover {
+  background: var(--border-light);
+  border-color: var(--text-tertiary);
+}
+.editor-fullscreen-btn .pi {
+  font-size: 1rem;
+}
+.editor-fullscreen-btn-label {
+  white-space: nowrap;
+}
+@media (max-width: 480px) {
+  .editor-fullscreen-btn-label { display: none; }
 }
 .editor-toolbar {
   display: flex;
