@@ -73,13 +73,15 @@
         <p v-else>No past versions.</p>
         <button type="button" class="btn btn-sm btn-ghost" @click="versionsOpen = false">Close</button>
       </div>
-      <div v-if="postType === 'post'" class="form-group editor-row">
+      <div v-if="postType === 'post'" class="form-group editor-row" :class="{ 'editor-row--wysiwyg': contentType === 'WYSIWYG' }">
         <div class="editor-pane">
           <RichTextEditor
             v-if="contentType === 'WYSIWYG'"
+            ref="richTextEditorRef"
             v-model="content"
             :can-add-image="imageCountInContent < MAX_IMAGES_PER_POST"
             @image-upload="onRichEditorImageUpload"
+            @image-crop-apply="onRichEditorCropApply"
           />
           <div v-else class="editor-mention-wrap">
             <textarea
@@ -117,7 +119,7 @@
             </Transition>
           </div>
         </div>
-        <div class="preview-pane">
+        <div v-if="contentType !== 'WYSIWYG'" class="preview-pane">
           <div class="preview-label">Preview</div>
           <div class="preview-content" v-html="previewHtml"></div>
         </div>
@@ -128,7 +130,7 @@
       </div>
       <template v-if="postType === 'post'">
       <div class="form-group">
-        <input v-model="tagsStr" type="text" placeholder="Tags (comma-separated)" class="tags-input" />
+        <input :value="tagsStr" type="text" placeholder="Tags (comma-separated)" class="tags-input" @input="onTagsInput" @blur="normalizeTagsStr" />
       </div>
       </template>
       <template v-if="postType === 'poll'">
@@ -497,6 +499,14 @@ const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
 const MAX_TITLE_WORDS = 20
 const MAX_TITLE_CHARS = 120
 
+/** Normalize image src in post HTML to relative /posts/images/ID so they resolve correctly when viewing. */
+function normalizePostContentImageUrls(html: string): string {
+  return html.replace(
+    /src=(["'])(?:(?:https?:)?\/\/[^"']*|\/api)?(\/posts\/images\/[a-zA-Z0-9_-]+)(?:\?[^"']*)?\1/g,
+    (_m, q, path) => `src=${q}${path}${q}`
+  )
+}
+
 function countWords(s: string): number {
   return s.trim() ? s.trim().split(/\s+/).filter(Boolean).length : 0
 }
@@ -542,6 +552,7 @@ function onTitleInput(e: Event) {
 }
 const content = ref('')
 const contentType = ref<ContentType>('MARKDOWN')
+const richTextEditorRef = ref<{ addImage: (url: string) => void; replaceSelectedImage: (url: string) => void } | null>(null)
 const tagsStr = ref('')
 const visibility = ref<'PUBLIC' | 'FOLLOWERS_ONLY'>('PUBLIC')
 const postType = ref<'post' | 'poll'>('post')
@@ -955,13 +966,46 @@ const imageCountInContent = computed(() => countImagesInContent(content.value, c
 
 // handler invoked by the rich text editor when it wants to upload a file
 function onRichEditorImageUpload(file: File) {
-  // delegate to plain textarea upload logic by crafting a fake event
   const fakeEvent = { target: { files: [file] } } as unknown as Event
   onImageUpload(fakeEvent)
 }
 
+async function onRichEditorCropApply(file: File) {
+  error.value = ''
+  try {
+    const formData = new FormData()
+    formData.append('image', file)
+    const { data } = await api.post<{ url: string }>('/posts/upload-image', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+    const absoluteUrl = avatarSrc(data.url)
+    richTextEditorRef.value?.replaceSelectedImage(absoluteUrl)
+  } catch (err) {
+    error.value = getUploadErrorMessage(err)
+  }
+}
+
+/** Normalize a single tag: trim and replace spaces with dashes. */
+function normalizeTag(t: string): string {
+  return t.trim().replace(/\s+/g, '-')
+}
+
 function tags(): string[] {
-  return tagsStr.value.split(',').map((t) => t.trim()).filter(Boolean)
+  return tagsStr.value
+    .split(',')
+    .map((t) => normalizeTag(t))
+    .filter(Boolean)
+}
+
+function onTagsInput(e: Event) {
+  tagsStr.value = (e.target as HTMLInputElement).value ?? ''
+}
+
+function normalizeTagsStr() {
+  const normalized = tagsStr.value
+    .split(',')
+    .map((t) => normalizeTag(t))
+    .filter(Boolean)
+    .join(', ')
+  if (normalized !== tagsStr.value) tagsStr.value = normalized
 }
 
 function addPollOption() {
@@ -1047,7 +1091,10 @@ async function doPublish(anonymous: boolean) {
   try {
     const payload: Record<string, unknown> = {
       title: title.value,
-      content: postType.value === 'poll' ? content.value : content.value,
+      content:
+        postType.value === 'post' && contentType.value === 'WYSIWYG'
+          ? normalizePostContentImageUrls(content.value)
+          : content.value,
       contentType: contentType.value,
       tags: postType.value === 'post' ? tags() : [],
       isPublished: true,
@@ -1158,7 +1205,12 @@ async function onImageUpload(e: Event) {
     const formData = new FormData()
     formData.append('image', file)
     const { data } = await api.post<{ url: string }>('/posts/upload-image', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
-    const insert = contentType.value === 'MARKDOWN' ? `![image](${data.url})` : `<img src="${data.url}" alt="uploaded" />`
+    if (contentType.value === 'WYSIWYG') {
+      const absoluteUrl = avatarSrc(data.url)
+      richTextEditorRef.value?.addImage(absoluteUrl)
+      return
+    }
+    const insert = `![image](${data.url})`
     const el = editorRef.value
     if (el) {
       const start = el.selectionStart
@@ -1220,7 +1272,24 @@ function resetCardColor(target: 'backgroundColor' | 'borderColor' | { type: 'gra
 .write-page h1 { font-size: clamp(1.25rem, 4vw, 1.5rem); margin: 0 0 1.25rem; font-weight: 700; }
 .form { display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
 .form-group:first-of-type { margin-bottom: 0.25rem; }
-.title-input { width: 100%; min-width: 0; font-size: clamp(1.125rem, 4vw, 1.5rem); padding: 0.5rem 0; border: none; border-bottom: 1px solid var(--gray-200); background: transparent; }
+.title-input {
+  width: 100%;
+  min-width: 0;
+  font-size: clamp(1.125rem, 4vw, 1.5rem);
+  padding: 0.5rem 0;
+  border: none;
+  border-bottom: 1px solid var(--border-light);
+  background: transparent;
+  color: var(--text-primary);
+  font-family: inherit;
+}
+.title-input::placeholder {
+  color: var(--text-tertiary);
+}
+.title-input:focus {
+  outline: none;
+  border-bottom-color: var(--border-medium);
+}
 .title-warning { font-size: 0.8125rem; color: var(--accent-burgundy, #6b2c3e); margin: 0.25rem 0 0; }
 .post-type-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .card-style-radio-row { display: flex; gap: 1rem; align-items: center; margin-top: 0.5rem; }
@@ -1380,6 +1449,7 @@ function resetCardColor(target: 'backgroundColor' | 'borderColor' | { type: 'gra
 .btn-sm { padding: 0.375rem 0.75rem; font-size: 0.875rem; }
 .saved-hint { font-size: 0.75rem; color: var(--gray-700); }
 .editor-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; min-height: 420px; }
+.editor-row--wysiwyg { grid-template-columns: 1fr; }
 @media (max-width: 768px) { .editor-row { grid-template-columns: 1fr; min-height: 340px; } }
 @media (max-width: 640px) {
   .post-type-btn { padding: 0.5rem 0.75rem; font-size: 0.875rem; }
@@ -1388,10 +1458,27 @@ function resetCardColor(target: 'backgroundColor' | 'borderColor' | { type: 'gra
 }
 .editor-pane { min-height: 0; min-width: 0; }
 .editor-mention-wrap { position: relative; }
-.editor { width: 100%; height: 100%; min-height: 380px; padding: 1rem; border: 1px solid var(--gray-300); border-radius: var(--radius); font-family: inherit; resize: vertical; box-sizing: border-box; font-size: 0.9375rem; line-height: 1.6; }
+.editor {
+  width: 100%;
+  height: 100%;
+  min-height: 380px;
+  padding: 1rem;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius);
+  font-family: inherit;
+  resize: vertical;
+  box-sizing: border-box;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+.editor::placeholder {
+  color: var(--text-tertiary);
+}
 .mention-dropdown { position: absolute; left: 0; right: 0; top: 100%; margin-top: 0.25rem; background: var(--bg-card); border: 1px solid var(--border-medium); border-radius: var(--radius); box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-height: 220px; overflow-y: auto; z-index: 20; }
 .mention-item { display: flex; align-items: center; gap: 0.6rem; width: 100%; padding: 0.5rem 0.75rem; text-align: left; border: none; background: none; cursor: pointer; font-size: 0.9375rem; color: var(--text-primary); }
-.mention-item:hover, .mention-item--selected { background: var(--gray-100, #f3f4f6); }
+.mention-item:hover, .mention-item--selected { background: var(--bg-primary); }
 .mention-item--loading { color: var(--text-tertiary); cursor: default; }
 .mention-avatar-wrap { width: 36px; height: 36px; flex-shrink: 0; overflow: hidden; border-radius: 50%; background: var(--border-light, #e5e7eb); }
 .mention-avatar-wrap.avatar-shape-rounded { border-radius: 12%; }
@@ -1406,11 +1493,46 @@ function resetCardColor(target: 'backgroundColor' | 'borderColor' | { type: 'gra
   .editor-toolbar { gap: 0.5rem; }
   .editor { min-height: 280px; padding: 0.5rem; }
 }
-.preview-pane { border: 1px solid var(--gray-200); border-radius: var(--radius); background: var(--gray-50); overflow: auto; min-height: 0; }
-.preview-label { font-size: 0.75rem; color: var(--gray-700); padding: 0.25rem 0.5rem; border-bottom: 1px solid var(--gray-200); }
-.preview-content { padding: 0.75rem; font-size: 0.9375rem; line-height: 1.6; }
+.preview-pane {
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  background: var(--bg-secondary);
+  overflow: auto;
+  min-height: 0;
+}
+.preview-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  padding: 0.25rem 0.5rem;
+  border-bottom: 1px solid var(--border-light);
+}
+.preview-content {
+  padding: 0.75rem;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--text-primary);
+  background: transparent;
+}
 .preview-content :deep(img) { max-width: 100%; }
-.tags-input { width: 100%; min-width: 0; padding: 0.5rem 0.75rem; border: 1px solid var(--gray-300); border-radius: var(--radius); }
+.tags-input {
+  width: 100%;
+  min-width: 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.9375rem;
+}
+.tags-input::placeholder {
+  color: var(--text-tertiary);
+}
+.tags-input:focus {
+  outline: none;
+  border-color: var(--border-medium);
+  box-shadow: 0 0 0 2px var(--border-light);
+}
 .visibility-row { display: flex; align-items: center; gap: 0.75rem; }
 .error { color: #dc2626; font-size: 0.875rem; margin: 0; }
 .conflict-banner { padding: 0.75rem; background: #fef3c7; border: 1px solid #f59e0b; border-radius: var(--radius); }

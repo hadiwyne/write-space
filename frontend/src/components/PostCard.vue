@@ -64,6 +64,7 @@
       :is="previewOnly ? 'div' : 'router-link'"
       :to="previewOnly ? undefined : '/posts/' + post.id"
       class="card-body"
+      :style="cardBodyFontStyle"
     >
       <h2 class="card-title">{{ post.title }}</h2>
       <p v-if="excerpt" class="card-excerpt">{{ excerpt }}</p>
@@ -202,6 +203,8 @@ const auth = useAuthStore()
 const likedStore = useLikedPostsStore()
 
 import { getAnonAvatarUrl } from '@/utils/anonAvatar'
+import { getAllowedContentFontFamily, fontFamilyCss, extractContentFontFamiliesFromHtml } from '@/utils/allowed-content-fonts'
+import { ensureFontLoaded } from '@/utils/load-fonts'
 
 function authorFrame(author: unknown): AvatarFrameType | null {
   return ((author as { avatarFrame?: AvatarFrameType } | null)?.avatarFrame ?? null) as AvatarFrameType | null
@@ -310,6 +313,19 @@ const cardFooterSizeClass = computed(() => {
   if (!size || size === 'default') return ''
   return `card-footer--${size}`
 })
+
+const cardBodyFontStyle = computed(() => {
+  const post = props.post as { contentFontFamily?: string | null; renderedHTML?: string | null }
+  const explicit = getAllowedContentFontFamily(post.contentFontFamily)
+  const fromHtml = (post.renderedHTML && extractContentFontFamiliesFromHtml(post.renderedHTML)[0]) || null
+  const font = explicit ?? fromHtml
+  return font ? { fontFamily: fontFamilyCss(font) } : undefined
+})
+
+watch(cardBodyFontStyle, (style) => {
+  const font = style?.fontFamily?.replace(/^["']+|["']+$/g, '').trim()
+  if (font) ensureFontLoaded(font)
+}, { immediate: true })
 
 const emit = defineEmits<{
   (e: 'archive', postId: string): void

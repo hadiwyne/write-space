@@ -17,6 +17,21 @@ import { extractMentionedUsernames } from '../utils/mentions';
 
 export const MAX_IMAGES_PER_POST = 5;
 
+/** Allowed font family values for post content (allowlist for security). Must match frontend. */
+export const ALLOWED_CONTENT_FONT_FAMILIES = new Set([
+  'Georgia', 'Times New Roman', 'Lora', 'Merriweather', 'Source Serif 4', 'PT Serif',
+  'Libre Baskerville', 'Crimson Text', 'Playfair Display', 'Arial', 'Helvetica', 'Verdana',
+  'Inter', 'Open Sans', 'Roboto', 'Nunito', 'Manrope', 'Trebuchet MS', 'Tahoma',
+  'Bebas Neue', 'Oswald', 'Dancing Script', 'Pacifico', 'Lobster',
+  'Courier New', 'JetBrains Mono', 'Source Code Pro', 'Palatino Linotype', 'Lucida Sans Unicode',
+]);
+
+function sanitizeContentFontFamily(value: string | undefined): string | undefined {
+  if (value == null || value.trim() === '') return undefined;
+  const trimmed = value.trim();
+  return ALLOWED_CONTENT_FONT_FAMILIES.has(trimmed) ? trimmed : undefined;
+}
+
 const ANONYMOUS_ALIASES = [
   'Ganja Grin',
   'Giggly Ghost Pepper',
@@ -147,6 +162,7 @@ export class PostsService {
             isAnonymous,
             anonymousAlias,
             cardStyle: (dto.cardStyle ?? undefined) as Prisma.InputJsonValue | undefined,
+            contentFontFamily: sanitizeContentFontFamily(dto.contentFontFamily),
           },
         });
         await tx.poll.create({
@@ -189,6 +205,7 @@ export class PostsService {
         isAnonymous,
         anonymousAlias,
         cardStyle: (dto.cardStyle ?? undefined) as Prisma.InputJsonValue | undefined,
+        contentFontFamily: sanitizeContentFontFamily(dto.contentFontFamily),
       },
       include: { author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } } },
     });
@@ -307,6 +324,7 @@ export class PostsService {
         }),
         ...(dto.visibility != null && { visibility: dto.visibility }),
         ...(dto.cardStyle !== undefined && { cardStyle: dto.cardStyle as Prisma.InputJsonValue }),
+        ...(dto.contentFontFamily !== undefined && { contentFontFamily: sanitizeContentFontFamily(dto.contentFontFamily) }),
       },
       include: { author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } } },
     });

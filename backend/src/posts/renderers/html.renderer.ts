@@ -13,12 +13,26 @@ export class HtmlRenderer {
       allowedTags: ['p', 'br', 'strong', 'em', 'u', 's', 'mark', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'a', 'img', 'blockquote', 'span', 'div', 'code', 'pre', 'hr'],
       allowedAttributes: {
         a: ['href', 'class', 'style', 'target', 'rel'],
-        img: ['src', 'alt', 'class', 'style'],
+        img: ['src', 'alt', 'class', 'style', 'width', 'height', 'data-width'],
         p: ['class', 'style', 'data-text-align'], span: ['class', 'style', 'data-text-align'], div: ['class', 'style', 'data-text-align'],
         strong: ['class'], em: ['class'], u: ['class'], s: ['class'], mark: ['class'], blockquote: ['class'],
         h1: ['class'], h2: ['class'], h3: ['class'], h4: ['class'], h5: ['class'], h6: ['class'],
         ul: ['class'], ol: ['class'], li: ['class'], code: ['class'], pre: ['class'], hr: ['class'],
       },
+      allowedStyles: {
+        span: { 'font-family': [/^[\w\s,"'-]+$/], 'font-size': [/^[\w.%]+$/] },
+        p: { 'font-family': [/^[\w\s,"'-]+$/], 'font-size': [/^[\w.%]+$/], 'text-align': [/^(left|right|center|justify)$/] },
+        div: { 'font-family': [/^[\w\s,"'-]+$/], 'font-size': [/^[\w.%]+$/], 'text-align': [/^(left|right|center|justify)$/] },
+        img: {
+          width: [/^\d+%?|auto$/],
+          height: [/^\d+%?|auto$/],
+          'max-width': [/^\d+%?|auto$/],
+          display: [/^block|inline|inline-block$/],
+          float: [/^(left|right|none)$/],
+        },
+      },
+      allowedSchemes: ['http', 'https', 'data'],
+      allowedSchemesByTag: { img: ['http', 'https', 'data'] },
     });
   }
 }
