@@ -486,23 +486,28 @@ const fullscreen = ref(false)
 const fullscreenExiting = ref(false)
 const FULLSCREEN_EXIT_MS = 280
 
+function lockBodyScroll(lock: boolean) {
+  const val = lock ? 'hidden' : ''
+  document.documentElement.style.overflow = val
+  document.body.style.overflow = val
+}
 function toggleFullscreen() {
   if (fullscreen.value) {
     fullscreenExiting.value = true
-    document.body.style.overflow = ''
+    lockBodyScroll(false)
     setTimeout(() => {
       fullscreen.value = false
       fullscreenExiting.value = false
     }, FULLSCREEN_EXIT_MS)
   } else {
     fullscreen.value = true
-    document.body.style.overflow = 'hidden'
+    lockBodyScroll(true)
   }
 }
 function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape' && fullscreen.value && !fullscreenExiting.value) {
     fullscreenExiting.value = true
-    document.body.style.overflow = ''
+    lockBodyScroll(false)
     setTimeout(() => {
       fullscreen.value = false
       fullscreenExiting.value = false
@@ -519,7 +524,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   document.removeEventListener('click', closeToolbarDropdowns)
   document.removeEventListener('keydown', onKeydown)
-  if (fullscreen.value || fullscreenExiting.value) document.body.style.overflow = ''
+  if (fullscreen.value || fullscreenExiting.value) lockBodyScroll(false)
   fullscreen.value = false
   fullscreenExiting.value = false
   editor.value?.destroy()
@@ -557,6 +562,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   background: var(--bg-primary);
   overflow: hidden;
+  overscroll-behavior: contain;
   border-radius: 0;
   border: none;
   min-height: 0;
