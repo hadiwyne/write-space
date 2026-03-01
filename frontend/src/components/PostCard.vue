@@ -33,6 +33,7 @@
         </AvatarFrame>
         <div class="author-info">
           <span class="author-name">{{ post.author && (post.author.displayName || post.author.username) }}</span>
+          <span v-if="post.author?.username" class="author-username">@{{ post.author.username }}</span>
           <div class="author-meta">
             <span class="meta-date">{{ formatDate(post.publishedAt || post.createdAt) }}</span>
             <span class="meta-dot">·</span>
@@ -563,8 +564,14 @@ function formatDate(s: string | undefined) {
   display: block;
   font-size: 1rem;
   font-weight: 700;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.1rem;
   color: var(--text-primary);
+}
+.author-username {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+  margin-bottom: 0.2rem;
 }
 .author-meta {
   display: flex;

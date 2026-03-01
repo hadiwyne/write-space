@@ -17,6 +17,7 @@
           </AvatarFrame>
         </div>
         <h1>{{ profile.displayName || profile.username }}</h1>
+        <p v-if="profile.username" class="profile-username">@{{ profile.username }}</p>
         <p v-if="profile.bio" class="bio">{{ profile.bio }}</p>
         <div v-if="profile.profileHTML" class="profile-html" v-html="resolvedProfileHtml"></div>
         <div class="profile-stats">
@@ -736,12 +737,18 @@ onUnmounted(() => {
   outline: 2px solid var(--border-medium);
 }
 .profile-header h1 {
-  margin: 0 0 0.25rem;
+  margin: 0 0 0.15rem;
   font-size: clamp(1.25rem, 4vw, 1.5rem);
   font-weight: 800;
   letter-spacing: -0.03em;
   color: var(--text-primary);
   word-break: break-word;
+}
+.profile-username {
+  margin: 0 0 0.5rem;
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+  font-weight: 500;
 }
 .bio { color: var(--text-secondary); margin: 0 0 0.5rem; font-size: 0.9375rem; }
 .profile-html {

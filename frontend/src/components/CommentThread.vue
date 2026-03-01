@@ -15,7 +15,10 @@
       </span>
       <div class="comment-content">
         <span class="comment-meta">
-          <router-link v-if="comment.author?.username" :to="`/u/${comment.author.username}`" class="comment-author">{{ comment.author?.displayName || comment.author?.username }}</router-link>
+          <template v-if="comment.author?.username">
+            <router-link :to="`/u/${comment.author.username}`" class="comment-author">{{ comment.author?.displayName || comment.author?.username }}</router-link>
+            <span class="comment-username">@{{ comment.author.username }}</span>
+          </template>
           <span v-else class="comment-author comment-author--anonymous">{{ comment.author?.displayName || comment.author?.username || '?' }}</span>
           <time v-if="comment.createdAt" :datetime="comment.createdAt" class="comment-time">{{ formatCommentDate(comment.createdAt) }}</time>
           <span v-if="comment.editedAt" class="comment-edited">(Edited)</span>
@@ -270,10 +273,18 @@ function linkifyCommentContent(text: string) {
 .comment-meta {
   display: flex;
   align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.35rem;
   gap: 0.5rem;
   flex-wrap: wrap;
 }
 .comment-author { font-weight: 600; font-size: 0.875rem; color: var(--text-primary); }
+.comment-username {
+  margin-left: 0.35rem;
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
 .comment-author--anonymous { cursor: default; text-decoration: none; pointer-events: none; }
 .comment-author--anonymous:hover { text-decoration: none; color: inherit; }
 .comment-avatar-link--anonymous { cursor: default; pointer-events: none; }
