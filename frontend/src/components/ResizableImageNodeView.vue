@@ -5,7 +5,7 @@
       class="resizable-image-wrap"
       :style="wrapStyle"
       @dblclick="toggleResize"
-      @touchstart.passive="onTouchStart"
+      @touchstart="onTouchStart"
     >
       <div
         class="drag-handle"
@@ -26,7 +26,7 @@
         v-show="resizing"
         class="resize-handle"
         @mousedown="onResizeStart"
-        @touchstart.passive="onResizeHandleTouchStart"
+        @touchstart="onResizeHandleTouchStart"
       />
     </div>
   </NodeViewWrapper>
@@ -51,9 +51,9 @@ const wrapRef = ref<HTMLElement | null>(null)
 
 const wrapStyle = computed(() => {
   const w = props.node.attrs.width
-  if (!w) return undefined
+  if (!w) return { maxWidth: '100%' }
   const v = typeof w === 'number' ? `${w}px` : String(w)
-  return { maxWidth: v, width: v }
+  return { width: v, maxWidth: '100%' }
 })
 
 function selectImageNode() {
@@ -197,35 +197,48 @@ function onTouchStart(e: TouchEvent) {
   const now = Date.now()
   if (now - lastTap < 400) {
     lastTap = 0
+    e.preventDefault()
+    selectImageNode()
     resizing.value = !resizing.value
   } else {
     lastTap = now
   }
 }
 
+function lockBodyScroll(lock: boolean) {
+  const val = lock ? 'hidden' : ''
+  document.documentElement.style.overflow = val
+  document.body.style.overflow = val
+}
+
 function onResizeHandleTouchStart(e: TouchEvent) {
   e.preventDefault()
   if (e.touches.length !== 1) return
   resizing.value = true
+  lockBodyScroll(true)
   const touch = e.touches[0]
   resizeStartX = touch.clientX
   startWrapWidth = parseWidth(props.node.attrs.width) || 400
   resizeStartWidth = startWrapWidth
+  const container = wrapRef.value?.closest('.ProseMirror')
+  const maxW = container?.clientWidth ?? 600
   const onMove = (ev: TouchEvent) => {
     if (ev.touches.length !== 1) return
+    ev.preventDefault()
     const delta = ev.touches[0].clientX - resizeStartX
-    const container = (e.target as HTMLElement).closest('.ProseMirror')
-    const maxW = container?.clientWidth ?? 600
     const newW = Math.min(maxW, Math.max(80, resizeStartWidth + delta))
     props.updateAttributes({ width: `${newW}px` })
   }
   const onEnd = () => {
-    document.removeEventListener('touchmove', onMove, { passive: false })
+    document.removeEventListener('touchmove', onMove, { passive: false } as EventListenerOptions)
     document.removeEventListener('touchend', onEnd)
+    document.removeEventListener('touchcancel', onEnd)
+    lockBodyScroll(false)
     resizing.value = false
   }
-  document.addEventListener('touchmove', onMove, { passive: false } as AddEventListenerOptions)
+  document.addEventListener('touchmove', onMove, { passive: false } as EventListenerOptions)
   document.addEventListener('touchend', onEnd)
+  document.addEventListener('touchcancel', onEnd)
 }
 
 onMounted(() => {
@@ -241,12 +254,15 @@ onMounted(() => {
 .resizable-image-node {
   display: block;
   margin: 0.5rem 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 .resizable-image-wrap {
   position: relative;
   display: inline-block;
   max-width: 100%;
   cursor: default;
+  box-sizing: border-box;
 }
 .drag-handle {
   position: absolute;
@@ -278,10 +294,15 @@ onMounted(() => {
   outline-offset: 2px;
   border-radius: 4px;
 }
+.resizable-image-node--resizing .resizable-image-wrap {
+  touch-action: none;
+}
 .resizable-image-img {
   display: block;
   max-width: 100%;
+  width: 100%;
   height: auto;
+  vertical-align: middle;
 }
 .resize-handle {
   position: absolute;
@@ -293,6 +314,7 @@ onMounted(() => {
   cursor: nwse-resize;
   border-radius: 4px 0 0 0;
   clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  touch-action: none;
 }
 .resize-handle::after {
   content: '';
