@@ -1,10 +1,18 @@
-import { IsString, IsOptional, MaxLength, IsObject, IsIn } from 'class-validator';
+import { IsString, IsOptional, MaxLength, MinLength, Matches, IsObject, IsIn } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export const PRIVACY_VISIBILITY = ['NO_ONE', 'FOLLOWERS', 'PUBLIC'] as const;
 export const WHO_CAN_FOLLOW_ME = ['PUBLIC', 'APPROVAL'] as const;
 
 export class UpdateProfileDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(3)
+  @MaxLength(30)
+  @Matches(/^[a-zA-Z0-9_]+$/, { message: 'Username can only contain letters, numbers, and underscores' })
+  @Transform(({ value }) => (typeof value === 'string' ? value.replace(/^@+/, '').trim() : value))
+  username?: string;
+
   @IsOptional()
   @IsString()
   @MaxLength(100)

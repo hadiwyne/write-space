@@ -12,6 +12,7 @@ export type NotificationItem = {
   actor?: { id: string; username: string; displayName: string | null; avatarUrl: string | null; avatarShape?: string | null }
   post?: { id: string; title: string }
   postId?: string
+  commentId?: string
   isAnonymousActor?: boolean
 }
 

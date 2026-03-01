@@ -3,10 +3,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { NotificationsService } from '../notifications/notifications.service';
+import { extractMentionedUsernames } from '../utils/mentions';
 
 const authorSelect = { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true };
 
-/** Masked author for comment by post author on anonymous post. */
 function maskedCommentAuthor(anonymousAlias: string | null) {
   const alias = anonymousAlias || 'Anonymous';
   return {
@@ -85,6 +85,24 @@ export class CommentsService {
           type: 'COMMENT_REPLY',
           actorId: authorId,
           ...(isAnonymousReply ? { actorAnonymousAlias: post.anonymousAlias ?? null } : {}),
+          postId,
+          commentId: withCounts.id,
+        });
+      }
+    }
+
+    const usernames = extractMentionedUsernames(dto.content);
+    if (usernames.length > 0) {
+      const users = await this.prisma.user.findMany({
+        where: { username: { in: usernames } },
+        select: { id: true },
+      });
+      const mentionedIds = users.map((u) => u.id).filter((id) => id !== authorId);
+      for (const userId of mentionedIds) {
+        await this.notifications.create({
+          userId,
+          type: 'MENTION',
+          actorId: authorId,
           postId,
           commentId: withCounts.id,
         });

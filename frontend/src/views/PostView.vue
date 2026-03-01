@@ -98,7 +98,7 @@
       <section class="comments">
         <h2>Comments</h2>
         <div v-if="auth.isLoggedIn" class="comment-form">
-          <textarea v-model="newComment" placeholder="Add a comment…" rows="3"></textarea>
+          <MentionTextarea v-model="newComment" placeholder="Add a comment…" :rows="3" />
           <button type="button" class="btn btn-primary btn-sm" @click="() => addComment()">Post</button>
         </div>
         <div class="comment-list">
@@ -146,12 +146,14 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRoute } from 'vue-router'
 import { api, avatarSrc, resolveContentImageUrls } from '@/api/client'
+import { linkifyMentionsInHtml } from '@/utils/linkifyMentions'
 import { useAuthStore } from '@/stores/auth'
 import { useLikedPostsStore } from '@/stores/likedPosts'
 import { getCachedPost, setCachedPost } from '@/utils/indexedDBCache'
 import { getAnonAvatarUrl } from '@/utils/anonAvatar'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import CommentThread, { type CommentNode } from '@/components/CommentThread.vue'
+import MentionTextarea from '@/components/MentionTextarea.vue'
 import PollBlock from '@/components/PollBlock.vue'
 
 function collectionId(c: { id: string; title: string }) {
@@ -192,7 +194,9 @@ function onPollUpdate(updated: Record<string, unknown>) {
   if (post.value) post.value = updated as typeof post.value
 }
 
-const resolvedPostHtml = computed(() => resolveContentImageUrls(post.value?.renderedHTML ?? ''))
+const resolvedPostHtml = computed(() =>
+  linkifyMentionsInHtml(resolveContentImageUrls(post.value?.renderedHTML ?? ''))
+)
 
 const isOwnPost = computed(() => {
   if (post.value?.isOwnPost === true) return true

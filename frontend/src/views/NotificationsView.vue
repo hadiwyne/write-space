@@ -41,6 +41,7 @@ type NotifRecord = Record<string, unknown> & {
   createdAt?: string
   actor?: { id?: string; displayName?: string; username?: string; avatarUrl?: string | null; avatarShape?: string | null; avatarFrame?: unknown; badgeUrl?: string | null }
   postId?: string
+  commentId?: string
   isAnonymousActor?: boolean
 }
 
@@ -89,6 +90,8 @@ function notificationText(n: NotifRecord) {
       return `${actor} started following you`
     case 'FOLLOW_REQUEST':
       return `${actor} requested to follow you`
+    case 'MENTION':
+      return (n.commentId ? `${actor} mentioned you in a comment` : `${actor} mentioned you in a post`)
     default:
       return `${actor} notified you`
   }

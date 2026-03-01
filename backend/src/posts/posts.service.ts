@@ -7,11 +7,13 @@ const sharp = require('sharp') as typeof import('sharp');
 // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
 const PDFDocument = require('pdfkit');
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { MarkdownRenderer } from './renderers/markdown.renderer';
 import { HtmlRenderer } from './renderers/html.renderer';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { extractFirstUrl, fetchLinkPreview } from './link-preview.service';
+import { extractMentionedUsernames } from '../utils/mentions';
 
 export const MAX_IMAGES_PER_POST = 5;
 
@@ -41,7 +43,6 @@ function pickAnonymousAlias(): string {
   return ANONYMOUS_ALIASES[Math.floor(Math.random() * ANONYMOUS_ALIASES.length)];
 }
 
-/** Count image references in post content (markdown ![alt](url) or HTML <img). */
 function countImagesInContent(content: string, contentType: ContentType): number {
   if (!content) return 0;
   if (contentType === 'MARKDOWN') {
@@ -58,6 +59,7 @@ export class PostsService {
     private config: ConfigService,
     private markdown: MarkdownRenderer,
     private html: HtmlRenderer,
+    private notifications: NotificationsService,
   ) { }
 
   private renderContent(content: string, type: ContentType): string {
@@ -69,6 +71,25 @@ export class PostsService {
         return this.html.render(content);
       default:
         return this.html.render(content);
+    }
+  }
+
+  private async createMentionNotifications(content: string, authorId: string, postId: string, commentId?: string) {
+    const usernames = extractMentionedUsernames(content);
+    if (usernames.length === 0) return;
+    const users = await this.prisma.user.findMany({
+      where: { username: { in: usernames } },
+      select: { id: true },
+    });
+    const mentionedIds = users.map((u) => u.id).filter((id) => id !== authorId);
+    for (const userId of mentionedIds) {
+      await this.notifications.create({
+        userId,
+        type: 'MENTION',
+        actorId: authorId,
+        postId,
+        commentId,
+      });
     }
   }
 
@@ -149,6 +170,7 @@ export class PostsService {
         });
       });
       this.refreshLinkPreview(post!.id, dto.content).catch(() => { });
+      if (dto.isPublished) this.createMentionNotifications(dto.content, authorId, post!.id).catch(() => { });
       return post!;
     }
 
@@ -171,6 +193,7 @@ export class PostsService {
       include: { author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } } },
     });
     this.refreshLinkPreview(post.id, dto.content).catch(() => { });
+    if (dto.isPublished) this.createMentionNotifications(dto.content, authorId, post.id).catch(() => { });
     return post;
   }
 
@@ -218,12 +241,10 @@ export class PostsService {
         : null;
       if (!follows) throw new NotFoundException('Post not found');
     }
-    // Increment view count in background so we don't wait; return the post we already have (avoids second findOne).
     this.prisma.post.update({ where: { id }, data: { viewCount: { increment: 1 } } }).catch(() => { });
     return post;
   }
 
-  /** Fetch poll with options for a post (same visibility as findOnePublic). Use when post view needs poll options. */
   async getPollForPost(postId: string, userId?: string | null) {
     const post = await this.prisma.post.findUnique({
       where: { id: postId },
@@ -293,7 +314,6 @@ export class PostsService {
     return updated;
   }
 
-  /** Fetch OG metadata for first URL in content and save to post.linkPreview (runs in background). */
   private async refreshLinkPreview(postId: string, content: string): Promise<void> {
     const url = extractFirstUrl(content);
     if (!url) {
@@ -457,7 +477,6 @@ export class PostsService {
     return Packer.toBuffer(doc);
   }
 
-  /** Compress image for web (max width 1600, quality 82). Returns buffer and mime type. */
   private async compressPostImage(buffer: Buffer, mimeType: string): Promise<{ buffer: Buffer; mimeType: string }> {
     try {
       const pipeline = sharp(buffer)
@@ -475,7 +494,6 @@ export class PostsService {
     }
   }
 
-  /** Vote on a poll. Supports allowMultiple (toggle option) and allowChangeVote (unvote by clicking same option). */
   async votePoll(postId: string, userId: string, optionId: string) {
     const post = await this.prisma.post.findUnique({
       where: { id: postId },
@@ -524,7 +542,6 @@ export class PostsService {
     return this.findOne(postId, userId);
   }
 
-  /** List voters for a poll (author only). Returns users who voted and their chosen option(s). */
   async getPollVoters(postId: string, userId: string) {
     const post = await this.prisma.post.findUnique({
       where: { id: postId },
@@ -562,7 +579,6 @@ export class PostsService {
     return { voters: Array.from(byUser.values()) };
   }
 
-  /** Add an option to an open poll (only when poll.isOpen or user is author). */
   async addPollOption(postId: string, userId: string, text: string) {
     const trimmed = text.trim();
     if (!trimmed) throw new BadRequestException('Option text is required');
@@ -581,7 +597,6 @@ export class PostsService {
     return this.findOne(postId, userId);
   }
 
-  /** Save post image to database (persists on ephemeral hosts; no external storage). Compresses image. Returns URL for embedding in content. */
   async uploadPostImage(userId: string, buffer: Buffer, mimeType: string): Promise<{ url: string }> {
     const { buffer: compressed, mimeType: outMime } = await this.compressPostImage(buffer, mimeType);
     const image = await this.prisma.postImage.create({
@@ -592,7 +607,6 @@ export class PostsService {
     return { url };
   }
 
-  /** Get post image by id for serving (DB-stored images). */
   async getPostImage(id: string): Promise<{ buffer: Buffer; mimeType: string } | null> {
     const row = await this.prisma.postImage.findUnique({
       where: { id },

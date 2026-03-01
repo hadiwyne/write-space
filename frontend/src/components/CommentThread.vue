@@ -20,7 +20,7 @@
           <time v-if="comment.createdAt" :datetime="comment.createdAt" class="comment-time">{{ formatCommentDate(comment.createdAt) }}</time>
           <span v-if="comment.editedAt" class="comment-edited">(Edited)</span>
         </span>
-        <p v-if="!editing" class="comment-body">{{ comment.content }}</p>
+        <p v-if="!editing" class="comment-body" v-html="linkifyCommentContent(comment.content)"></p>
         <div v-else class="comment-edit-wrap">
           <textarea v-model="editContent" class="comment-edit-textarea" rows="3" placeholder="Edit your comment…"></textarea>
           <div class="comment-edit-actions">
@@ -59,13 +59,12 @@
     </div>
     <div v-if="replyToId === comment.id && isLoggedIn" class="reply-form-wrap" :class="{ 'reply-form-in-thread': depth > 0 }">
       <div class="reply-form">
-        <textarea
-          :value="replyContent"
+        <MentionTextarea
+          :model-value="replyContent"
           placeholder="Write a reply…"
-          rows="3"
-          class="reply-textarea"
-          @input="onReplyContentInput($event)"
-        ></textarea>
+          :rows="3"
+          @update:model-value="$emit('update:replyContent', $event)"
+        />
         <div class="reply-form-actions">
           <button type="button" class="btn-reply btn-reply-primary" @click="$emit('submitReply', comment.id)">Reply</button>
           <button type="button" class="btn-reply btn-reply-ghost" @click="$emit('cancelReply')">Cancel</button>
@@ -102,6 +101,8 @@
 import { ref, computed } from 'vue'
 import { avatarShapeClass } from '@/utils/avatar'
 import AvatarFrame from '@/components/AvatarFrame.vue'
+import MentionTextarea from '@/components/MentionTextarea.vue'
+import { linkifyMentionsInText } from '@/utils/linkifyMentions'
 defineOptions({ name: 'CommentThread' })
 
 export type CommentNode = {
@@ -176,9 +177,8 @@ const emit = defineEmits<{
   delete: [commentId: string]
 }>()
 
-function onReplyContentInput(e: Event) {
-  const target = e.target as HTMLTextAreaElement
-  emit('update:replyContent', target?.value ?? '')
+function linkifyCommentContent(text: string) {
+  return linkifyMentionsInText(text ?? '')
 }
 </script>
 

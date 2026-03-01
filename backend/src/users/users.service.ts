@@ -91,11 +91,29 @@ export class UsersService {
     private config: ConfigService,
   ) { }
 
-  /** For auth: returns only id, email, passwordHash so we can verify then fetch user without hash. */
   async findByEmail(email: string) {
     return this.prisma.user.findUnique({
       where: { email },
       select: { id: true, email: true, passwordHash: true },
+    });
+  }
+
+  async findByUsernameForAuth(username: string) {
+    const normalized = username.startsWith('@') ? username.slice(1) : username;
+    return this.prisma.user.findUnique({
+      where: { username: normalized },
+      select: { id: true, email: true, passwordHash: true },
+    });
+  }
+
+  async searchUsernames(prefix: string, limit = 10) {
+    const q = (prefix || '').replace(/^@+/, '').trim().toLowerCase();
+    if (q.length === 0) return [];
+    return this.prisma.user.findMany({
+      where: { username: { startsWith: q, mode: 'insensitive' } },
+      select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true },
+      take: limit,
+      orderBy: { username: 'asc' },
     });
   }
 
@@ -143,7 +161,6 @@ export class UsersService {
     };
   }
 
-  /** Returns profile by username. If profile is superadmin and viewer is not that user, returns null (invisible). */
   async findByUsername(username: string, viewerId?: string | null) {
     const user = await this.prisma.user.findUnique({
       where: { username },
@@ -229,6 +246,15 @@ export class UsersService {
   async updateProfile(userId: string, dto: UpdateProfileDto) {
     const user = await this.findById(userId);
     if (!user) throw new NotFoundException('User not found');
+    if (dto.username !== undefined) {
+      const normalized = dto.username.trim();
+      if (normalized.length > 0) {
+        const existing = await this.prisma.user.findFirst({
+          where: { username: normalized, id: { not: userId } },
+        });
+        if (existing) throw new ConflictException('Username already taken');
+      }
+    }
     const profileHTML =
       dto.profileHTML !== undefined
         ? sanitizeHtml(dto.profileHTML, {
@@ -273,9 +299,14 @@ export class UsersService {
       const n = whoSee(dto.whoCanFollowMe);
       if (n && (WHO_CAN_FOLLOW_ME as readonly string[]).includes(n)) privacy.whoCanFollowMe = n;
     }
+    const usernameData =
+      dto.username !== undefined && dto.username.trim().length > 0
+        ? { username: dto.username.trim() }
+        : {};
     return this.prisma.user.update({
       where: { id: userId },
       data: {
+        ...usernameData,
         displayName: dto.displayName,
         bio: dto.bio,
         avatarUrl: dto.avatarUrl,
@@ -301,7 +332,6 @@ export class UsersService {
     });
   }
 
-  /** Get avatar image buffer and mime type for a user (for DB-stored avatars). */
   async getAvatar(userId: string): Promise<{ buffer: Buffer; mimeType: string } | null> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
