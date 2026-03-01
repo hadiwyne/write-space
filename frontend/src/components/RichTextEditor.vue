@@ -92,8 +92,8 @@
       </button>
       <span class="toolbar-divider"></span>
       <!-- Link -->
-      <button type="button" class="toolbar-btn" :class="{ active: editor.isActive('link') }" @click="toggleLink" title="Link">
-        🔗
+      <button type="button" class="toolbar-btn" :class="{ active: editor.isActive('link') }" @click="toggleLink" title="Link" aria-label="Link">
+        <i class="pi pi-link" aria-hidden="true"></i>
       </button>
       <!-- Image -->
       <button
@@ -101,9 +101,10 @@
         class="toolbar-btn"
         :disabled="!canAddImage"
         :title="canAddImage ? 'Insert Media' : 'Maximum 5 images per post'"
+        :aria-label="canAddImage ? 'Insert Media' : 'Maximum 5 images per post'"
         @click="triggerImageUpload"
       >
-        🖼
+        <i class="pi pi-images" aria-hidden="true"></i>
       </button>
       <template v-if="imageSelectedByDoubleClick && editor.isActive('image')">
         <span class="toolbar-divider"></span>
