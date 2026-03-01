@@ -33,9 +33,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, inject } from 'vue'
 import { NodeViewWrapper } from '@tiptap/vue-3'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
+import { NodeSelection } from 'prosemirror-state'
 
 const props = defineProps<{
   node: ProseMirrorNode
@@ -44,6 +45,7 @@ const props = defineProps<{
   editor?: { view: { state: { doc: { resolve: (p: number) => { nodeBefore: ProseMirrorNode | null }; nodeAt: (p: number) => ProseMirrorNode | null }; tr: { delete: (a: number, b: number) => unknown; insert: (p: number, n: ProseMirrorNode) => unknown } }; dispatch: (tr: unknown) => void } }
 }>()
 
+const onImageDoubleClick = inject<() => void>('onImageDoubleClick')
 const resizing = ref(false)
 const wrapRef = ref<HTMLElement | null>(null)
 
@@ -54,7 +56,20 @@ const wrapStyle = computed(() => {
   return { maxWidth: v, width: v }
 })
 
+function selectImageNode() {
+  const pos = props.getPos?.()
+  const view = props.editor?.view
+  if (typeof pos === 'number' && view) {
+    const { state } = view
+    const doc = state.doc as Parameters<typeof NodeSelection.create>[0]
+    const tr = (state.tr as unknown as { setSelection: (s: unknown) => unknown }).setSelection(NodeSelection.create(doc, pos))
+    view.dispatch(tr as unknown as Parameters<typeof view.dispatch>[0])
+  }
+  onImageDoubleClick?.()
+}
+
 function toggleResize() {
+  selectImageNode()
   resizing.value = !resizing.value
 }
 

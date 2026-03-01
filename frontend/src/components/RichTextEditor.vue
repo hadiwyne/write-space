@@ -105,7 +105,7 @@
       >
         🖼
       </button>
-      <template v-if="editor.isActive('image')">
+      <template v-if="imageSelectedByDoubleClick && editor.isActive('image')">
         <span class="toolbar-divider"></span>
         <div class="toolbar-dropdown-wrap" ref="imageSizeDropdownRef">
           <button type="button" class="toolbar-dropdown-trigger" title="Image size" :aria-expanded="imageSizeDropdownOpen" @click="imageSizeDropdownOpen = !imageSizeDropdownOpen">
@@ -118,8 +118,8 @@
             </div>
           </Transition>
         </div>
-        <button type="button" class="toolbar-btn" title="Crop image" @click="openCropModal">
-          Crop
+        <button type="button" class="toolbar-btn toolbar-btn--crop" title="Crop image" aria-label="Crop image" @click="openCropModal">
+          <svg class="crop-icon" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" fill="none" width="18" height="18" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M5.5 2a1 1 0 00-2 0v2H2a1 1 0 000 2h12v7h2V5a1 1 0 00-1-1H5.5V2zm-2 5v8a1 1 0 001 1H14v2a1 1 0 102 0v-2h2a1 1 0 100-2H5.5V7h-2z"/></svg>
         </button>
       </template>
       <input ref="imageInputRef" type="file" accept="image/*" class="hidden" @change="onImageSelect" />
@@ -150,7 +150,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount, provide } from 'vue'
 import { useEditor, EditorContent, VueNodeViewRenderer } from '@tiptap/vue-3'
 import { Extension } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
@@ -338,6 +338,10 @@ const currentHeading = ref('')
 const currentImageWidth = ref('')
 const cropModalOpen = ref(false)
 const cropImageSrc = ref('')
+const imageSelectedByDoubleClick = ref(false)
+provide('onImageDoubleClick', () => {
+  imageSelectedByDoubleClick.value = true
+})
 
 const fontDropdownOpen = ref(false)
 const sizeDropdownOpen = ref(false)
@@ -368,6 +372,7 @@ watch(
       const heading = e.getAttributes('heading') as { level?: number }
       currentHeading.value = heading?.level ? String(heading.level) : 'paragraph'
       currentImageWidth.value = e.isActive('image') ? (e.getAttributes('image').width as string) || '' : ''
+      if (!e.isActive('image')) imageSelectedByDoubleClick.value = false
     }
     e.on('selectionUpdate', updateAttrs)
     e.on('transaction', updateAttrs)
@@ -675,6 +680,10 @@ onBeforeUnmount(() => {
 .toolbar-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+.toolbar-btn--crop .crop-icon {
+  display: block;
+  flex-shrink: 0;
 }
 .toolbar-highlight-icon {
   background: linear-gradient(transparent 60%, var(--accent-tertiary) 60%);
