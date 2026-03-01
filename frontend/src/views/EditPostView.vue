@@ -145,7 +145,24 @@ async function save() {
   outline: none;
   border-bottom-color: var(--border-medium);
 }
-.editor { width: 100%; min-width: 0; min-height: 320px; padding: 1rem; border: 1px solid var(--gray-300); border-radius: var(--radius); font-family: inherit; resize: vertical; box-sizing: border-box; font-size: 0.9375rem; line-height: 1.6; }
+.editor {
+  width: 100%;
+  min-width: 0;
+  min-height: 320px;
+  padding: 1rem;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius);
+  font-family: inherit;
+  resize: vertical;
+  box-sizing: border-box;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+.editor::placeholder {
+  color: var(--text-tertiary);
+}
 .tags-input {
   width: 100%;
   min-width: 0;
