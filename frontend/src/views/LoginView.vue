@@ -4,8 +4,8 @@
       <h1>Log in</h1>
       <form @submit.prevent="submit" class="form">
         <div class="form-group">
-          <label for="email">Email</label>
-          <input id="email" v-model="email" type="email" required autocomplete="email" />
+          <label for="emailOrUsername">Email or username</label>
+          <input id="emailOrUsername" v-model="emailOrUsername" type="text" required autocomplete="username" placeholder="Email or @username" />
         </div>
         <div class="form-group">
           <label for="password">Password</label>
@@ -27,7 +27,7 @@ import { useAuthStore } from '@/stores/auth'
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
-const email = ref('')
+const emailOrUsername = ref('')
 const password = ref('')
 const error = ref('')
 const loading = ref(false)
@@ -36,7 +36,7 @@ async function submit() {
   error.value = ''
   loading.value = true
   try {
-    await auth.login(email.value, password.value)
+    await auth.login(emailOrUsername.value, password.value)
     router.push((route.query.redirect as string) || '/feed')
   } catch (e: unknown) {
     error.value = (e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Login failed'

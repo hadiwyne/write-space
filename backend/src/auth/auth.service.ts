@@ -12,8 +12,12 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async validateUser(email: string, password: string) {
-    const user = await this.usersService.findByEmail(email);
+  async validateUser(emailOrUsername: string, password: string) {
+    const trimmed = (emailOrUsername || '').trim();
+    const isEmail = trimmed.includes('@') && !trimmed.startsWith('@') && trimmed.includes('.', trimmed.indexOf('@'));
+    const user = isEmail
+      ? await this.usersService.findByEmail(trimmed)
+      : await this.usersService.findByUsernameForAuth(trimmed);
     if (user && (await bcrypt.compare(password, user.passwordHash))) {
       const { passwordHash: _passwordHash, ...result } = user;
       return result;
@@ -22,8 +26,8 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    const user = await this.validateUser(dto.email, dto.password);
-    if (!user) throw new UnauthorizedException('Invalid email or password');
+    const user = await this.validateUser(dto.emailOrUsername, dto.password);
+    if (!user) throw new UnauthorizedException('Invalid email, username or password');
     return { accessToken: this.jwtService.sign({ sub: user.id, email: user.email }) };
   }
 

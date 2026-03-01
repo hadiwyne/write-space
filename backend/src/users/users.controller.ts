@@ -47,6 +47,13 @@ export class UsersController {
     return this.usersService.findMe(user.id);
   }
 
+  /** Username search for @mention autocomplete. Query param q = prefix (with or without @). */
+  @Get('search')
+  @UseGuards(JwtAuthGuard)
+  searchUsernames(@Query('q') q: string, @Query('limit') limit?: string) {
+    return this.usersService.searchUsernames(q ?? '', limit ? Number(limit) : 10);
+  }
+
   @Patch('me')
   @UseGuards(JwtAuthGuard)
   updateProfile(@CurrentUser() user: { id: string }, @Body() dto: UpdateProfileDto) {

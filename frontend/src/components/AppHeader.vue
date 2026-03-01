@@ -227,6 +227,10 @@ function notifText(n: NotificationItem) {
       return `${name} replied to your comment`
     case 'FOLLOW':
       return `${name} started following you`
+    case 'FOLLOW_REQUEST':
+      return `${name} requested to follow you`
+    case 'MENTION':
+      return (n.commentId ? `${name} mentioned you in a comment` : `${name} mentioned you in a post`)
     default:
       return `${name} notified you`
   }

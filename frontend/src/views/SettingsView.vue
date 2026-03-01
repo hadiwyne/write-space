@@ -203,6 +203,14 @@
           </div>
         </div>
         <div class="form-group">
+          <label for="username">Username</label>
+          <div class="username-input-wrap">
+            <span class="username-prefix">@</span>
+            <input id="username" v-model="username" type="text" placeholder="username" class="input username-input" maxlength="30" />
+          </div>
+          <p class="hint">Unique handle for your profile. Letters, numbers, underscores only. Others can mention you with @{{ username || 'username' }}.</p>
+        </div>
+        <div class="form-group">
           <label for="displayName">Display name</label>
           <input id="displayName" v-model="displayName" type="text" placeholder="Display name" class="input" />
         </div>
@@ -311,6 +319,7 @@
   import { BADGE_LABELS, BADGE_POSITION_LABELS, ANIMATION_LABELS } from '@/types/avatarFrame'
   
   const auth = useAuthStore()
+  const username = ref('')
   const displayName = ref('')
   const bio = ref('')
   const profileHTML = ref('')
@@ -514,6 +523,7 @@
   
   onMounted(() => {
     if (auth.user) {
+      username.value = auth.user.username || ''
       displayName.value = auth.user.displayName || ''
       bio.value = (auth.user as { bio?: string }).bio || ''
       const s = (auth.user as { avatarShape?: string | null }).avatarShape
@@ -522,6 +532,7 @@
     }
     auth.fetchUser().then(() => {
       if (auth.user) {
+        username.value = auth.user.username || ''
         displayName.value = auth.user.displayName || ''
         bio.value = (auth.user as { bio?: string }).bio || ''
         const s = (auth.user as { avatarShape?: string | null }).avatarShape
@@ -596,6 +607,7 @@
         avatarPreview.value = null
       }
       await api.patch('/users/me', {
+        username: username.value?.replace(/^@+/, '').trim() || undefined,
         displayName: displayName.value || undefined,
         bio: bio.value || undefined,
         profileHTML: profileHTML.value || undefined,
@@ -617,6 +629,9 @@
   .settings-page h1 { font-size: clamp(1.25rem, 4vw, 1.5rem); margin: 0 0 1rem; }
   .form { max-width: 100%; width: 100%; min-width: 0; display: flex; flex-direction: column; gap: 1rem; }
   .form-group label { display: block; font-size: 0.875rem; font-weight: 500; color: var(--gray-700); margin-bottom: 0.25rem; }
+  .username-input-wrap { display: flex; align-items: center; gap: 0; border: 1px solid var(--border-medium, #d1d5db); border-radius: var(--radius-md, 6px); background: var(--bg-card); }
+  .username-prefix { padding: 0.5rem 0.5rem 0.5rem 0.75rem; color: var(--text-tertiary, #6b7280); font-size: 0.9375rem; }
+  .username-input-wrap .username-input { border: none; border-radius: 0; flex: 1; min-width: 0; }
   .avatar-section { }
   .avatar-row { display: flex; flex-direction: column; gap: 1rem; }
   .avatar-with-upload {

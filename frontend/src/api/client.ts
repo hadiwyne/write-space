@@ -25,6 +25,7 @@ export function resolveContentImageUrls(html: string | null | undefined): string
 const REAL_TIME_ENDPOINTS = [
   '/presence/online-count',
   '/notifications/unread-count',
+  '/users/search',
 ]
 
 const axiosInstance = axios.create({
@@ -40,7 +41,6 @@ export const api = setupCache(axiosInstance, {
   },
 })
 
-// Extend AxiosRequestConfig type to include 'cache' property
 declare module 'axios' {
   interface AxiosRequestConfig {
     cache?: boolean | import('axios-cache-interceptor').CacheRequestConfig;

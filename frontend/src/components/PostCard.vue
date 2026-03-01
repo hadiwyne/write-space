@@ -218,7 +218,6 @@ const props = defineProps({
   reposted: { type: Boolean, default: false },
   showLike: { type: Boolean, default: true },
   animationDelay: { type: String, default: '0s' },
-  /** When true, card is non-clickable (e.g. live preview in editor). No router-links, no navigation. */
   previewOnly: { type: Boolean, default: false },
 })
 const canLike = computed(() => props.showLike && !!auth.token)
@@ -236,7 +235,6 @@ watch(
   () => props.post,
   (post) => {
     likeCount.value = (post._count && post._count.likes) || 0
-    // Sync API liked state to store
     if (post.isLiked) {
       likedStore.setLiked(post.id, true)
     }
@@ -259,7 +257,6 @@ const postForPollBlock = computed(() => props.post as PollBlockPost)
 const cardStyle = computed((): PostCardStyle => {
   const raw = (props.post as { cardStyle?: PostCardStyle }).cardStyle
   if (!raw || typeof raw !== 'object') return null
-  // normalize legacy fields
   const copy: any = { ...raw }
   if (!copy.overlayUrl && copy.overlayGifUrl) copy.overlayUrl = copy.overlayGifUrl
   if (copy.overlayGifOpacity != null && copy.overlayOpacity == null) copy.overlayOpacity = copy.overlayGifOpacity
@@ -276,7 +273,6 @@ function buildCardBackground(s: NonNullable<PostCardStyle>): string | undefined 
   return undefined
 }
 
-/** For shimmer/gradient-shift we need a gradient + background-size. If only solid color, use a two-tone gradient. */
 function getBackgroundForAnimation(
   /* unused */ _s: NonNullable<PostCardStyle>,
   bg: string | undefined
@@ -330,12 +326,9 @@ function onPollUpdate(updatedPost: Record<string, unknown>) {
 async function toggleLike() {
   if (!auth.token || !props.post.id) return
   
-  // Optimistic Update
   const originalLiked = liked.value
   const originalCount = likeCount.value
   
-  // We can't directly mutate 'liked' as it's a computed property based on props and store
-  // but we can update the store which 'liked' depends on
   likedStore.setLiked(props.post.id, !originalLiked)
   likeCount.value = originalLiked ? originalCount - 1 : originalCount + 1
   
@@ -345,7 +338,6 @@ async function toggleLike() {
     likeCount.value = data.count ?? likeCount.value
     emit('like', props.post.id, data.liked)
   } catch (err) {
-    // Rollback
     likedStore.setLiked(props.post.id, originalLiked)
     likeCount.value = originalCount
     console.warn('PostCard like failed, rolled back state:', err)
@@ -365,7 +357,6 @@ async function onRepost() {
   if (!auth.token || !props.post.id) return
   emit('repost', props.post.id)
 }
-/** Extract image URLs from post (rendered HTML or markdown) for thumbnail preview. Max 4. */
 const postImageUrls = computed(() => {
   const html = props.post.renderedHTML || ''
   const content = props.post.content || ''
@@ -385,7 +376,6 @@ const postImageUrls = computed(() => {
   return urls.slice(0, 4)
 })
 
-/** Excerpt from rendered HTML first (so markdown shows as plain text, not raw syntax). Strip image URLs so we never show them. */
 const excerpt = computed(() => {
   const raw = props.post.renderedHTML || props.post.content || ''
   let text = raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
@@ -484,7 +474,6 @@ function formatDate(s: string | undefined) {
 
 
 
-/* Card style: footer button size */
 .card--buttons-small .card-footer .action-stat,
 .card--buttons-small .card-footer .action-btn {
   padding: 0.375rem 0.625rem;
@@ -502,7 +491,6 @@ function formatDate(s: string | undefined) {
 .card--buttons-large .card-footer .action-stat .pi,
 .card--buttons-large .card-footer .action-btn .pi { font-size: 1.25rem; }
 
-/* Overlay GIF (transparent) */
 .card-overlay {
   position: absolute;
   inset: 0;
@@ -511,7 +499,6 @@ function formatDate(s: string | undefined) {
   overflow: hidden;
 }
 .card--overlay-bg .card-overlay {
-  /* move behind card content but still on top of background */
   z-index: 0;
 }
 .card--overlay-bg .card-header,
@@ -651,18 +638,15 @@ function formatDate(s: string | undefined) {
   background: var(--bg-primary);
   display: block;
 }
-/* One image: large preview */
 .card-thumbnails--1 .card-thumb {
   max-height: 240px;
   object-position: center;
 }
-/* Two images: medium, side by side */
 .card-thumbnails--2 .card-thumb {
   flex: 1 1 0;
   min-width: 0;
   max-height: 160px;
 }
-/* Three or four: small grid */
 .card-thumbnails--3 .card-thumb,
 .card-thumbnails--4 .card-thumb {
   width: 72px;
