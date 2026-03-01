@@ -162,6 +162,3 @@ export function useMentionAutocomplete(contentRef: { value: string }, textareaRe
   }
 }
 
-function nextTick(fn: () => void) {
-  Promise.resolve().then(fn)
-}

@@ -98,7 +98,7 @@
       <section class="comments">
         <h2>Comments</h2>
         <div v-if="auth.isLoggedIn" class="comment-form">
-          <MentionTextarea v-model="newComment" placeholder="Add a comment…" rows="3" />
+          <MentionTextarea v-model="newComment" placeholder="Add a comment…" :rows="3" />
           <button type="button" class="btn btn-primary btn-sm" @click="() => addComment()">Post</button>
         </div>
         <div class="comment-list">

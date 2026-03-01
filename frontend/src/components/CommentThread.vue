@@ -177,11 +177,6 @@ const emit = defineEmits<{
   delete: [commentId: string]
 }>()
 
-function onReplyContentInput(e: Event) {
-  const target = e.target as HTMLTextAreaElement
-  emit('update:replyContent', target?.value ?? '')
-}
-
 function linkifyCommentContent(text: string) {
   return linkifyMentionsInText(text ?? '')
 }
