@@ -499,7 +499,6 @@ const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
 const MAX_TITLE_WORDS = 20
 const MAX_TITLE_CHARS = 120
 
-/** Normalize image src in post HTML to relative /posts/images/ID so they resolve correctly when viewing. */
 function normalizePostContentImageUrls(html: string): string {
   return html.replace(
     /src=(["'])(?:(?:https?:)?\/\/[^"']*|\/api)?(\/posts\/images\/[a-zA-Z0-9_-]+)(?:\?[^"']*)?\1/g,
@@ -530,15 +529,12 @@ const titleWarningMessage = computed(() => {
   return ''
 })
 
-// manual URL inputs separate from the actual style value. when a file is uploaded
-// we update the style directly and leave these blank so the form doesn't complain.
 const manualOverlayUrl = ref('')
 const manualBorderUrl = ref('')
 
 function onTitleInput(e: Event) {
   const target = e.target as HTMLInputElement
   const raw = target.value
-  // Only truncate when a limit is exceeded so we don't strip spaces between words
   let truncated = raw
   if (countWords(raw) > MAX_TITLE_WORDS) truncated = truncateToWords(raw, MAX_TITLE_WORDS)
   if (truncated.length > MAX_TITLE_CHARS) truncated = truncateToChars(truncated, MAX_TITLE_CHARS)
@@ -636,7 +632,6 @@ function buildCardStylePayload(form: CardStyleFormState | null): PostCardStyle |
     }
   }
   if (form.overlayUrl?.trim()) out.overlayUrl = form.overlayUrl.trim()
-  // Persist overlayOpacity when set (default for new overlays is 0.5). Only skip when null/undefined.
   if (form.overlayOpacity != null) out.overlayOpacity = form.overlayOpacity
   if (form.overlayMode && form.overlayMode !== 'cover') out.overlayMode = form.overlayMode
   if (form.borderImage?.trim()) out.borderImage = form.borderImage.trim()
@@ -650,7 +645,6 @@ function toggleModifyPostCard() {
   }
 }
 
-// Transparency
 const overlayTransparency = computed({
   get: () => 1 - (cardStyleForm.value?.overlayOpacity ?? 0.5),
   set: (v: number) => {
@@ -827,7 +821,6 @@ async function onCardOverlayUpload(e: Event) {
     const formData = new FormData()
     formData.append('image', file)
     const { data } = await api.post<{ url: string }>('/posts/upload-image', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
-    // Store raw URL (relative path like /posts/images/xxx); PostCard will resolve via avatarSrc when rendering
     cardStyleForm.value.overlayUrl = data.url
     cardStyleForm.value.overlayOpacity = 0.5
     manualOverlayUrl.value = ''
@@ -852,7 +845,6 @@ async function onCardBorderImageUpload(e: Event) {
     const formData = new FormData()
     formData.append('image', file)
     const { data } = await api.post<{ url: string }>('/posts/upload-image', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
-    // Store raw URL (relative path like /posts/images/xxx); PostCard will resolve via avatarSrc when rendering
     cardStyleForm.value.borderImage = data.url
     manualBorderUrl.value = ''
   } catch (err) {
@@ -904,9 +896,7 @@ function applyBorderUrl() {
 
 const previewPost = computed(() => {
   const form = cardStyleForm.value
-  // stringify the form to create a deep dependency; ensures preview updates for any field change
   if (form) {
-    // just evaluate JSON.stringify without storing result
     JSON.stringify(form)
   }
   const style = form ? ({ ...form } as PostCardStyle) : undefined
@@ -954,7 +944,6 @@ function onEditorKeydown(e: KeyboardEvent) {
   mention.onKeydown(e)
 }
 
-// referenced only by template
 const previewHtml = computed(() => renderPreview(content.value, contentType.value))
 
 function countImagesInContent(text: string, type: ContentType): number {
@@ -964,7 +953,6 @@ function countImagesInContent(text: string, type: ContentType): number {
 }
 const imageCountInContent = computed(() => countImagesInContent(content.value, contentType.value))
 
-// handler invoked by the rich text editor when it wants to upload a file
 function onRichEditorImageUpload(file: File) {
   const fakeEvent = { target: { files: [file] } } as unknown as Event
   onImageUpload(fakeEvent)
@@ -983,7 +971,6 @@ async function onRichEditorCropApply(file: File) {
   }
 }
 
-/** Normalize a single tag: trim and replace spaces with dashes. */
 function normalizeTag(t: string): string {
   return t.trim().replace(/\s+/g, '-')
 }
@@ -1231,7 +1218,6 @@ function randomHex(): string {
   return '#' + Math.floor(Math.random() * 0x1000000).toString(16).padStart(6, '0')
 }
 
-// Randomize a specific field
 function randomizeCardColor(target: 'backgroundColor' | 'borderColor' | { type: 'gradient', index: number }) {
   if (!cardStyleForm.value) return
   const hex = randomHex()
@@ -1248,7 +1234,6 @@ function randomizeCardColor(target: 'backgroundColor' | 'borderColor' | { type: 
   }
 }
 
-// Reset a specific field to default
 function resetCardColor(target: 'backgroundColor' | 'borderColor' | { type: 'gradient', index: number }) {
   if (!cardStyleForm.value) return
   if (target === 'backgroundColor') {
@@ -1438,7 +1423,6 @@ function resetCardColor(target: 'backgroundColor' | 'borderColor' | { type: 'gra
 .dropdown-leave-to { opacity: 0; transform: translateY(-4px); }
 .hidden { display: none; }
 .file-input-hidden {
-  /* visually hidden but still focusable/clickable so programmatic .click() opens the file picker */
   position: absolute;
   opacity: 0;
   width: 0.01px;
@@ -1577,7 +1561,6 @@ function resetCardColor(target: 'backgroundColor' | 'borderColor' | { type: 'gra
 .btn-outline:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-outline:disabled:hover { border-color: var(--border-medium); color: var(--text-secondary); }
 
-/* Modify your post card – matches dropdown/panel/input patterns */
 .card-style-section { min-width: 0; }
 .card-style-toggle {
   display: inline-flex;
@@ -1738,7 +1721,6 @@ function resetCardColor(target: 'backgroundColor' | 'borderColor' | { type: 'gra
   overflow: hidden;
   min-height: 120px;
 }
-/* Color picker */
 .card-style-section .color-input-wrap {
   display: flex;
   align-items: center;
@@ -1897,9 +1879,6 @@ function resetCardColor(target: 'backgroundColor' | 'borderColor' | { type: 'gra
 .card-style-remove-btn:hover { color: var(--accent-burgundy, #c53030); }
 .card-style-hint { font-size: 0.75rem; color: var(--text-tertiary); margin-top: 0.25rem; }
 
-/* Modal backdrop shared styles (used by Teleported dialogs)
-   - make global so they apply even when the element is moved out of the
-     component by <Teleport>. This mirrors CustomizationView exactly. */
 :global(.modal-backdrop) {
   position: fixed;
   inset: 0;
@@ -1915,7 +1894,6 @@ function resetCardColor(target: 'backgroundColor' | 'borderColor' | { type: 'gra
   :global(.color-editor-backdrop) { align-items: center; padding: 1rem; }
 }
 
-/* base modal styles match CustomizationView's color-editor-modal */
 :global(.color-editor-modal) {
   width: 100%;
   max-width: 360px;
@@ -1930,10 +1908,7 @@ function resetCardColor(target: 'backgroundColor' | 'borderColor' | { type: 'gra
   padding: 1.5rem;
 }
 
-/* extra card-specific adjustments */
 :global(.card-color-editor-backdrop .card-color-editor-modal) {
-  /* keep previous width limit smaller than the generic modal so cards
-     remain narrow */
   max-width: 20rem;
   padding: 1.25rem;
 }
