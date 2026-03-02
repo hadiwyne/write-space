@@ -215,22 +215,19 @@ async function load() {
   const tag = tagFilter.value.trim()
   const cacheKey = tag ? `${sort.value}|${tag}` : sort.value
   
-  // 1. Set loading true and clear posts immediately to show skeletons if no immediate cache
   loading.value = true
   posts.value = []
   
-  // 2. Try to load from IndexedDB cache
   const cached = await getCachedFeed(cacheKey)
   if (cached && Array.isArray(cached) && cached.length > 0) {
     posts.value = cached as FeedPost[]
     loading.value = false
-    // Sync reposted status from cache
     const ids = new Set<string>()
     posts.value.forEach(p => { if (p.isReposted) ids.add(p.id) })
     repostedIds.value = ids
   }
   
-  refreshing.value = !loading.value // Show subtle indicator if we are showing cached data
+  refreshing.value = !loading.value
 
   try {
     const params = new URLSearchParams()
@@ -240,7 +237,6 @@ async function load() {
     const { data } = await api.get(`/feed?${params.toString()}`)
     posts.value = Array.isArray(data) ? data : []
     
-    // Sync reposted status
     const ids = new Set<string>()
     posts.value.forEach(p => { if (p.isReposted) ids.add(p.id) })
     repostedIds.value = ids
@@ -251,7 +247,6 @@ async function load() {
     setCachedProfiles(authors)
   } catch (err) {
       console.error('Feed load error:', err)
-      // If error but we have cache, keep cache; otherwise it's empty
       if (posts.value.length === 0) posts.value = []
   } finally {
     loading.value = false
