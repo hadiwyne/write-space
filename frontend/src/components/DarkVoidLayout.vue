@@ -51,7 +51,7 @@
         <router-link to="/notifications" class="dark-void-nav-btn" aria-label="Notifications" @click="leftNavOpen = false">
           <i class="pi pi-bell" aria-hidden="true"></i>
         </router-link>
-        <router-link to="/follow-requests" class="dark-void-nav-btn" aria-label="Follow requests" @click="leftNavOpen = false">
+        <router-link v-if="auth.user?.whoCanFollowMe === 'APPROVAL'" to="/follow-requests" class="dark-void-nav-btn" aria-label="Follow requests" @click="leftNavOpen = false">
           <i class="pi pi-user-plus" aria-hidden="true"></i>
         </router-link>
         <router-link v-if="auth.user" :to="`/u/${auth.user.username}`" class="dark-void-nav-btn" aria-label="Profile" @click="leftNavOpen = false">

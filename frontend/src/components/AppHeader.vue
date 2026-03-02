@@ -65,7 +65,7 @@
             </div>
           </Transition>
         </div>
-        <router-link to="/follow-requests" class="nav-btn" v-tooltip.bottom="'Follow requests'" aria-label="Follow requests">
+        <router-link v-if="auth.user?.whoCanFollowMe === 'APPROVAL'" to="/follow-requests" class="nav-btn" v-tooltip.bottom="'Follow requests'" aria-label="Follow requests">
           <i class="pi pi-user-plus"></i>
         </router-link>
         <router-link to="/write" class="nav-btn nav-btn-create" v-tooltip.bottom="'Write a post'" aria-label="Write a post">
