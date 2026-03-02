@@ -645,7 +645,6 @@
   @media (max-width: 480px) {
     .avatar-with-upload { flex-direction: column; align-items: flex-start; }
   }
-  /* Preview: container shapes, image fills it (no background so no black/gray around image) */
   .avatar-preview-clip {
     width: 64px;
     height: 64px;
