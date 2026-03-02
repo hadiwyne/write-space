@@ -361,7 +361,6 @@ const totalPosts = computed(() => {
   return postsCount + repostsCount
 })
 
-/** Why the followers/following modal list is empty: 'empty' | 'hidden' | 'followers_only' when not loading and list length 0; null otherwise */
 const modalEmptyReason = computed(() => {
   if (modalLoading.value || modalList.value.length > 0) return null
   const p = profile.value
@@ -377,7 +376,6 @@ async function load() {
   const username = route.params.username as string
   if (!username) return
 
-  // Clear feed-specific states immediately to avoid "ghosting" previous profile's data
   posts.value = []
   reposts.value = []
   likedPosts.value = []
@@ -387,7 +385,6 @@ async function load() {
   const cached = await getCachedProfile(username)
   if (cached) {
     profile.value = cached as typeof profile.value
-    // If it's a full profile (has _count), we can hide the big skeleton
     if (profile.value && profile.value._count) {
       loading.value = false
       if (profile.value) {
@@ -402,7 +399,7 @@ async function load() {
     loading.value = true
   }
 
-  refreshing.value = !loading.value // If not show skeleton, show subtle refresh text
+  refreshing.value = !loading.value
 
   try {
     const [profileRes, postsRes, repostsRes] = await Promise.all([
@@ -416,16 +413,12 @@ async function load() {
     posts.value = Array.isArray(postsRes.data) ? postsRes.data : []
     reposts.value = Array.isArray(repostsRes.data) ? repostsRes.data : []
     
-    // Follow status is now consolidated in profileRes.data
-    // Follow status is now consolidated as flat flags
     if (profile.value) {
       isFollowing.value = !!(profile.value as any).isFollowing
       isRequested.value = !!(profile.value as any).hasRequested
     }
 
     if (Array.isArray(postsRes.data) && postsRes.data.length === 0 && username) {
-      // Fallback logic for old data if needed, but usually empty means empty
-      // const fallback = ...
     }
   } catch (err) {
     console.error('Profile load error:', err)
@@ -440,7 +433,6 @@ async function toggleFollow() {
   const username = profile.value?.username
   if (!username || followLoading.value) return
   
-  // Optimistic Update
   const originalFollowing = isFollowing.value
   const originalRequested = isRequested.value
   const originalFollowersCount = profile.value?._count?.followers ?? 0
@@ -449,7 +441,6 @@ async function toggleFollow() {
   
   try {
     if (isFollowing.value) {
-      // Optimistic: Unfollow
       isFollowing.value = false
       isRequested.value = false
       if (profile.value?._count != null) {
@@ -459,9 +450,6 @@ async function toggleFollow() {
       await api.delete(`/users/${username}/follow`)
       if (profile.value) setCachedProfile(profile.value.username, profile.value)
     } else {
-      // Optimistic: Follow (assume public unless we know otherwise, but better to wait for status if private)
-      // For now, let's just toggle and wait for API to tell us if it's 'requested' or 'following'
-      // But we can still be optimistic about starting the action
       
       const { data } = await api.post<{ following?: boolean; requested?: boolean }>(`/users/${username}/follow`)
       isFollowing.value = data?.following ?? false
@@ -473,7 +461,6 @@ async function toggleFollow() {
     }
     if (profile.value) setCachedProfile(profile.value.username, profile.value)
   } catch (err) {
-    // Rollback
     isFollowing.value = originalFollowing
     isRequested.value = originalRequested
     if (profile.value?._count != null) {
@@ -683,7 +670,6 @@ onUnmounted(() => {
   justify-content: center;
   margin-bottom: 1rem;
 }
-/* Container has the shape; image fills it (full picture), container clips to shape. No background so no black/dark around image. */
 .avatar-clip {
   width: clamp(72px, 20vw, 96px);
   height: clamp(72px, 20vw, 96px);
@@ -871,7 +857,6 @@ onUnmounted(() => {
 .profile-tab:hover:not(.active) { color: var(--accent-primary); }
 .profile-tab.active {
   color: white;
-  /* Always show active state (sliding indicator may measure late; this ensures tab is highlighted) */
   background: var(--accent-primary);
   box-shadow: 0 2px 8px rgba(139, 69, 19, 0.25);
 }
@@ -900,7 +885,6 @@ onUnmounted(() => {
   .modal-backdrop { padding: 0.75rem; }
 }
 
-/* Modal (teleported) */
 .modal-backdrop { position: fixed; inset: 0; background: rgba(44, 24, 16, 0.4); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
 .modal {
   background: var(--bg-card);
