@@ -496,6 +496,9 @@ export class PostsService {
   }
 
   private async compressPostImage(buffer: Buffer, mimeType: string): Promise<{ buffer: Buffer; mimeType: string }> {
+    if (mimeType === 'image/gif') {
+      return { buffer, mimeType };
+    }
     try {
       const pipeline = sharp(buffer)
         .resize(1600, 1600, { fit: 'inside', withoutEnlargement: true })
@@ -503,7 +506,7 @@ export class PostsService {
       const isPng = mimeType === 'image/png';
       const output = isPng
         ? pipeline.png({ quality: 85, compressionLevel: 6 })
-        : pipeline.jpeg({ quality: 82, mozjpeg: true }); // jpeg for jpeg/gif/webp
+        : pipeline.jpeg({ quality: 82, mozjpeg: true }); // jpeg for jpeg/webp
       const outBuffer = await output.toBuffer();
       const outMime = isPng ? 'image/png' : 'image/jpeg';
       return { buffer: outBuffer, mimeType: outMime };
