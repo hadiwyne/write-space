@@ -286,7 +286,6 @@ async function load() {
     setCachedPost(id, postRes.data)
     comments.value = commentsRes.data
     likeCount.value = post.value?._count?.likes ?? 0
-    // Poll is already included in the post response; only fetch if we have a poll but options are missing.
     const hasPollWithOptions = post.value?.poll && Array.isArray((post.value.poll as { options?: unknown[] })?.options) && (post.value.poll as { options: unknown[] }).options.length > 0
     if (post.value?.poll && !hasPollWithOptions) {
       try {
@@ -295,7 +294,6 @@ async function load() {
           post.value = { ...post.value!, poll: { ...(post.value?.poll ?? {}), ...pollData, options: pollData.options } }
         }
       } catch {
-        // No poll or not found – keep post as-is
       }
     }
     if (auth.token && post.value) {
@@ -322,7 +320,6 @@ async function toggleLike() {
   if (!auth.isLoggedIn) return
   const postId = route.params.id as string
   
-  // Optimistic Update
   const originalLiked = liked.value
   const originalCount = likeCount.value
   liked.value = !originalLiked
@@ -331,7 +328,6 @@ async function toggleLike() {
   
   try {
     const { data } = await api.post(`/posts/${postId}/likes`)
-    // Sync with server response if possible
     liked.value = data.liked
     likeCount.value = data.count ?? likeCount.value
     likedStore.setLiked(postId, data.liked)
@@ -349,7 +345,6 @@ async function toggleLike() {
       setCachedPost(postId, post.value)
     }
   } catch (err) {
-    // Rollback on error
     liked.value = originalLiked
     likeCount.value = originalCount
     likedStore.setLiked(postId, originalLiked)
@@ -361,14 +356,12 @@ async function toggleBookmark() {
   if (!auth.isLoggedIn) return
   const originalBookmarked = bookmarked.value
   
-  // Optimistic Update
   bookmarked.value = !originalBookmarked
   
   try {
     const { data } = await api.post(`/posts/${route.params.id}/bookmarks`)
     bookmarked.value = data.bookmarked
   } catch (err) {
-    // Rollback on error
     bookmarked.value = originalBookmarked
     console.warn('Bookmark failed, rolled back state:', err)
   }
@@ -378,7 +371,6 @@ async function toggleRepost() {
   if (!auth.isLoggedIn) return
   const postId = route.params.id as string
   
-  // Optimistic Update
   const originalReposted = reposted.value
   const originalCount = repostCount.value
   reposted.value = !originalReposted
@@ -397,7 +389,6 @@ async function toggleRepost() {
       setCachedPost(postId, post.value)
     }
   } catch (err) {
-    // Rollback on error
     reposted.value = originalReposted
     repostCount.value = originalCount
     console.warn('Repost failed, rolled back state:', err)
@@ -431,7 +422,6 @@ async function addToCollection(collectionId: string) {
     await api.post(`/collections/${collectionId}/posts/${postId}`)
     collectionDropdownOpen.value = false
   } catch {
-    // ignore (e.g. already in collection)
   } finally {
     addingToCollection.value = null
   }
@@ -492,7 +482,6 @@ async function addComment(parentId?: string) {
     ...(isAnonymousPostAuthor ? { isAnonymousReply: true, isOwnComment: true } : {}),
   }
 
-  // Optimistic Update
   if (parentId) {
     const parent = findCommentInTree(comments.value, parentId)
     if (parent) {
@@ -522,7 +511,6 @@ async function addComment(parentId?: string) {
       if (idx !== -1) comments.value[idx] = merged
     }
   } catch (err) {
-    // Rollback
     if (parentId) {
       const parent = findCommentInTree(comments.value, parentId)
       if (parent && parent.replies) {
