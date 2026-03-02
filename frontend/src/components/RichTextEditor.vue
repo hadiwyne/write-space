@@ -100,8 +100,8 @@
         type="button"
         class="toolbar-btn"
         :disabled="!canAddImage"
-        :title="canAddImage ? 'Insert Media' : 'Maximum 5 images per post'"
-        :aria-label="canAddImage ? 'Insert Media' : 'Maximum 5 images per post'"
+        :title="canAddImage ? 'Insert image or GIF' : 'Maximum 5 images per post'"
+        :aria-label="canAddImage ? 'Insert image or GIF' : 'Maximum 5 images per post'"
         @click="triggerImageUpload"
       >
         <i class="pi pi-images" aria-hidden="true"></i>
