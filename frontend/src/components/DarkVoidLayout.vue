@@ -117,6 +117,9 @@
               <router-link to="/archived" class="dark-void-dropdown-item" role="menuitem" @click="closeDropdownAndSidebar">
                 <i class="pi pi-folder"></i> Archived
               </router-link>
+              <router-link to="/drafts" class="dark-void-dropdown-item" role="menuitem" @click="closeDropdownAndSidebar">
+                <i class="pi pi-file-edit"></i> Drafts
+              </router-link>
               <router-link to="/bookmarks" class="dark-void-dropdown-item" role="menuitem" @click="closeDropdownAndSidebar">
                 <i class="pi pi-bookmark"></i> Bookmarks
               </router-link>

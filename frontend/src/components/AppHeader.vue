@@ -89,6 +89,9 @@
               <router-link to="/archived" class="dropdown-item" role="menuitem" @click="closeDropdown">
                 <i class="pi pi-folder"></i> Archived
               </router-link>
+              <router-link to="/drafts" class="dropdown-item" role="menuitem" @click="closeDropdown">
+                <i class="pi pi-file-edit"></i> Drafts
+              </router-link>
               <router-link to="/bookmarks" class="dropdown-item" role="menuitem" @click="closeDropdown">
                 <i class="pi pi-bookmark"></i> Bookmarks
               </router-link>
