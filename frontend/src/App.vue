@@ -1145,6 +1145,51 @@ html.ui-theme-dark-void .dark-void-main .bookmarks-page .empty {
   font-family: 'Space Grotesk', sans-serif;
 }
 
+/* Dark Void drafts page */
+html.ui-theme-dark-void .dark-void-main .drafts-page {
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+}
+html.ui-theme-dark-void .dark-void-main .drafts-page h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .dark-void-main .drafts-page .intro,
+html.ui-theme-dark-void .dark-void-main .drafts-page .loading,
+html.ui-theme-dark-void .dark-void-main .drafts-page .empty {
+  color: var(--dark-void-text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .drafts-page .draft-item {
+  background: var(--dark-void-card);
+  border: 1px solid var(--dark-void-border);
+  border-radius: 0 !important;
+  padding-right: 0.5rem;
+}
+html.ui-theme-dark-void .dark-void-main .drafts-page .draft-link {
+  color: inherit;
+}
+html.ui-theme-dark-void .dark-void-main .drafts-page .draft-link:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+html.ui-theme-dark-void .dark-void-main .drafts-page .draft-title {
+  color: var(--dark-void-text);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .dark-void-main .drafts-page .draft-preview,
+html.ui-theme-dark-void .dark-void-main .drafts-page .draft-meta {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .drafts-page .draft-delete {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .dark-void-main .drafts-page .draft-delete:hover {
+  background: rgba(248, 113, 113, 0.15);
+  color: #f87171;
+}
+
 /* Dark Void: search page */
 html.ui-theme-dark-void .dark-void-main .search-page {
   max-width: 640px;
