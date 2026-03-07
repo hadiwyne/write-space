@@ -30,14 +30,14 @@
           </button>
           <Transition name="dropdown">
             <div v-if="formatDropdownOpen" class="dropdown-panel" role="menu">
+              <button type="button" class="dropdown-option" role="menuitem" :class="{ active: contentType === 'WYSIWYG' }" @click="contentType = 'WYSIWYG'; formatDropdownOpen = false">
+                <i class="pi pi-align-left" aria-hidden="true"></i> Rich text
+              </button>
               <button type="button" class="dropdown-option" role="menuitem" :class="{ active: contentType === 'MARKDOWN' }" @click="contentType = 'MARKDOWN'; formatDropdownOpen = false">
                 <i class="pi pi-file-edit" aria-hidden="true"></i> Markdown
               </button>
               <button type="button" class="dropdown-option" role="menuitem" :class="{ active: contentType === 'HTML' }" @click="contentType = 'HTML'; formatDropdownOpen = false">
                 <i class="pi pi-code" aria-hidden="true"></i> HTML
-              </button>
-              <button type="button" class="dropdown-option" role="menuitem" :class="{ active: contentType === 'WYSIWYG' }" @click="contentType = 'WYSIWYG'; formatDropdownOpen = false">
-                <i class="pi pi-align-left" aria-hidden="true"></i> Rich text
               </button>
             </div>
           </Transition>
@@ -62,15 +62,28 @@
       <div v-if="versionsOpen" class="versions-panel">
         <p v-if="versionsLoading">Loading…</p>
         <template v-else-if="versions.length">
-          <p class="versions-title">Past versions (restore to load that content)</p>
+          <p class="versions-title">Past versions – preview before restoring</p>
           <ul class="versions-list">
             <li v-for="v in versions" :key="v.id" class="versions-item">
               <span>v{{ v.version }} – {{ formatDate(v.lastSavedAt) }}</span>
+              <button type="button" class="btn btn-sm btn-outline" @click="openVersionPreview(v.id)">Preview</button>
               <button type="button" class="btn btn-sm btn-outline" @click="restoreVersion(v.id)">Restore</button>
             </li>
           </ul>
         </template>
         <p v-else>No past versions.</p>
+        <div v-if="versionPreview" class="version-preview-modal">
+          <div class="version-preview-content">
+            <h3 class="version-preview-title">{{ versionPreview.title || 'Untitled' }}</h3>
+            <p class="version-preview-meta">Version {{ versionPreview.version }} – {{ formatDate(versionPreview.lastSavedAt) }}</p>
+            <div class="version-preview-body" v-html="versionPreviewRendered"></div>
+            <div class="version-preview-actions">
+              <button type="button" class="btn btn-outline" @click="restoreVersionFromPreview">Restore this version</button>
+              <button type="button" class="btn btn-ghost" @click="closeVersionPreview">Close</button>
+            </div>
+          </div>
+        </div>
+        <p v-else-if="versionPreviewLoading" class="version-preview-loading">Loading preview…</p>
         <button type="button" class="btn btn-sm btn-ghost" @click="versionsOpen = false">Close</button>
       </div>
       <div v-if="postType === 'post'" class="form-group editor-row" :class="{ 'editor-row--wysiwyg': contentType === 'WYSIWYG' }">
@@ -484,7 +497,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted, reactive } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { api, avatarSrc } from '@/api/client'
 import { avatarShapeClass } from '@/utils/avatar'
 import { renderPreview, type ContentType } from '@/utils/preview'
@@ -521,6 +534,7 @@ function truncateToChars(s: string, maxChars: number): string {
 }
 
 const router = useRouter()
+const route = useRoute()
 const title = ref('')
 const titleWarningReason = ref<'words' | 'chars' | null>(null)
 const titleWarningMessage = computed(() => {
@@ -547,7 +561,7 @@ function onTitleInput(e: Event) {
   else titleWarningReason.value = null
 }
 const content = ref('')
-const contentType = ref<ContentType>('MARKDOWN')
+const contentType = ref<ContentType>('WYSIWYG')
 const richTextEditorRef = ref<{ addImage: (url: string) => void; replaceSelectedImage: (url: string) => void } | null>(null)
 const tagsStr = ref('')
 const visibility = ref<'PUBLIC' | 'FOLLOWERS_ONLY'>('PUBLIC')
@@ -931,6 +945,8 @@ const draftVersion = ref(0)
 const versionsOpen = ref(false)
 const versions = ref<{ id: string; version: number; lastSavedAt: string }[]>([])
 const versionsLoading = ref(false)
+const versionPreview = ref<{ id: string; version: number; lastSavedAt: string; title: string | null; content: string; contentType: string } | null>(null)
+const versionPreviewLoading = ref(false)
 const wordInputRef = ref<HTMLInputElement | null>(null)
 const imageInputRef = ref<HTMLInputElement | null>(null)
 const editorRef = ref<HTMLTextAreaElement | null>(null)
@@ -945,6 +961,11 @@ function onEditorKeydown(e: KeyboardEvent) {
 }
 
 const previewHtml = computed(() => renderPreview(content.value, contentType.value))
+const versionPreviewRendered = computed(() => {
+  const v = versionPreview.value
+  if (!v) return ''
+  return renderPreview(v.content, v.contentType as ContentType)
+})
 
 function countImagesInContent(text: string, type: ContentType): number {
   if (!text) return 0
@@ -1013,7 +1034,23 @@ function scheduleAutoSave() {
 }
 
 watch([content, title], () => scheduleAutoSave())
-onMounted(() => document.addEventListener('click', onWritePageDocumentClick))
+onMounted(async () => {
+  const draftIdParam = route.query.draft
+  if (typeof draftIdParam === 'string' && draftIdParam.trim()) {
+    try {
+      const { data } = await api.get<{ id: string; title: string | null; content: string; contentType: string; version?: number; lastSavedAt?: string }>(`/drafts/${draftIdParam.trim()}`)
+      title.value = data.title ?? ''
+      content.value = data.content ?? ''
+      contentType.value = (data.contentType as ContentType) ?? 'MARKDOWN'
+      draftId.value = data.id
+      draftVersion.value = data.version ?? 1
+      lastSavedAt.value = data.lastSavedAt ? new Date(data.lastSavedAt).toLocaleTimeString() : ''
+    } catch {
+      // invalid or forbidden draft – leave form empty
+    }
+  }
+  document.addEventListener('click', onWritePageDocumentClick)
+})
 onUnmounted(() => {
   document.removeEventListener('click', onWritePageDocumentClick)
   if (autoSaveTimer) clearTimeout(autoSaveTimer)
@@ -1151,6 +1188,27 @@ async function loadVersions() {
   }
 }
 
+async function openVersionPreview(versionId: string) {
+  versionPreviewLoading.value = true
+  versionPreview.value = null
+  try {
+    const { data } = await api.get<{ id: string; version: number; lastSavedAt: string; title: string | null; content: string; contentType: string }>(`/drafts/${versionId}`)
+    versionPreview.value = data
+  } catch {
+    versionPreview.value = null
+  } finally {
+    versionPreviewLoading.value = false
+  }
+}
+
+function closeVersionPreview() {
+  versionPreview.value = null
+}
+
+function restoreVersionFromPreview() {
+  if (versionPreview.value) restoreVersion(versionPreview.value.id)
+}
+
 async function restoreVersion(versionId: string) {
   if (!draftId.value) return
   try {
@@ -1159,6 +1217,7 @@ async function restoreVersion(versionId: string) {
     content.value = data.content
     contentType.value = data.contentType as ContentType
     draftVersion.value = data.version ?? draftVersion.value
+    versionPreview.value = null
     versionsOpen.value = false
   } catch {
     error.value = 'Failed to restore version'
@@ -1524,7 +1583,15 @@ function resetCardColor(target: 'backgroundColor' | 'borderColor' | { type: 'gra
 .versions-panel { padding: 0.75rem; border: 1px solid var(--gray-200); border-radius: var(--radius); background: var(--gray-50); margin-top: 0.5rem; }
 .versions-title { font-size: 0.875rem; margin: 0 0 0.5rem; }
 .versions-list { list-style: none; margin: 0; padding: 0; }
-.versions-item { display: flex; align-items: center; justify-content: space-between; padding: 0.35rem 0; font-size: 0.875rem; }
+.versions-item { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; padding: 0.35rem 0; font-size: 0.875rem; }
+.version-preview-loading { font-size: 0.875rem; color: var(--gray-600); margin: 0.5rem 0; }
+.version-preview-modal { margin-top: 0.75rem; padding: 1rem; border: 1px solid var(--gray-300); border-radius: var(--radius); background: var(--bg-card, #fff); max-height: 60vh; overflow: auto; }
+.version-preview-content { display: flex; flex-direction: column; gap: 0.5rem; }
+.version-preview-title { font-size: 1rem; margin: 0; font-weight: 600; }
+.version-preview-meta { font-size: 0.8125rem; color: var(--gray-600); margin: 0; }
+.version-preview-body { font-size: 0.9375rem; line-height: 1.5; border-top: 1px solid var(--gray-200); padding-top: 0.75rem; }
+.version-preview-body :deep(img) { max-width: 100%; }
+.version-preview-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
 .btn-ghost { background: transparent; border: none; color: var(--gray-700); cursor: pointer; }
 .upload-hint { font-size: 0.8125rem; color: var(--gray-600); margin: -0.5rem 0 0; }
 .actions {

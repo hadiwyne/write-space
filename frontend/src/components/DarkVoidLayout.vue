@@ -51,7 +51,7 @@
         <router-link to="/notifications" class="dark-void-nav-btn" aria-label="Notifications" @click="leftNavOpen = false">
           <i class="pi pi-bell" aria-hidden="true"></i>
         </router-link>
-        <router-link to="/follow-requests" class="dark-void-nav-btn" aria-label="Follow requests" @click="leftNavOpen = false">
+        <router-link v-if="auth.user?.whoCanFollowMe === 'APPROVAL'" to="/follow-requests" class="dark-void-nav-btn" aria-label="Follow requests" @click="leftNavOpen = false">
           <i class="pi pi-user-plus" aria-hidden="true"></i>
         </router-link>
         <router-link v-if="auth.user" :to="`/u/${auth.user.username}`" class="dark-void-nav-btn" aria-label="Profile" @click="leftNavOpen = false">
@@ -116,6 +116,9 @@
               </router-link>
               <router-link to="/archived" class="dark-void-dropdown-item" role="menuitem" @click="closeDropdownAndSidebar">
                 <i class="pi pi-folder"></i> Archived
+              </router-link>
+              <router-link to="/drafts" class="dark-void-dropdown-item" role="menuitem" @click="closeDropdownAndSidebar">
+                <i class="pi pi-file-edit"></i> Drafts
               </router-link>
               <router-link to="/bookmarks" class="dark-void-dropdown-item" role="menuitem" @click="closeDropdownAndSidebar">
                 <i class="pi pi-bookmark"></i> Bookmarks

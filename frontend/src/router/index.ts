@@ -15,6 +15,7 @@ const router = createRouter({
     { path: '/posts/:id/edit', name: 'EditPost', component: () => import('@/views/EditPostView.vue'), meta: { auth: true } },
     { path: '/u/:username', name: 'Profile', component: () => import('@/views/ProfileView.vue') },
     { path: '/archived', name: 'Archived', component: () => import('@/views/ArchivedView.vue'), meta: { auth: true } },
+    { path: '/drafts', name: 'Drafts', component: () => import('@/views/DraftsView.vue'), meta: { auth: true } },
     { path: '/bookmarks', name: 'Bookmarks', component: () => import('@/views/BookmarksView.vue'), meta: { auth: true } },
     { path: '/collections', name: 'Collections', component: () => import('@/views/CollectionsView.vue'), meta: { auth: true } },
     { path: '/collections/:idOrSlug', name: 'Collection', component: () => import('@/views/CollectionView.vue') },
