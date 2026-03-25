@@ -4,7 +4,7 @@
     :class="{ 'card--overlay-bg': cardStyle?.overlayMode === 'background', 'card--preview-only': previewOnly }"
     :style="cardWrapperStyle"
   >
-        <div v-if="cardStyle?.overlayUrl" class="card-overlay" aria-hidden="true">
+    <div v-if="cardStyle?.overlayUrl" class="card-overlay" aria-hidden="true">
       <img
         :src="avatarSrc(cardStyle.overlayUrl)"
         alt=""
@@ -12,12 +12,16 @@
         :style="{ opacity: cardStyle?.overlayOpacity != null ? cardStyle.overlayOpacity : 0.5 }"
       />
     </div>
+
+    <div class="card-accent-stripe"></div>
+
     <div v-if="post.repostData" class="card-repost-header">
       <i class="pi pi-refresh"></i>
       <router-link :to="'/u/' + post.repostData.user?.username" class="reposter-link" @click.stop>
         {{ post.repostData.user?.displayName || post.repostData.user?.username }} reposted
       </router-link>
     </div>
+
     <header class="card-header">
       <component
         :is="previewOnly ? 'div' : 'router-link'"
@@ -34,13 +38,12 @@
         <div class="author-info">
           <span class="author-name">{{ post.author && (post.author.displayName || post.author.username) }}</span>
           <span v-if="post.author?.username" class="author-username">@{{ post.author.username }}</span>
-          <div class="author-meta">
-            <span class="meta-date">{{ formatDate(post.publishedAt || post.createdAt) }}</span>
-            <span class="meta-dot">·</span>
-            <span class="meta-read">{{ readTime }} min read</span>
-          </div>
+        </div>
+        <div class="author-meta-right">
+          <span class="meta-date">{{ formatDate(post.publishedAt || post.createdAt) }}</span>
         </div>
       </component>
+
       <div v-else class="card-author card-author-anonymous">
         <div class="author-avatar author-avatar-anonymous">
           <img v-if="anonAvatarUrl" :src="anonAvatarUrl" alt="" class="avatar-img" />
@@ -48,16 +51,11 @@
         </div>
         <div class="author-info">
           <span class="author-name">{{ post.anonymousAlias || 'Anonymous' }}</span>
-          <div class="author-meta">
-            <span class="meta-date">{{ formatDate(post.publishedAt || post.createdAt) }}</span>
-            <span class="meta-dot">·</span>
-            <span class="meta-read">{{ readTime }} min read</span>
-          </div>
+        </div>
+        <div class="author-meta-right">
+          <span class="meta-date">{{ formatDate(post.publishedAt || post.createdAt) }}</span>
         </div>
       </div>
-      <button type="button" class="card-menu" aria-label="Post menu" @click.stop>
-        <span aria-hidden="true">⋯</span>
-      </button>
     </header>
 
     <component
@@ -121,6 +119,7 @@
         </component>
       </div>
     </component>
+
     <div v-if="post.poll && post.poll.options?.length" class="card-poll-wrap">
       <PollBlock
         :post="postForPollBlock"
@@ -130,60 +129,87 @@
     </div>
 
     <footer class="card-footer" :class="cardFooterSizeClass">
+      <!-- Like -->
       <button
         v-if="canLike"
         type="button"
-        class="action-stat action-like-btn"
+        class="action-btn action-like-btn"
         :class="{ liked: liked }"
         v-tooltip.bottom="liked ? 'Unlike' : 'Like'"
         @click.stop="toggleLike"
       >
-        <i :class="liked ? 'pi pi-heart-fill' : 'pi pi-heart'"></i>
+        <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+        </svg>
         {{ likeCount }}
       </button>
-      <span v-else class="action-stat">
-        <i class="pi pi-heart"></i>
+      <span v-else class="action-btn action-btn--static">
+        <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+        </svg>
         {{ likeCount }}
       </span>
+
+      <!-- Comments -->
       <component
         :is="previewOnly ? 'span' : 'router-link'"
         :to="previewOnly ? undefined : '/posts/' + post.id + '#comments'"
-        class="action-stat action-comment-link"
+        class="action-btn"
+        :class="{ 'action-btn--static': previewOnly }"
         v-tooltip.bottom="previewOnly ? undefined : 'View and add comments'"
       >
-        <i class="pi pi-comment"></i>
+        <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
         {{ (post._count && post._count.comments) || 0 }}
       </component>
-      <span class="action-stat" v-tooltip.bottom="'Reposts'">
-        <i class="pi pi-refresh"></i>
-        {{ (post._count && post._count.reposts) || 0 }}
-      </span>
+
+      <!-- Repost count + repost action merged -->
       <button
         v-if="showRepost && post.id"
         type="button"
-        class="action-btn"
-        :class="{ active: reposted }"
+        class="action-btn action-repost-btn"
+        :class="{ reposted: reposted }"
         v-tooltip.bottom="reposted ? 'Undo repost' : 'Repost'"
         @click.stop="onRepost"
       >
-        <i class="pi pi-refresh"></i>
-        Repost
+        <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <polyline points="17 1 21 5 17 9"/>
+          <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+          <polyline points="7 23 3 19 7 15"/>
+          <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+        </svg>
+        {{ (post._count && post._count.reposts) || 0 }}
       </button>
+      <span v-else class="action-btn action-btn--static">
+        <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <polyline points="17 1 21 5 17 9"/>
+          <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+          <polyline points="7 23 3 19 7 15"/>
+          <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+        </svg>
+        {{ (post._count && post._count.reposts) || 0 }}
+      </span>
+
+      <!-- Archive / Delete actions -->
       <div v-if="showActions" class="card-actions">
         <template v-if="archivedMode">
-          <button type="button" class="action-btn action-archive" v-tooltip.bottom="'Restore to profile'" @click.stop="onUnarchive">
+          <button type="button" class="action-btn" v-tooltip.bottom="'Restore to profile'" @click.stop="onUnarchive">
             <i class="pi pi-refresh"></i>
           </button>
         </template>
         <template v-else>
-          <button type="button" class="action-btn action-archive" v-tooltip.bottom="'Archive'" @click.stop="onArchive">
+          <button type="button" class="action-btn action-archive-btn" v-tooltip.bottom="'Archive'" @click.stop="onArchive">
             <i class="pi pi-folder"></i>
           </button>
         </template>
-        <button type="button" class="action-btn action-delete" v-tooltip.bottom="'Delete'" @click.stop="onDelete">
+        <button type="button" class="action-btn action-delete-btn" v-tooltip.bottom="'Delete'" @click.stop="onDelete">
           <i class="pi pi-trash"></i>
         </button>
       </div>
+
+      <span class="footer-spacer"></span>
+      <span class="read-badge">{{ readTime }} min read</span>
     </footer>
   </article>
 </template>
@@ -224,6 +250,7 @@ const props = defineProps({
   animationDelay: { type: String, default: '0s' },
   previewOnly: { type: Boolean, default: false },
 })
+
 const canLike = computed(() => props.showLike && !!auth.token)
 
 const anonAvatarUrl = computed(() => {
@@ -278,7 +305,7 @@ function buildCardBackground(s: NonNullable<PostCardStyle>): string | undefined 
 }
 
 function getBackgroundForAnimation(
-  /* unused */ _s: NonNullable<PostCardStyle>,
+  _s: NonNullable<PostCardStyle>,
   bg: string | undefined
 ): { background: string; backgroundSize?: string } {
   return { background: bg ?? '' }
@@ -304,9 +331,6 @@ const cardWrapperStyle = computed(() => {
   if (s.boxShadow) base.boxShadow = s.boxShadow
   return base
 })
-
-
-
 
 const cardFooterSizeClass = computed(() => {
   const size = cardStyle.value?.buttonSize
@@ -342,13 +366,13 @@ function onPollUpdate(updatedPost: Record<string, unknown>) {
 
 async function toggleLike() {
   if (!auth.token || !props.post.id) return
-  
+
   const originalLiked = liked.value
   const originalCount = likeCount.value
-  
+
   likedStore.setLiked(props.post.id, !originalLiked)
   likeCount.value = originalLiked ? originalCount - 1 : originalCount + 1
-  
+
   try {
     const { data } = await api.post(`/posts/${props.post.id}/likes`)
     likedStore.setLiked(props.post.id, data.liked)
@@ -361,19 +385,14 @@ async function toggleLike() {
   }
 }
 
-function onArchive() {
-  emit('archive', props.post.id)
-}
-function onDelete() {
-  emit('delete', props.post.id)
-}
-function onUnarchive() {
-  emit('unarchive', props.post.id)
-}
+function onArchive() { emit('archive', props.post.id) }
+function onDelete() { emit('delete', props.post.id) }
+function onUnarchive() { emit('unarchive', props.post.id) }
 async function onRepost() {
   if (!auth.token || !props.post.id) return
   emit('repost', props.post.id)
 }
+
 const postImageUrls = computed(() => {
   const html = props.post.renderedHTML || ''
   const content = props.post.content || ''
@@ -396,9 +415,7 @@ const postImageUrls = computed(() => {
 const excerpt = computed(() => {
   const raw = props.post.renderedHTML || props.post.content || ''
   let text = raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-  postImageUrls.value.forEach((url) => {
-    text = text.split(url).join(' ')
-  })
+  postImageUrls.value.forEach((url) => { text = text.split(url).join(' ') })
   text = text.replace(/\s+/g, ' ').trim()
   if (!text) return ''
   return text.slice(0, 160) + (text.length > 160 ? '…' : '')
@@ -428,10 +445,30 @@ const readTime = computed(() => {
   const words = text.split(/\s+/).filter(Boolean).length
   return Math.max(1, Math.ceil(words / 200))
 })
-function formatDate(s: string | undefined) {
+
+function formatDate(s: string | undefined): string {
   if (s == null || typeof s !== 'string') return ''
   const d = new Date(s)
   if (Number.isNaN(d.getTime())) return ''
+
+  const now = new Date()
+  const diffMs = now.getTime() - d.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+
+  // Same calendar day — show relative time
+  const isToday =
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+
+  if (isToday) {
+    if (diffMins < 1) return 'just now'
+    if (diffMins < 60) return `${diffMins}m ago`
+    return `${diffHours}h ago`
+  }
+
+  // Any previous day — show full date with year
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 </script>
@@ -443,12 +480,32 @@ function formatDate(s: string | undefined) {
   background: var(--bg-card);
   border-radius: var(--radius-lg);
   padding: clamp(1rem, 4vw, 2rem);
+  padding-top: 0;
   margin-bottom: 0;
   box-shadow: var(--shadow-md);
-  border: 2px solid var(--border-light);
+  border: 0.5px solid var(--border-light);
   transition: all 0.2s ease;
   animation: fadeInUp 0.6s ease-out both;
 }
+.card:hover {
+  border-color: var(--accent-secondary);
+}
+
+/* Accent stripe — always visible, inherits accent color */
+.card-accent-stripe {
+  position: relative;
+  left: calc(-1 * clamp(1rem, 4vw, 2rem));
+  width: calc(100% + 2 * clamp(1rem, 4vw, 2rem));
+  height: 3px;
+  background: var(--accent-primary);
+  margin-bottom: clamp(1rem, 4vw, 2rem);
+  flex-shrink: 0;
+}
+.card--overlay-bg .card-accent-stripe {
+  position: relative;
+  z-index: 1;
+}
+
 .card-repost-header {
   display: flex;
   align-items: center;
@@ -470,54 +527,7 @@ function formatDate(s: string | undefined) {
   color: var(--accent-primary);
   text-decoration: underline;
 }
-.card::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 4px;
-  height: 100%;
-  background: var(--accent-primary);
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-.card:hover {
-  border-color: var(--accent-secondary);
-}
-.card:hover::after {
-  opacity: 1;
-}
 
-
-
-
-.card--buttons-small .card-footer .action-stat,
-.card--buttons-small .card-footer .action-btn {
-  padding: 0.375rem 0.625rem;
-  font-size: 0.8125rem;
-  gap: 0.375rem;
-}
-.card--buttons-small .card-footer .action-stat .pi,
-.card--buttons-small .card-footer .action-btn .pi { font-size: 0.9375rem; }
-.card--buttons-large .card-footer .action-stat,
-.card--buttons-large .card-footer .action-btn {
-  padding: 0.75rem 1.25rem;
-  font-size: 1rem;
-  gap: 0.625rem;
-}
-.card--buttons-large .card-footer .action-stat .pi,
-.card--buttons-large .card-footer .action-btn .pi { font-size: 1.25rem; }
-
-.card-overlay {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 1;
-  overflow: hidden;
-}
-.card--overlay-bg .card-overlay {
-  z-index: 0;
-}
 .card--overlay-bg .card-header,
 .card--overlay-bg .card-body,
 .card--overlay-bg .card-footer,
@@ -532,18 +542,27 @@ function formatDate(s: string | undefined) {
   pointer-events: none;
 }
 .card--preview-only .card-body { pointer-events: auto; }
+
+.card-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+}
+.card--overlay-bg .card-overlay { z-index: 0; }
 .card-overlay-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-
+/* Author */
 .card-author {
   display: flex;
   align-items: center;
   gap: 1rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
   padding-bottom: 1rem;
   border-bottom: 1px solid var(--border-light);
   text-decoration: none;
@@ -551,7 +570,7 @@ function formatDate(s: string | undefined) {
 }
 .card-author:hover { text-decoration: none; color: inherit; }
 .card-author.card-author-anonymous { cursor: default; pointer-events: none; }
-.card-author.card-author-anonymous .card-body { pointer-events: auto; }
+
 .author-avatar {
   width: 52px;
   height: 52px;
@@ -575,7 +594,8 @@ function formatDate(s: string | undefined) {
 .author-avatar.avatar-shape-squircle { border-radius: 25%; }
 .avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .avatar-initial { line-height: 1; }
-.author-info { min-width: 0; }
+
+.author-info { min-width: 0; flex: 1; }
 .author-name {
   display: block;
   font-size: 1rem;
@@ -587,47 +607,35 @@ function formatDate(s: string | undefined) {
   display: block;
   font-size: 0.8125rem;
   color: var(--text-tertiary);
-  margin-bottom: 0.2rem;
 }
-.author-meta {
+
+/* Date pushed to right side of author row */
+.author-meta-right {
+  margin-left: auto;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  font-size: 0.875rem;
-  color: var(--text-tertiary);
 }
-.meta-dot { user-select: none; }
-
-.card-menu {
-  position: absolute;
-  top: clamp(1rem, 2vw, 2rem);
-  right: clamp(1rem, 2vw, 2rem);
-  padding: 0.5rem;
-  border: none;
-  background: none;
-  border-radius: var(--radius-sm);
+.meta-date {
+  font-size: 0.8125rem;
   color: var(--text-tertiary);
-  font-size: 1.25rem;
-  cursor: pointer;
-  line-height: 1;
-  transition: all 0.2s ease;
-}
-.card-menu:hover {
-  background: var(--bg-primary);
-  color: var(--accent-primary);
+  white-space: nowrap;
 }
 
+/* Card body */
 .card-body {
   display: block;
   color: inherit;
   text-decoration: none;
 }
 .card-body:hover { text-decoration: none; color: inherit; }
+
 .card-poll-wrap {
   position: relative;
   z-index: 2;
   pointer-events: auto;
 }
+
 .card-title {
   font-size: clamp(1.25rem, 4vw, 1.75rem);
   font-weight: 800;
@@ -639,12 +647,14 @@ function formatDate(s: string | undefined) {
   word-break: break-word;
 }
 .card:hover .card-title { color: var(--accent-primary); }
+
 .card-excerpt {
   color: var(--text-secondary);
   line-height: 1.75;
   margin-bottom: 1rem;
   font-size: 1rem;
 }
+
 .card-thumbnails {
   display: flex;
   gap: 0.5rem;
@@ -661,21 +671,10 @@ function formatDate(s: string | undefined) {
   background: var(--bg-primary);
   display: block;
 }
-.card-thumbnails--1 .card-thumb {
-  max-height: 240px;
-  object-position: center;
-}
-.card-thumbnails--2 .card-thumb {
-  flex: 1 1 0;
-  min-width: 0;
-  max-height: 160px;
-}
+.card-thumbnails--1 .card-thumb { max-height: 240px; object-position: center; }
+.card-thumbnails--2 .card-thumb { flex: 1 1 0; min-width: 0; max-height: 160px; }
 .card-thumbnails--3 .card-thumb,
-.card-thumbnails--4 .card-thumb {
-  width: 72px;
-  height: 72px;
-  max-width: 72px;
-}
+.card-thumbnails--4 .card-thumb { width: 72px; height: 72px; max-width: 72px; }
 
 .card-link-preview {
   display: block;
@@ -695,9 +694,7 @@ function formatDate(s: string | undefined) {
   text-decoration: none;
   color: inherit;
 }
-.card-link-preview:hover .card-link-preview-img {
-  transform: scale(1.02);
-}
+.card-link-preview:hover .card-link-preview-img { transform: scale(1.02); }
 .card-link-preview-media {
   position: relative;
   width: 100%;
@@ -712,65 +709,25 @@ function formatDate(s: string | undefined) {
   display: block;
   transition: transform 0.25s ease;
 }
-.card-link-preview-body {
-  padding: 0.625rem 0.875rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-.card-link-preview-site {
-  font-size: 0.625rem;
-  font-weight: 600;
-  color: var(--accent-primary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-.card-link-preview-title {
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  line-height: 1.3;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.card-link-preview-desc {
-  font-size: 0.8125rem;
-  color: var(--text-secondary);
-  margin: 0;
-  line-height: 1.4;
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.card-link-preview-hint {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-size: 0.75rem;
-  color: var(--text-tertiary);
-  margin-top: 0.125rem;
-}
-.card-link-preview-hint .pi {
-  font-size: 0.6875rem;
-}
-.card-link-preview:hover .card-link-preview-hint {
-  color: var(--accent-primary);
-}
+.card-link-preview-body { padding: 0.625rem 0.875rem; display: flex; flex-direction: column; gap: 0.25rem; }
+.card-link-preview-site { font-size: 0.625rem; font-weight: 600; color: var(--accent-primary); text-transform: uppercase; letter-spacing: 0.05em; }
+.card-link-preview-title { font-size: 0.875rem; font-weight: 700; color: var(--text-primary); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card-link-preview-desc { font-size: 0.8125rem; color: var(--text-secondary); margin: 0; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.card-link-preview-hint { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.75rem; color: var(--text-tertiary); margin-top: 0.125rem; }
+.card-link-preview-hint .pi { font-size: 0.6875rem; }
+.card-link-preview:hover .card-link-preview-hint { color: var(--accent-primary); }
 
 .card-tags {
   display: flex;
-  gap: 0.625rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
   margin-bottom: 1.25rem;
 }
 .tag {
-  padding: 0.5rem 1rem;
+  padding: 0.3rem 0.75rem;
   background: var(--bg-primary);
   color: var(--accent-primary);
-  border-radius: var(--radius-sm);
+  border-radius: 99px;
   font-size: 0.8125rem;
   font-weight: 600;
   border: 1px solid var(--border-light);
@@ -785,98 +742,127 @@ function formatDate(s: string | undefined) {
   text-decoration: none;
 }
 
+/* Footer */
 .card-footer {
   display: flex;
-  gap: 0.5rem;
-  padding-top: 1.25rem;
+  gap: 2px;
+  padding-top: 1rem;
   border-top: 1px solid var(--border-light);
-  flex-wrap: wrap;
   align-items: center;
+  flex-wrap: wrap;
 }
-.action-stat,
+
+/* Unified action button — all three share this */
 .action-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.625rem 1rem;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  font-weight: 600;
-  font-size: 0.9375rem;
+  justify-content: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: none;
+  background: none;
   font-family: inherit;
+  font-size: 0.875rem;
+  color: var(--text-tertiary);
   cursor: pointer;
   text-decoration: none;
-  transition: all 0.2s ease;
+  transition: background 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
-.action-stat { cursor: default; }
-.action-stat .pi { font-size: 1.125rem; }
-.action-stat:hover { color: var(--text-secondary); text-decoration: none; }
-.action-like-btn {
-  cursor: pointer;
-  border: none;
-  background: var(--bg-primary);
-  font-family: inherit;
-}
-.action-like-btn:hover { color: var(--like-color); text-decoration: none; }
-.action-like-btn.liked { color: var(--like-color); }
-.action-like-btn.liked .pi { color: var(--like-color); }
-.action-comment-link { cursor: pointer; }
-.action-comment-link:hover { color: var(--accent-primary); text-decoration: none; }
 .action-btn:hover {
-  color: var(--accent-primary);
-  border-color: var(--accent-primary);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  text-decoration: none;
 }
-.action-btn.active {
-  color: var(--accent-primary);
-  border-color: var(--accent-primary);
+.action-btn--static {
+  cursor: default;
+  pointer-events: none;
 }
-.card-actions { margin-left: auto; display: flex; gap: 0.5rem; }
-.action-archive:hover { color: var(--accent-primary); border-color: var(--accent-primary); }
-.action-delete:hover { color: var(--like-color); border-color: var(--like-color); }
+
+/* SVG icons inside action buttons */
+.action-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Like active state */
+.action-like-btn.liked {
+  color: var(--like-color);
+}
+.action-like-btn.liked .action-icon {
+  fill: var(--like-color);
+  stroke: var(--like-color);
+}
+.action-like-btn:hover {
+  color: var(--like-color);
+}
+
+/* Repost active state */
+.action-repost-btn.reposted {
+  color: var(--accent-primary);
+}
+.action-repost-btn.reposted .action-icon {
+  stroke: var(--accent-primary);
+}
+.action-repost-btn:hover {
+  color: var(--accent-primary);
+}
+
+/* Archive / delete */
+.card-actions { display: flex; gap: 2px; }
+.action-archive-btn:hover { color: var(--accent-primary); }
+.action-delete-btn:hover { color: var(--like-color); }
+
+/* Button size variants from cardStyle */
+.card-footer--small .action-btn {
+  height: 26px;
+  padding: 0 8px;
+  font-size: 0.8125rem;
+}
+.card-footer--small .action-icon { width: 13px; height: 13px; }
+.card-footer--large .action-btn {
+  height: 40px;
+  padding: 0 14px;
+  font-size: 1rem;
+}
+.card-footer--large .action-icon { width: 17px; height: 17px; }
+
+.footer-spacer { flex: 1; }
+
+.read-badge {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  padding: 0 4px;
+}
 
 @media (max-width: 768px) {
   .card-author { gap: 0.75rem; margin-bottom: 1rem; padding-bottom: 0.75rem; }
   .author-avatar { width: 44px; height: 44px; font-size: 1rem; }
   .author-name { font-size: 0.9375rem; }
-  .author-meta { font-size: 0.8125rem; gap: 0.5rem; }
-  .card-footer {
-    gap: 0.375rem;
-    padding-top: 1rem;
-  }
-  .card-footer .action-stat,
-  .card-footer .action-btn {
-    padding: 0.375rem 0.625rem;
-    font-size: 0.8125rem;
-    gap: 0.375rem;
-  }
-  .card-footer .action-stat .pi,
-  .card-footer .action-btn .pi { font-size: 1rem; }
-  .card-actions { margin-left: auto; }
+  .meta-date { font-size: 0.75rem; }
 }
 @media (max-width: 480px) {
-  .card { padding: 1rem; }
-  .card-footer {
-    gap: 0.25rem;
-    padding-top: 0.75rem;
+  .card { padding: 0.75rem; padding-top: 0; }
+  .card-accent-stripe {
+    left: -0.75rem;
+    width: calc(100% + 1.5rem);
+    margin-bottom: 0.75rem;
   }
-  .card-footer .action-stat,
-  .card-footer .action-btn {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.75rem;
-    gap: 0.25rem;
-  }
-  .card-footer .action-stat .pi,
-  .card-footer .action-btn .pi { font-size: 0.9375rem; }
   .card-thumbnails--2 .card-thumb { min-width: 100%; max-height: 140px; }
   .card-thumbnails--3 .card-thumb,
-  .card-thumbnails--4 .card-thumb {
-    width: 56px;
-    height: 56px;
-    max-width: 56px;
-  }
+  .card-thumbnails--4 .card-thumb { width: 56px; height: 56px; max-width: 56px; }
   .card-link-preview-media { height: 120px; }
   .card-link-preview-body { padding: 0.5rem 0.75rem; }
+  .read-badge { display: none; }
 }
 </style>
