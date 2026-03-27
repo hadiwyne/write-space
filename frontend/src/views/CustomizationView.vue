@@ -1340,6 +1340,13 @@ function previewStyle(palette: ThemeTemplate) {
 .btn-outline:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
 .btn-outline:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-outline:disabled:hover { border-color: var(--border-medium); color: var(--text-secondary); }
+.actions .btn-outline {
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
 
 .sr-only {
   position: absolute;
