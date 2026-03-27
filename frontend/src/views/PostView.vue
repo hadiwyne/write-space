@@ -769,7 +769,7 @@ watch(() => route.params.id, load)
 .action-delete:hover { color: var(--like-color); border-color: var(--like-color); }
 .comments h2 { font-size: 1.25rem; font-weight: 700; margin: 0 0 1rem; color: var(--text-primary); }
 .comment-form { margin-bottom: 1rem; }
-.comment-form textarea {
+.comment-form ::v-deep textarea {
   width: 100%;
   padding: 0.75rem 1rem;
   border: 2px solid var(--border-light);
@@ -783,7 +783,7 @@ watch(() => route.params.id, load)
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
-.comment-form textarea:focus {
+.comment-form ::v-deep textarea:focus {
   outline: none;
   border-color: var(--accent-primary);
   box-shadow: 0 0 0 3px rgba(255, 105, 180, 0.15);
