@@ -947,6 +947,35 @@ async function saveProfile() {
 .dropdown-leave-to { opacity: 0; transform: translateY(-4px); }
 /* ─────────────────────────────────────────────────────────── */
 
+.form-group input.input,
+.form-group textarea.textarea {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9375rem;
+  border: 1px solid var(--border-medium, #d1d5db);
+  border-radius: 6px;
+  background: var(--bg-card, #fff);
+  color: var(--text-primary, #111827);
+  outline: none;
+  transition: border 0.2s, box-shadow 0.2s;
+}
+
+.form-group input.input:focus,
+.form-group textarea.textarea:focus {
+  border-color: var(--primary-500, #6366f1);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+.form-group textarea.textarea {
+  resize: vertical;
+  min-height: 2.5rem;
+}
+
+.form-group input.input:hover,
+.form-group textarea.textarea:hover {
+  border-color: var(--border-dark, #9ca3af);
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
