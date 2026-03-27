@@ -38,7 +38,10 @@
           </div>
         </div>
         <p v-if="error" class="error">{{ error }}</p>
-        <button type="submit" class="btn btn-primary btn-block" :disabled="loading">Log in</button>
+        <button type="submit" class="btn btn-primary btn-block" :disabled="loading">
+          <i v-if="loading" class="pi pi-spin pi-spinner"></i>
+          <span v-else>Log in</span>
+        </button>
       </form>
       <p class="footer">Don't have an account? <router-link to="/register">Sign up</router-link></p>
     </div>
