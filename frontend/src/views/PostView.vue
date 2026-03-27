@@ -771,15 +771,24 @@ watch(() => route.params.id, load)
 .comment-form { margin-bottom: 1rem; }
 .comment-form textarea {
   width: 100%;
-  padding: 0.75rem;
+  padding: 0.75rem 1rem;
   border: 2px solid var(--border-light);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   margin-bottom: 0.5rem;
   font-size: 0.9375rem;
   font-family: inherit;
-  transition: border-color 0.2s ease;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
-.comment-form textarea:focus { outline: none; border-color: var(--accent-primary); }
+
+.comment-form textarea:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(255, 105, 180, 0.15);
+  background: var(--bg-card);
+}
 .btn-primary { background: var(--accent-primary); color: white; border: 2px solid var(--accent-primary); }
 .btn-primary:hover:not(:disabled) { background: var(--accent-burgundy); border-color: var(--accent-burgundy); }
 .btn-sm { padding: 0.5rem 1rem; font-size: 0.9375rem; font-weight: 600; border-radius: var(--radius-sm); cursor: pointer; }
