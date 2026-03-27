@@ -734,9 +734,17 @@ async function saveProfile() {
 .settings-page h1 { font-size: clamp(1.25rem, 4vw, 1.5rem); margin: 0 0 1rem; }
 .form { max-width: 100%; width: 100%; min-width: 0; display: flex; flex-direction: column; gap: 1rem; }
 .form-group label { display: block; font-size: 0.875rem; font-weight: 500; color: var(--gray-700); margin-bottom: 0.25rem; }
-.username-input-wrap { display: flex; align-items: center; gap: 0; border: 1px solid var(--border-medium, #d1d5db); border-radius: var(--radius-md, 6px); background: var(--bg-card); }
+.username-input-wrap { display: flex; align-items: center; gap: 0; border: 1px solid var(--border-medium, #d1d5db); border-radius: var(--radius-md, 6px); background: var(--bg-card); overflow: hidden; }
 .username-prefix { padding: 0.5rem 0.5rem 0.5rem 0.75rem; color: var(--text-tertiary, #6b7280); font-size: 0.9375rem; }
-.username-input-wrap .username-input { border: none; border-radius: 0; flex: 1; min-width: 0; padding: 0.5rem 0.5rem 0.5rem 0.25rem; font-size: 0.9375rem; box-sizing: border-box; }
+.username-input-wrap .username-input {
+  border: none;
+  flex: 1 1 auto;        
+  min-width: 0;            
+  padding: 0.5rem;         
+  font-size: 0.9375rem;
+  box-sizing: border-box;  
+  width: 100%;             
+}
 .avatar-section { }
 .avatar-row { display: flex; flex-direction: column; gap: 1rem; }
 .avatar-with-upload {
