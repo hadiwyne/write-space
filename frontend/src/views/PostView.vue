@@ -150,7 +150,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRoute } from 'vue-router'
 import { api, avatarSrc, resolveContentImageUrls } from '@/api/client'
@@ -160,6 +160,7 @@ import { ensureFontLoaded, ensureFontsInHtmlLoaded } from '@/utils/load-fonts'
 import { useAuthStore } from '@/stores/auth'
 import { useLikedPostsStore } from '@/stores/likedPosts'
 import { useSeriesStore } from '@/stores/series'
+import { applyOgMeta, clearOgMeta, absoluteUrl } from '@/utils/ogMeta'
 import { getCachedPost, setCachedPost } from '@/utils/indexedDBCache'
 import { getAnonAvatarUrl } from '@/utils/anonAvatar'
 import ConfirmModal from '@/components/ConfirmModal.vue'
@@ -307,6 +308,24 @@ async function load() {
     setCachedPost(id, postRes.data)
     comments.value = commentsRes.data
     likeCount.value = post.value?._count?.likes ?? 0
+
+    // Set OG / social preview meta tags
+    const p = postRes.data as any
+    const ogImage = p.imageUrls?.[0]
+      ? absoluteUrl(avatarSrc(p.imageUrls[0]))
+      : p.linkPreview?.image
+        ? p.linkPreview.image
+        : ''
+    const desc = p.renderedHTML
+      ? p.renderedHTML.replace(/<[^>]+>/g, '').slice(0, 200)
+      : ''
+    applyOgMeta({
+      title: p.title,
+      description: desc,
+      image: ogImage,
+      url: window.location.href,
+      type: 'article',
+    })
     const hasPollWithOptions = post.value?.poll && Array.isArray((post.value.poll as { options?: unknown[] })?.options) && (post.value.poll as { options: unknown[] }).options.length > 0
     if (post.value?.poll && !hasPollWithOptions) {
       try {
@@ -644,6 +663,7 @@ onMounted(() => {
     seriesStore.fetchMySeries()
   }
 })
+onUnmounted(() => { clearOgMeta() })
 watch(() => route.params.id, load)
 </script>
 

@@ -22,6 +22,8 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { Public } from '../auth/public.decorator';
 import { CreateSeriesDto } from './dto/create-series.dto';
 import { UpdateSeriesDto } from './dto/update-series.dto';
+import { CreateSectionDto } from './dto/create-section.dto';
+import { UpdateSectionDto, ReorderDto } from './dto/update-section.dto';
 
 const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const MAX_IMAGE_SIZE = 15 * 1024 * 1024;
@@ -327,6 +329,101 @@ export class SeriesController {
   ) {
     if (!Array.isArray(postIds)) throw new BadRequestException('postIds must be an array');
     return this.seriesService.reorderPosts(slug, user.id, postIds);
+  }
+
+  // ─── Sections ────────────────────────────────────────────────────────────────
+
+  @Public()
+  @Get(':slug/sections')
+  @UseGuards(OptionalJwtAuthGuard)
+  getSections(@Param('slug') slug: string, @CurrentUser() user?: { id: string } | null) {
+    return this.seriesService.getSections(slug, user?.id ?? null);
+  }
+
+  @Post(':slug/sections')
+  @UseGuards(JwtAuthGuard)
+  createSection(
+    @Param('slug') slug: string,
+    @CurrentUser() user: { id: string },
+    @Body() dto: CreateSectionDto,
+  ) {
+    return this.seriesService.createSection(slug, user.id, dto);
+  }
+
+  @Patch(':slug/sections/reorder')
+  @UseGuards(JwtAuthGuard)
+  reorderSections(
+    @Param('slug') slug: string,
+    @CurrentUser() user: { id: string },
+    @Body() dto: ReorderDto,
+  ) {
+    return this.seriesService.reorderSections(slug, user.id, dto);
+  }
+
+  @Patch(':slug/sections/:sectionId')
+  @UseGuards(JwtAuthGuard)
+  updateSection(
+    @Param('slug') slug: string,
+    @Param('sectionId') sectionId: string,
+    @CurrentUser() user: { id: string },
+    @Body() dto: UpdateSectionDto,
+  ) {
+    return this.seriesService.updateSection(slug, sectionId, user.id, dto);
+  }
+
+  @Delete(':slug/sections/:sectionId')
+  @UseGuards(JwtAuthGuard)
+  deleteSection(
+    @Param('slug') slug: string,
+    @Param('sectionId') sectionId: string,
+    @CurrentUser() user: { id: string },
+  ) {
+    return this.seriesService.deleteSection(slug, sectionId, user.id);
+  }
+
+  @Public()
+  @Get(':slug/sections/:sectionId/posts')
+  @UseGuards(OptionalJwtAuthGuard)
+  getSectionPosts(
+    @Param('slug') slug: string,
+    @Param('sectionId') sectionId: string,
+    @CurrentUser() user?: { id: string } | null,
+  ) {
+    return this.seriesService.getSectionPosts(slug, sectionId, user?.id ?? null);
+  }
+
+  @Post(':slug/sections/:sectionId/posts')
+  @UseGuards(JwtAuthGuard)
+  addPostToSection(
+    @Param('slug') slug: string,
+    @Param('sectionId') sectionId: string,
+    @CurrentUser() user: { id: string },
+    @Body('postId') postId: string,
+  ) {
+    if (!postId) throw new BadRequestException('postId is required');
+    return this.seriesService.addPostToSection(slug, sectionId, user.id, postId);
+  }
+
+  @Delete(':slug/sections/:sectionId/posts/:postId')
+  @UseGuards(JwtAuthGuard)
+  removePostFromSection(
+    @Param('slug') slug: string,
+    @Param('sectionId') sectionId: string,
+    @Param('postId') postId: string,
+    @CurrentUser() user: { id: string },
+  ) {
+    return this.seriesService.removePostFromSection(slug, sectionId, user.id, postId);
+  }
+
+  @Patch(':slug/sections/:sectionId/posts/reorder')
+  @UseGuards(JwtAuthGuard)
+  reorderSectionPosts(
+    @Param('slug') slug: string,
+    @Param('sectionId') sectionId: string,
+    @CurrentUser() user: { id: string },
+    @Body() dto: ReorderDto,
+  ) {
+    return this.seriesService.reorderSectionPosts(slug, sectionId, user.id, dto);
   }
 
   // ─── Follow ──────────────────────────────────────────────────────────────────

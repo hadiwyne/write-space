@@ -2,7 +2,6 @@ import {
   IsString,
   IsOptional,
   IsEnum,
-  IsBoolean,
   IsArray,
   IsHexColor,
   IsNumber,
@@ -60,18 +59,16 @@ export class UpdateSeriesDto {
   postListMode?: string;
 
   @IsOptional()
-  @IsBoolean()
-  showTopPosts?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  showTagline?: boolean;
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  coverFocalY?: number | null;
 
   @IsOptional()
   @IsNumber()
   @Min(0)
   @Max(100)
-  coverFocalY?: number | null;
+  socialFocalY?: number | null;
 
   @IsOptional()
   @IsArray()

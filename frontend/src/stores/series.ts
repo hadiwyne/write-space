@@ -18,13 +18,12 @@ export interface SeriesInfo {
   bgColor?: string | null
   bgImageMimeType?: string | null
   coverFocalY?: number | null
+  socialFocalY?: number | null
   fontFamily?: string | null
   layoutMode: string
   postListMode: string
-  showTopPosts: boolean
   navLinks?: any[] | null
   pinnedPostIds: string[]
-  showTagline: boolean
   visibility: 'PUBLIC' | 'FOLLOWERS_ONLY' | 'PRIVATE'
   followerCount: number
   postCount: number
@@ -50,7 +49,7 @@ export interface SeriesMember {
   }
 }
 
-export function seriesImageUrl(slug: string, type: 'logo' | 'wordmark' | 'cover' | 'social-preview'): string {
+export function seriesImageUrl(slug: string, type: 'logo' | 'wordmark' | 'cover' | 'social-preview' | 'bg-image'): string {
   const base = apiBaseUrl.replace(/\/$/, '')
   return `${base}/series/${encodeURIComponent(slug)}/images/${type}`
 }
@@ -104,7 +103,7 @@ export const useSeriesStore = defineStore('series', () => {
 
   async function uploadImage(
     slug: string,
-    type: 'logo' | 'wordmark' | 'cover' | 'social-preview',
+    type: 'logo' | 'wordmark' | 'cover' | 'social-preview' | 'bg-image',
     file: File,
     onProgress?: (pct: number) => void,
   ) {
@@ -118,7 +117,7 @@ export const useSeriesStore = defineStore('series', () => {
     })
   }
 
-  async function deleteImage(slug: string, type: 'logo' | 'wordmark' | 'cover' | 'social-preview') {
+  async function deleteImage(slug: string, type: 'logo' | 'wordmark' | 'cover' | 'social-preview' | 'bg-image') {
     await api.delete(`/series/${slug}/images/${type}`, { cache: false })
   }
 

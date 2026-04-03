@@ -161,19 +161,49 @@
         <div class="branding-item branding-item--full">
           <div class="branding-item-header">
             <span class="branding-label">Social Preview</span>
-            <span class="branding-hint">14:10 ratio. Default image when shared on social media.</span>
+            <span class="branding-hint">14:10 ratio. Shown as thumbnail when the series URL is shared on social media.</span>
           </div>
-          <div class="image-upload-area image-upload-area--social" @click="triggerUpload('social-preview')">
-            <img v-if="series.socialPreviewMimeType && !imageChanged['social-preview']" :src="imgUrl('social-preview')" alt="Social Preview" class="preview-img preview-img--social" />
-            <img v-else-if="imagePreviews['social-preview']" :src="imagePreviews['social-preview']" alt="Social Preview" class="preview-img preview-img--social" />
-            <div v-else class="upload-placeholder">
+
+          <!-- Upload area — shown when no image set -->
+          <div
+            v-if="!series.socialPreviewMimeType && !imagePreviews['social-preview']"
+            class="image-upload-area image-upload-area--social"
+            @click="triggerUpload('social-preview')"
+          >
+            <div class="upload-placeholder">
               <i class="pi pi-image"></i>
               <span>Upload Social Preview (14:10)</span>
             </div>
             <div class="upload-overlay"><i class="pi pi-upload"></i></div>
           </div>
+
+          <!-- Draggable preview — shown when image is set -->
+          <div
+            v-else
+            class="cover-drag-preview cover-drag-preview--social"
+            :class="{ dragging: isDraggingSocial }"
+            @mousedown="startSocialDrag"
+            @touchstart.passive="startSocialDrag"
+          >
+            <img
+              :src="imagePreviews['social-preview'] || imgUrl('social-preview')"
+              alt="Social Preview"
+              class="cover-drag-img"
+              :style="{ objectPosition: `center ${theme.socialFocalY}%` }"
+              draggable="false"
+            />
+            <div class="cover-drag-hint">
+              <i class="pi pi-arrows-v"></i> Drag to reposition
+            </div>
+            <button type="button" class="cover-drag-remove" @click.stop="triggerUpload('social-preview')" title="Replace image">
+              <i class="pi pi-upload"></i>
+            </button>
+            <button type="button" class="cover-drag-remove cover-drag-remove--delete" @click.stop="removeImage('social-preview')" title="Remove image">
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
+
           <div v-if="uploadProgress['social-preview']" class="progress-bar"><div class="progress-fill" :style="{ width: uploadProgress['social-preview'] + '%' }"></div></div>
-          <button v-if="series.socialPreviewMimeType" type="button" class="btn-remove" @click.stop="removeImage('social-preview')">Remove social preview</button>
           <input ref="socialInput" type="file" accept="image/*" class="hidden-input" @change="onFileChange($event, 'social-preview')" />
         </div>
       </div>
@@ -189,26 +219,35 @@
         <!-- Colors -->
         <div class="field">
           <label class="field-label">Accent Color</label>
-          <div class="color-row">
-            <input type="color" v-model="theme.accentColor" class="color-picker" />
-            <span class="color-val">{{ theme.accentColor }}</span>
+          <div class="color-input-wrap">
+            <input type="color" :value="theme.accentColor" class="color-picker color-picker-desktop" @input="onNativeColor('accentColor', $event)" />
+            <button type="button" class="color-adjust-btn" :style="{ backgroundColor: theme.accentColor }" @click="openColorEditor('accentColor', 'Accent Color')">
+              <span class="color-adjust-btn-label">Adjust</span>
+            </button>
+            <input type="text" :value="theme.accentColor" class="color-hex" spellcheck="false" maxlength="7" placeholder="#6366f1" @input="onColorHex('accentColor', $event)" />
           </div>
           <span class="field-hint">Used for buttons, links, highlights.</span>
         </div>
         <div class="field">
           <label class="field-label">Cover Background Color</label>
-          <div class="color-row">
-            <input type="color" v-model="theme.coverBgColor" class="color-picker" />
-            <span class="color-val">{{ theme.coverBgColor }}</span>
+          <div class="color-input-wrap">
+            <input type="color" :value="theme.coverBgColor || '#ffffff'" class="color-picker color-picker-desktop" @input="onNativeColor('coverBgColor', $event)" />
+            <button type="button" class="color-adjust-btn" :style="{ backgroundColor: theme.coverBgColor || '#ffffff' }" @click="openColorEditor('coverBgColor', 'Cover Background Color')">
+              <span class="color-adjust-btn-label">Adjust</span>
+            </button>
+            <input type="text" :value="theme.coverBgColor" class="color-hex" spellcheck="false" maxlength="7" placeholder="#ffffff" @input="onColorHex('coverBgColor', $event)" />
             <button type="button" class="btn-clear-color" @click="theme.coverBgColor = ''">Clear</button>
           </div>
           <span class="field-hint">Only shown when no cover photo is set.</span>
         </div>
         <div class="field">
           <label class="field-label">Page Background Color</label>
-          <div class="color-row">
-            <input type="color" v-model="theme.bgColor" class="color-picker" />
-            <span class="color-val">{{ theme.bgColor }}</span>
+          <div class="color-input-wrap">
+            <input type="color" :value="theme.bgColor || '#ffffff'" class="color-picker color-picker-desktop" @input="onNativeColor('bgColor', $event)" />
+            <button type="button" class="color-adjust-btn" :style="{ backgroundColor: theme.bgColor || '#ffffff' }" @click="openColorEditor('bgColor', 'Page Background Color')">
+              <span class="color-adjust-btn-label">Adjust</span>
+            </button>
+            <input type="text" :value="theme.bgColor" class="color-hex" spellcheck="false" maxlength="7" placeholder="#ffffff" @input="onColorHex('bgColor', $event)" />
             <button type="button" class="btn-clear-color" @click="theme.bgColor = ''">Clear</button>
           </div>
         </div>
@@ -284,38 +323,6 @@
           </div>
         </div>
 
-        <!-- Show Top Posts -->
-        <div class="field field-inline">
-          <div>
-            <span class="field-label">Show Top Posts section</span>
-            <span class="field-hint">Displays most-engaged posts on series homepage</span>
-          </div>
-          <button
-            type="button"
-            class="toggle-switch"
-            :class="{ on: theme.showTopPosts }"
-            :style="theme.showTopPosts ? { background: series.accentColor || 'var(--accent-primary)' } : {}"
-            @click="theme.showTopPosts = !theme.showTopPosts"
-          >
-            <span class="toggle-thumb"></span>
-          </button>
-        </div>
-
-        <!-- Show Tagline -->
-        <div class="field field-inline">
-          <div>
-            <span class="field-label">Show tagline in header</span>
-          </div>
-          <button
-            type="button"
-            class="toggle-switch"
-            :class="{ on: theme.showTagline }"
-            :style="theme.showTagline ? { background: series.accentColor || 'var(--accent-primary)' } : {}"
-            @click="theme.showTagline = !theme.showTagline"
-          >
-            <span class="toggle-thumb"></span>
-          </button>
-        </div>
       </div>
       <SaveBar :saving="saving" :saved="saved" :error="saveError" @save="saveTheme" />
     </section>
@@ -487,6 +494,171 @@
     <section v-if="activeTab === 'posts'" class="tab-content">
       <h2 class="section-title">Posts</h2>
 
+      <!-- ── Sections Manager ───────────────────────────────────── -->
+      <div v-if="isOwnerOrContributor" class="sections-manager">
+        <div class="sections-header">
+          <h3 class="subsection-title"><i class="pi pi-th-large"></i> Sections</h3>
+          <button type="button" class="btn-secondary" @click="startNewSection">
+            <i class="pi pi-plus"></i> New Section
+          </button>
+        </div>
+        <p class="field-hint" style="margin-bottom:1rem">
+          Group posts into named sections that appear as tabs on the series homepage. Each section can have its own layout.
+        </p>
+
+        <!-- New section inline form -->
+        <div v-if="newSectionForm" class="new-section-form">
+          <input
+            v-model="newSectionName"
+            type="text"
+            class="field-input"
+            placeholder="Section name…"
+            maxlength="100"
+            @keyup.enter="createSection"
+            ref="newSectionInput"
+          />
+          <div class="section-layout-row">
+            <button
+              v-for="l in sectionLayoutOptions"
+              :key="l.value"
+              type="button"
+              class="section-layout-btn"
+              :class="{ active: newSectionLayout === l.value }"
+              @click="newSectionLayout = l.value"
+            >
+              <i :class="l.icon"></i> {{ l.label }}
+            </button>
+          </div>
+          <div class="new-section-actions">
+            <button type="button" class="btn-primary" :disabled="!newSectionName.trim() || creatingSec" @click="createSection">
+              <i v-if="creatingSec" class="pi pi-spin pi-spinner"></i> Create
+            </button>
+            <button type="button" class="btn-secondary" @click="cancelNewSection">Cancel</button>
+          </div>
+        </div>
+
+        <!-- Sections list -->
+        <div v-if="sections.length" class="sections-list">
+          <div
+            v-for="(sec, idx) in sections"
+            :key="sec.id"
+            class="section-card"
+            :class="{ dragging: secDragFromIdx === idx }"
+            draggable="true"
+            @dragstart="onSecDragStart(idx)"
+            @dragover.prevent="onSecDragOver(idx)"
+            @drop="onSecDrop"
+            @dragend="secDragFromIdx = -1"
+          >
+            <div class="section-card-header" @click="toggleExpandSection(sec.id)">
+              <i class="pi pi-bars section-drag-icon" @click.stop></i>
+              <span v-if="editingSectionId !== sec.id" class="section-name-text">{{ sec.name }}</span>
+              <input
+                v-else
+                type="text"
+                class="section-name-edit"
+                v-model="editingSectionName"
+                @keyup.enter="saveSectionName(sec)"
+                @blur="saveSectionName(sec)"
+                @click.stop
+              />
+              <i :class="expandedSectionId === sec.id ? 'pi pi-chevron-up' : 'pi pi-chevron-down'" class="section-chevron"></i>
+              <div class="section-card-actions" @click.stop>
+                <button v-if="editingSectionId !== sec.id" type="button" class="section-icon-btn" @click="startEditSectionName(sec)" title="Rename">
+                  <i class="pi pi-pencil"></i>
+                </button>
+                <div class="s-dropdown-wrap">
+                  <button
+                    type="button"
+                    class="s-dropdown-trigger s-dropdown-trigger--sm"
+                    @click="openSecLayoutDropdown = openSecLayoutDropdown === sec.id ? null : sec.id"
+                    :aria-expanded="openSecLayoutDropdown === sec.id"
+                  >
+                    <i :class="sectionLayoutOptions.find(l => l.value === sec.layoutMode)?.icon || 'pi pi-list'"></i>
+                    <span class="sec-layout-label">{{ sectionLayoutOptions.find(l => l.value === sec.layoutMode)?.label || 'List' }}</span>
+                    <i class="pi pi-chevron-down s-dropdown-chevron"></i>
+                  </button>
+                  <Transition name="s-dropdown">
+                    <div v-if="openSecLayoutDropdown === sec.id" class="s-dropdown-panel s-dropdown-panel--right" role="menu">
+                      <button
+                        v-for="l in sectionLayoutOptions"
+                        :key="l.value"
+                        type="button"
+                        class="s-dropdown-option"
+                        role="menuitem"
+                        :class="{ active: sec.layoutMode === l.value }"
+                        @click="selectSectionLayout(sec, l.value)"
+                      >
+                        <i :class="l.icon"></i> {{ l.label }}
+                      </button>
+                    </div>
+                  </Transition>
+                </div>
+                <button type="button" class="btn-remove-member" @click="doDeleteSection(sec)" title="Delete section">
+                  <i class="pi pi-trash"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Expanded posts panel -->
+            <div v-if="expandedSectionId === sec.id" class="section-card-body" @click.stop>
+              <div v-if="sec._posts && sec._posts.length" class="section-posts-list">
+                <div
+                  v-for="(sp, pidx) in sec._posts"
+                  :key="sp.id"
+                  class="section-post-item"
+                  :class="{ dragging: secPostDrag.fromSec === sec.id && secPostDrag.fromIdx === pidx }"
+                  draggable="true"
+                  @dragstart.stop="onSecPostDragStart(sec.id, pidx)"
+                  @dragover.prevent.stop="onSecPostDragOver(sec.id, pidx)"
+                  @drop.stop="onSecPostDrop(sec.id)"
+                  @dragend.stop="secPostDrag.fromSec = null"
+                >
+                  <i class="pi pi-bars drag-handle"></i>
+                  <span class="section-post-title">{{ sp.title }}</span>
+                  <button type="button" class="btn-remove-post" @click="removePostFromSection(sec, sp.id)" title="Remove from section">
+                    <i class="pi pi-minus-circle"></i>
+                  </button>
+                </div>
+              </div>
+              <div v-else class="empty-posts" style="padding:.75rem 0">No posts in this section yet.</div>
+
+              <!-- Add post dropdown -->
+              <div class="add-post-row">
+                <div class="s-dropdown-wrap add-post-dropdown-wrap">
+                  <button
+                    type="button"
+                    class="s-dropdown-trigger add-post-trigger"
+                    @click="openAddPostDropdown = openAddPostDropdown === sec.id ? null : sec.id"
+                    :aria-expanded="openAddPostDropdown === sec.id"
+                  >
+                    <i class="pi pi-plus"></i>
+                    <span>Add a post to this section…</span>
+                    <i class="pi pi-chevron-down s-dropdown-chevron"></i>
+                  </button>
+                  <Transition name="s-dropdown">
+                    <div v-if="openAddPostDropdown === sec.id" class="s-dropdown-panel add-post-panel" role="menu">
+                      <p v-if="!getUnassignedPosts(sec).length" class="add-post-empty">No posts available to add.</p>
+                      <button
+                        v-for="p in getUnassignedPosts(sec)"
+                        :key="p.id"
+                        type="button"
+                        class="s-dropdown-option"
+                        role="menuitem"
+                        @click="addPostToSection(sec, p.id)"
+                      >
+                        {{ p.title }}
+                      </button>
+                    </div>
+                  </Transition>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div v-else-if="!newSectionForm" class="empty-members">No sections yet. Sections group posts into tabs on your homepage.</div>
+      </div>
+
       <!-- Pending Approvals -->
       <div v-if="pendingPosts.length && isOwnerOrEditor" class="pending-section">
         <h3 class="subsection-title pending-title">
@@ -619,6 +791,72 @@
         </div>
       </Teleport>
     </section>
+    <!-- Remove member confirm modal -->
+    <Teleport to="body">
+      <ConfirmModal
+        :open="showRemoveConfirm"
+        title="Remove member?"
+        :message="memberToRemove ? `Remove ${memberToRemove.user.displayName || memberToRemove.user.username} (@${memberToRemove.user.username}) from this series? They will lose access immediately.` : ''"
+        confirm-label="Yes, Remove"
+        cancel-label="Cancel"
+        variant="danger"
+        @confirm="doRemoveMember"
+        @cancel="showRemoveConfirm = false; memberToRemove = null"
+      />
+    </Teleport>
+
+    <!-- Color editor modal -->
+    <Teleport to="body">
+      <div
+        v-if="editingColorKey !== null"
+        class="modal-backdrop color-editor-backdrop"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="color-editor-title"
+        @click.self="closeColorEditor"
+      >
+        <div class="modal color-editor-modal">
+          <h2 id="color-editor-title" class="modal-title">{{ editingColorLabel }}</h2>
+          <p class="modal-hint-text">Use sliders or enter a hex code.</p>
+          <div class="color-editor-preview" :style="{ backgroundColor: editingHex }"></div>
+          <div class="color-editor-hex-wrap">
+            <label for="color-editor-hex" class="sr-only">Hex code</label>
+            <input
+              id="color-editor-hex"
+              v-model="editingHex"
+              type="text"
+              class="color-editor-hex"
+              spellcheck="false"
+              autocapitalize="off"
+              inputmode="text"
+              maxlength="7"
+              placeholder="#000000"
+              @input="onEditorHexInput"
+            />
+          </div>
+          <div class="color-editor-sliders">
+            <div class="color-editor-slider-row">
+              <label for="color-editor-h" class="color-editor-slider-label">Hue</label>
+              <input id="color-editor-h" v-model.number="editingHsl.h" type="range" min="0" max="360" class="color-editor-range color-editor-range-hue" @input="syncHexFromHsl" />
+              <span class="color-editor-value">{{ Math.round(editingHsl.h) }}°</span>
+            </div>
+            <div class="color-editor-slider-row">
+              <label for="color-editor-s" class="color-editor-slider-label">Saturation</label>
+              <input id="color-editor-s" v-model.number="editingHsl.s" type="range" min="0" max="100" class="color-editor-range" @input="syncHexFromHsl" />
+              <span class="color-editor-value">{{ Math.round(editingHsl.s) }}%</span>
+            </div>
+            <div class="color-editor-slider-row">
+              <label for="color-editor-l" class="color-editor-slider-label">Lightness</label>
+              <input id="color-editor-l" v-model.number="editingHsl.l" type="range" min="0" max="100" class="color-editor-range" @input="syncHexFromHsl" />
+              <span class="color-editor-value">{{ Math.round(editingHsl.l) }}%</span>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-primary" @click="closeColorEditor">Done</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 
   <!-- Loading -->
@@ -634,11 +872,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted, watch, defineComponent, h } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, watch, defineComponent, h, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api, avatarSrc, apiBaseUrl } from '@/api/client'
 import { useSeriesStore } from '@/stores/series'
 import type { SeriesInfo } from '@/stores/series'
+import ConfirmModal from '@/components/ConfirmModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -686,11 +925,10 @@ const theme = reactive({
   coverBgColor: '',
   bgColor: '',
   coverFocalY: 50,
+  socialFocalY: 50,
   fontFamily: '',
   layoutMode: 'feature',
   postListMode: 'list',
-  showTopPosts: true,
-  showTagline: true,
 })
 
 // Cover focal-point drag
@@ -703,13 +941,28 @@ function startCoverDrag(e: MouseEvent | TouchEvent) {
   _coverDragStartFocal = theme.coverFocalY
 }
 function onCoverDragMove(e: MouseEvent | TouchEvent) {
-  if (!isDraggingCover.value) return
+  if (!isDraggingCover.value && !isDraggingSocial.value) return
   const clientY = 'touches' in e ? (e as TouchEvent).touches[0].clientY : (e as MouseEvent).clientY
-  // Drag up → reveal more of bottom (increase %), drag down → reveal more of top (decrease %)
-  const delta = (_coverDragStartY - clientY) * 0.35
-  theme.coverFocalY = Math.max(0, Math.min(100, Math.round(_coverDragStartFocal + delta)))
+  if (isDraggingCover.value) {
+    const delta = (_coverDragStartY - clientY) * 0.35
+    theme.coverFocalY = Math.max(0, Math.min(100, Math.round(_coverDragStartFocal + delta)))
+  }
+  if (isDraggingSocial.value) {
+    const delta = (_socialDragStartY - clientY) * 0.35
+    theme.socialFocalY = Math.max(0, Math.min(100, Math.round(_socialDragStartFocal + delta)))
+  }
 }
-function stopCoverDrag() { isDraggingCover.value = false }
+function stopCoverDrag() { isDraggingCover.value = false; isDraggingSocial.value = false }
+
+// Social preview focal-point drag
+const isDraggingSocial = ref(false)
+let _socialDragStartY = 0
+let _socialDragStartFocal = 50
+function startSocialDrag(e: MouseEvent | TouchEvent) {
+  isDraggingSocial.value = true
+  _socialDragStartY = 'touches' in e ? e.touches[0].clientY : e.clientY
+  _socialDragStartFocal = theme.socialFocalY
+}
 
 // Image upload state
 type ImgType = 'logo' | 'wordmark' | 'cover' | 'social-preview' | 'bg-image'
@@ -743,6 +996,8 @@ function closeAllRoleDropdowns() {
   inviteRoleDropdownOpen.value = false
   inviteLinkRoleDropdownOpen.value = false
   openMemberRoleDropdown.value = null
+  openSecLayoutDropdown.value = null
+  openAddPostDropdown.value = null
 }
 
 function onRoleDropdownOutsideClick(e: MouseEvent) {
@@ -814,9 +1069,223 @@ const approvedPosts = ref<any[]>([])
 let dragFromIdx = -1
 const reorderDirty = ref(false)
 
+// Sections
+const sections = ref<any[]>([])
+const newSectionForm = ref(false)
+const newSectionName = ref('')
+const newSectionLayout = ref('list')
+const creatingSec = ref(false)
+const newSectionInput = ref<HTMLInputElement | null>(null)
+const expandedSectionId = ref<string | null>(null)
+const editingSectionId = ref<string | null>(null)
+const editingSectionName = ref('')
+const openSecLayoutDropdown = ref<string | null>(null)
+const openAddPostDropdown = ref<string | null>(null)
+let secDragFromIdx = -1
+const secDragFromIdxReactive = ref(-1)
+const secPostDrag = reactive<{ fromSec: string | null; fromIdx: number }>({ fromSec: null, fromIdx: -1 })
+
+const sectionLayoutOptions = [
+  { value: 'list',      label: 'List',      icon: 'pi pi-list' },
+  { value: 'grid',      label: 'Grid',      icon: 'pi pi-th-large' },
+  { value: 'feature',   label: 'Feature',   icon: 'pi pi-star' },
+  { value: 'magazine',  label: 'Magazine',  icon: 'pi pi-images' },
+  { value: 'newspaper', label: 'Newspaper', icon: 'pi pi-align-justify' },
+]
+
+function startNewSection() {
+  newSectionForm.value = true
+  newSectionName.value = ''
+  newSectionLayout.value = 'list'
+  nextTick(() => newSectionInput.value?.focus())
+}
+
+function cancelNewSection() {
+  newSectionForm.value = false
+}
+
+async function createSection() {
+  if (!newSectionName.value.trim() || creatingSec.value) return
+  creatingSec.value = true
+  try {
+    const slug = route.params.slug as string
+    const { data } = await api.post(`/series/${slug}/sections`, {
+      name: newSectionName.value.trim(),
+      layoutMode: newSectionLayout.value,
+    }, { cache: false })
+    data._posts = []
+    sections.value.push(data)
+    newSectionForm.value = false
+    expandedSectionId.value = data.id
+  } catch (e: any) {
+    alert(e?.response?.data?.message || 'Failed to create section')
+  } finally {
+    creatingSec.value = false
+  }
+}
+
+async function doDeleteSection(sec: any) {
+  if (!confirm(`Delete section "${sec.name}"? Posts will not be removed from the series.`)) return
+  try {
+    const slug = route.params.slug as string
+    await api.delete(`/series/${slug}/sections/${sec.id}`, { cache: false })
+    sections.value = sections.value.filter((s: any) => s.id !== sec.id)
+    if (expandedSectionId.value === sec.id) expandedSectionId.value = null
+  } catch (e: any) {
+    alert(e?.response?.data?.message || 'Failed to delete section')
+  }
+}
+
+function startEditSectionName(sec: any) {
+  editingSectionId.value = sec.id
+  editingSectionName.value = sec.name
+}
+
+async function saveSectionName(sec: any) {
+  if (editingSectionId.value !== sec.id) return
+  const newName = editingSectionName.value.trim()
+  if (!newName || newName === sec.name) { editingSectionId.value = null; return }
+  try {
+    const slug = route.params.slug as string
+    const { data } = await api.patch(`/series/${slug}/sections/${sec.id}`, { name: newName }, { cache: false })
+    sec.name = data.name
+    sec.slug = data.slug
+  } catch (e: any) {
+    alert(e?.response?.data?.message || 'Failed to rename section')
+  } finally {
+    editingSectionId.value = null
+  }
+}
+
+async function updateSectionLayout(sec: any, layoutMode?: string) {
+  const mode = layoutMode ?? sec.layoutMode
+  try {
+    const slug = route.params.slug as string
+    await api.patch(`/series/${slug}/sections/${sec.id}`, { layoutMode: mode }, { cache: false })
+  } catch (e: any) {
+    alert(e?.response?.data?.message || 'Failed to update section layout')
+  }
+}
+
+function selectSectionLayout(sec: any, value: string) {
+  sec.layoutMode = value
+  openSecLayoutDropdown.value = null
+  updateSectionLayout(sec, value)
+}
+
+function toggleExpandSection(sectionId: string) {
+  if (expandedSectionId.value === sectionId) {
+    expandedSectionId.value = null
+  } else {
+    expandedSectionId.value = sectionId
+    const sec = sections.value.find((s: any) => s.id === sectionId)
+    if (sec && !sec._posts) loadSectionPosts(sec)
+  }
+}
+
+async function loadSectionPosts(sec: any) {
+  try {
+    const slug = route.params.slug as string
+    const { data } = await api.get(`/series/${slug}/sections/${sec.id}/posts`, { cache: false })
+    sec._posts = data.posts ?? []
+  } catch {
+    sec._posts = []
+  }
+}
+
+function getUnassignedPosts(sec: any) {
+  const assignedIds = new Set((sec._posts ?? []).map((p: any) => p.id))
+  return approvedPosts.value.filter((p: any) => !assignedIds.has(p.id))
+}
+
+async function addPostToSection(sec: any, postId: string) {
+  if (!postId) return
+  openAddPostDropdown.value = null
+  try {
+    const slug = route.params.slug as string
+    await api.post(`/series/${slug}/sections/${sec.id}/posts`, { postId }, { cache: false })
+    const post = approvedPosts.value.find((p: any) => p.id === postId)
+    if (post) {
+      if (!sec._posts) sec._posts = []
+      sec._posts.push({ id: post.id, title: post.title })
+    }
+  } catch (err: any) {
+    alert(err?.response?.data?.message || 'Failed to add post to section')
+  }
+}
+
+async function removePostFromSection(sec: any, postId: string) {
+  try {
+    const slug = route.params.slug as string
+    await api.delete(`/series/${slug}/sections/${sec.id}/posts/${postId}`, { cache: false })
+    sec._posts = (sec._posts ?? []).filter((p: any) => p.id !== postId)
+  } catch (e: any) {
+    alert(e?.response?.data?.message || 'Failed to remove post from section')
+  }
+}
+
+// Section drag reorder
+function onSecDragStart(idx: number) {
+  secDragFromIdx = idx
+  secDragFromIdxReactive.value = idx
+}
+
+function onSecDragOver(idx: number) {
+  if (secDragFromIdx === -1 || secDragFromIdx === idx) return
+  const arr = sections.value
+  const moved = arr.splice(secDragFromIdx, 1)[0]
+  arr.splice(idx, 0, moved)
+  secDragFromIdx = idx
+  secDragFromIdxReactive.value = idx
+}
+
+async function onSecDrop() {
+  secDragFromIdx = -1
+  secDragFromIdxReactive.value = -1
+  try {
+    const slug = route.params.slug as string
+    await api.patch(`/series/${slug}/sections/reorder`, { ids: sections.value.map((s: any) => s.id) }, { cache: false })
+  } catch { /* non-critical */ }
+}
+
+// Section post drag reorder
+function onSecPostDragStart(sectionId: string, idx: number) {
+  secPostDrag.fromSec = sectionId
+  secPostDrag.fromIdx = idx
+}
+
+function onSecPostDragOver(sectionId: string, idx: number) {
+  if (secPostDrag.fromSec !== sectionId || secPostDrag.fromIdx === idx) return
+  const sec = sections.value.find((s: any) => s.id === sectionId)
+  if (!sec?._posts) return
+  const moved = sec._posts.splice(secPostDrag.fromIdx, 1)[0]
+  sec._posts.splice(idx, 0, moved)
+  secPostDrag.fromIdx = idx
+}
+
+async function onSecPostDrop(sectionId: string) {
+  const sec = sections.value.find((s: any) => s.id === sectionId)
+  secPostDrag.fromSec = null
+  secPostDrag.fromIdx = -1
+  if (!sec?._posts) return
+  try {
+    const slug = route.params.slug as string
+    await api.patch(
+      `/series/${slug}/sections/${sectionId}/posts/reorder`,
+      { ids: sec._posts.map((p: any) => p.id) },
+      { cache: false },
+    )
+  } catch { /* non-critical */ }
+}
+
 // Danger
 const showDeleteConfirm = ref(false)
 const deleting = ref(false)
+
+// Remove-member confirm modal
+const showRemoveConfirm = ref(false)
+const memberToRemove = ref<any>(null)
+const removingMember = ref(false)
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 const availableTabs = computed(() => {
@@ -867,15 +1336,24 @@ async function loadAll() {
   loadingPage.value = true
   loadError.value = ''
   try {
-    const [seriesRes, membersRes, approvedRes] = await Promise.all([
+    const [seriesRes, membersRes, approvedRes, sectionsRes] = await Promise.all([
       api.get(`/series/${slug}`, { cache: false }),
       api.get(`/series/${slug}/members`, { cache: false }),
       api.get(`/series/${slug}/posts`, { params: { limit: '200' }, cache: false }),
+      api.get(`/series/${slug}/sections`, { cache: false }).catch(() => ({ data: [] })),
     ])
 
     series.value = seriesRes.data
     memberRole.value = seriesRes.data.memberRole
+
+    // Only OWNER and CONTRIBUTOR may access settings
+    if (!memberRole.value || memberRole.value === 'EDITOR' || memberRole.value === 'VIEWER') {
+      await router.replace(`/series/${slug}`)
+      return
+    }
+
     members.value = membersRes.data
+    sections.value = (Array.isArray(sectionsRes.data) ? sectionsRes.data : []).map((s: any) => ({ ...s, _posts: null }))
 
     // Approved posts come from the public endpoint
     approvedPosts.value = approvedRes.data
@@ -914,11 +1392,10 @@ async function loadAll() {
     theme.coverBgColor = s.coverBgColor ?? ''
     theme.bgColor = s.bgColor ?? ''
     theme.coverFocalY = s.coverFocalY ?? 50
+    theme.socialFocalY = s.socialFocalY ?? 50
     theme.fontFamily = s.fontFamily ?? ''
     theme.layoutMode = s.layoutMode ?? 'feature'
     theme.postListMode = s.postListMode ?? 'list'
-    theme.showTopPosts = s.showTopPosts ?? true
-    theme.showTagline = s.showTagline ?? true
   } catch (e: any) {
     loadError.value = e?.response?.data?.message || 'Unable to load series settings'
   } finally {
@@ -953,6 +1430,82 @@ function showSaved() {
   setTimeout(() => { saved.value = false }, 2500)
 }
 
+type ColorKey = 'accentColor' | 'coverBgColor' | 'bgColor'
+
+// ─── Color editor ─────────────────────────────────────────────────────────────
+const editingColorKey = ref<ColorKey | null>(null)
+const editingColorLabel = ref('')
+const editingHex = ref('#000000')
+const editingHsl = ref({ h: 0, s: 0, l: 0 })
+
+function hexToHsl(hex: string): { h: number; s: number; l: number } {
+  const n = parseInt(hex.slice(1), 16)
+  const r = (n >> 16) / 255
+  const g = ((n >> 8) & 0xff) / 255
+  const b = (n & 0xff) / 255
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  let h = 0, s = 0
+  const l = (max + min) / 2
+  if (max !== min) {
+    const d = max - min
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6
+    else if (max === g) h = ((b - r) / d + 2) / 6
+    else h = ((r - g) / d + 4) / 6
+  }
+  return { h: h * 360, s: s * 100, l: l * 100 }
+}
+
+function hslToHex(h: number, s: number, l: number): string {
+  s /= 100; l /= 100
+  const a = s * Math.min(l, 1 - l)
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12
+    return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))
+  }
+  return '#' + [f(0), f(8), f(4)].map((x) => Math.round(x * 255).toString(16).padStart(2, '0')).join('')
+}
+
+function openColorEditor(key: ColorKey, label: string) {
+  editingColorKey.value = key
+  editingColorLabel.value = label
+  const hex = theme[key] || '#6366f1'
+  editingHex.value = /^#[0-9a-fA-F]{6}$/.test(hex) ? hex : '#6366f1'
+  editingHsl.value = hexToHsl(editingHex.value)
+}
+
+function closeColorEditor() {
+  editingColorKey.value = null
+}
+
+function syncHexFromHsl() {
+  const { h, s, l } = editingHsl.value
+  const hex = hslToHex(h, s, l)
+  editingHex.value = hex
+  if (editingColorKey.value) theme[editingColorKey.value] = hex
+}
+
+function onEditorHexInput(e: Event) {
+  const raw = (e.target as HTMLInputElement).value.trim().replace(/^#/, '')
+  if (/^[0-9A-Fa-f]{6}$/.test(raw)) {
+    const hex = '#' + raw
+    editingHex.value = hex
+    editingHsl.value = hexToHsl(hex)
+    if (editingColorKey.value) theme[editingColorKey.value] = hex
+  }
+}
+
+function onNativeColor(key: ColorKey, e: Event) {
+  const val = (e.target as HTMLInputElement).value
+  if (val) theme[key] = val
+}
+
+function onColorHex(key: ColorKey, e: Event) {
+  const val = (e.target as HTMLInputElement).value.trim()
+  if (/^#[0-9a-fA-F]{6}$/.test(val)) theme[key] = val
+}
+
 async function saveBasics() {
   saving.value = true; saveError.value = ''
   try {
@@ -980,7 +1533,7 @@ async function saveBranding() {
   saving.value = true; saveError.value = ''
   try {
     const slug = route.params.slug as string
-    const updated = await seriesStore.updateSeries(slug, { coverFocalY: theme.coverFocalY })
+    const updated = await seriesStore.updateSeries(slug, { coverFocalY: theme.coverFocalY, socialFocalY: theme.socialFocalY })
     series.value = { ...series.value!, ...updated }
     showSaved()
   } catch (e: any) {
@@ -999,11 +1552,10 @@ async function saveTheme() {
       coverBgColor: theme.coverBgColor || null,
       bgColor: theme.bgColor || null,
       coverFocalY: theme.coverFocalY,
+      socialFocalY: theme.socialFocalY,
       fontFamily: theme.fontFamily || null,
       layoutMode: theme.layoutMode,
       postListMode: theme.postListMode,
-      showTopPosts: theme.showTopPosts,
-      showTagline: theme.showTagline,
     })
     series.value = { ...series.value!, ...updated }
     showSaved()
@@ -1154,14 +1706,25 @@ async function changeRole(m: any, newRole: string) {
   }
 }
 
-async function removeMember(m: any) {
-  if (!confirm(`Remove ${m.user.displayName || m.user.username} from this series?`)) return
+function removeMember(m: any) {
+  memberToRemove.value = m
+  showRemoveConfirm.value = true
+}
+
+async function doRemoveMember() {
+  const m = memberToRemove.value
+  if (!m) return
+  removingMember.value = true
   try {
     const slug = route.params.slug as string
     await api.delete(`/series/${slug}/members/${m.user.id}`, { cache: false })
-    members.value = members.value.filter((x) => x.user.id !== m.user.id)
+    members.value = members.value.filter((x: any) => x.user.id !== m.user.id)
+    showRemoveConfirm.value = false
+    memberToRemove.value = null
   } catch (e: any) {
     alert(e?.response?.data?.message || 'Failed to remove member')
+  } finally {
+    removingMember.value = false
   }
 }
 
@@ -1425,6 +1988,16 @@ async function doDelete() {
   border-color: var(--s-accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--s-accent) 15%, transparent);
 }
+
+select.field-input {
+  padding-right: 2.25rem;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  cursor: pointer;
+}
 .field-textarea { resize: vertical; min-height: 100px; }
 .field-hint { font-size: 0.8125rem; color: var(--text-tertiary); }
 .field-error { font-size: 0.8125rem; color: #ef4444; }
@@ -1455,43 +2028,134 @@ async function doDelete() {
 .vis-desc { display: block; font-size: 0.8125rem; color: var(--text-secondary); }
 
 /* ─── Colors ─── */
-.color-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+/* ─── Colors ─── */
+.color-input-wrap { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+
 .color-picker {
-  width: 2.5rem;
-  height: 2.5rem;
-  padding: 0;
+  width: 2.5rem; height: 2.5rem; padding: 0;
   border: 2px solid var(--border-medium);
   border-radius: var(--radius-sm, 6px);
-  background: var(--bg-card);
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: border-color 0.15s;
+  background: var(--bg-card); cursor: pointer;
 }
-.color-picker:hover { border-color: var(--s-accent); }
-.color-picker::-webkit-color-swatch-wrapper { padding: 3px; }
-.color-picker::-webkit-color-swatch { border: none; border-radius: 3px; }
-.color-val {
-  font-size: 0.875rem;
+.color-picker::-webkit-color-swatch-wrapper { padding: 2px; }
+.color-picker::-webkit-color-swatch { border: none; border-radius: 4px; }
+
+/* Hidden on mobile, shown on desktop */
+.color-picker-desktop { display: none; }
+@media (min-width: 769px) { .color-picker-desktop { display: block; } }
+
+/* Colored adjust button — mobile-first large tap target, shrinks on desktop */
+.color-adjust-btn {
+  min-width: 2.75rem; min-height: 2.75rem;
+  padding: 0 0.5rem;
+  border: 2px solid var(--border-medium);
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer; font-size: 0.8125rem; font-weight: 600;
+  color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.2);
+  display: inline-flex; align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+.color-adjust-btn:focus-visible { outline: 2px solid var(--s-accent); outline-offset: 2px; }
+@media (min-width: 769px) {
+  .color-adjust-btn { min-width: 2.5rem; min-height: 2.5rem; padding: 0; }
+  .color-adjust-btn-label { display: none; }
+}
+.color-adjust-btn-label { display: inline; }
+
+/* Hex text input */
+.color-hex {
+  width: 6.5rem; min-height: 2.75rem;
+  padding: 0.5rem; font-size: 0.875rem;
   font-family: ui-monospace, monospace;
-  color: var(--text-secondary);
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-light);
+  border: 2px solid var(--border-medium);
   border-radius: var(--radius-sm, 6px);
-  padding: 0.375rem 0.625rem;
-  letter-spacing: 0.03em;
+  background: var(--bg-card); color: var(--text-primary);
+  -webkit-tap-highlight-color: transparent;
 }
+@media (min-width: 769px) { .color-hex { min-height: auto; padding: 0.375rem 0.5rem; } }
+.color-hex:focus { outline: none; border-color: var(--s-accent); }
+
 .btn-clear-color {
-  font-size: 0.8125rem;
-  color: var(--text-tertiary);
-  background: none;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-sm, 6px);
-  cursor: pointer;
-  font-family: inherit;
-  padding: 0.375rem 0.625rem;
+  font-size: 0.8125rem; color: var(--text-tertiary);
+  background: none; border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm, 6px); cursor: pointer;
+  font-family: inherit; padding: 0.375rem 0.625rem;
   transition: border-color 0.15s, color 0.15s;
 }
 .btn-clear-color:hover { border-color: var(--border-medium); color: var(--text-primary); }
+
+/* ─── Color editor modal ─── */
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+.modal-hint-text { font-size: 0.875rem; color: var(--text-secondary); margin: 0 0 1rem; }
+
+.color-editor-backdrop { align-items: flex-end; padding: 0; }
+@media (min-width: 480px) { .color-editor-backdrop { align-items: center; padding: 1rem; } }
+
+.color-editor-modal {
+  width: 100%; max-width: 360px; max-height: 90vh; overflow-y: auto;
+  margin: 0; background: #ffffff; color: #1a1a1a;
+  border: 2px solid #e0e0e0; border-radius: var(--radius-lg, 12px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2); padding: 1.5rem;
+}
+.color-editor-modal .modal-title { color: #1a1a1a; font-size: 1.1rem; font-weight: 700; margin: 0 0 0.25rem; }
+.color-editor-modal .modal-hint-text { color: #555; }
+.color-editor-modal .modal-actions { justify-content: flex-end; }
+.color-editor-modal .btn-primary {
+  background: var(--s-accent, #6366f1); color: #fff;
+  border: none; border-radius: var(--radius-md, 8px);
+  padding: 0.5rem 1.25rem; font-size: 0.9375rem; font-weight: 600;
+  font-family: inherit; cursor: pointer;
+}
+.color-editor-modal .btn-primary:hover { filter: brightness(1.08); }
+
+.color-editor-preview {
+  height: 4rem; border-radius: var(--radius-md, 8px);
+  border: 2px solid #ccc; margin-bottom: 1rem;
+}
+.color-editor-hex-wrap { margin-bottom: 1rem; }
+.color-editor-hex {
+  width: 100%; min-height: 2.75rem;
+  padding: 0.5rem 0.75rem; font-size: 1rem;
+  font-family: ui-monospace, monospace;
+  border: 2px solid #ccc; border-radius: var(--radius-sm, 6px);
+  background: #f5f5f5; color: #1a1a1a;
+  -webkit-tap-highlight-color: transparent;
+}
+.color-editor-hex:focus { outline: none; border-color: var(--s-accent, #6366f1); }
+.color-editor-hex::placeholder { color: #888; }
+
+.color-editor-sliders { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.25rem; }
+.color-editor-slider-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.color-editor-slider-label { flex: 0 0 4.5rem; font-size: 0.9375rem; font-weight: 500; color: #1a1a1a; }
+.color-editor-range {
+  flex: 1; min-width: 120px; min-height: 44px; height: 2.75rem;
+  margin: 0; -webkit-appearance: none; appearance: none; background: transparent;
+}
+.color-editor-range:focus-visible { outline: 2px solid var(--s-accent, #6366f1); outline-offset: 2px; }
+.color-editor-range::-webkit-slider-runnable-track { height: 0.5rem; border-radius: 999px; background: #e0e0e0; }
+.color-editor-range::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 1.5rem; height: 1.5rem; border-radius: 50%;
+  background: var(--s-accent, #6366f1); border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2); margin-top: -0.5rem; cursor: pointer;
+}
+.color-editor-range::-moz-range-track { height: 0.5rem; border-radius: 999px; background: #e0e0e0; }
+.color-editor-range::-moz-range-thumb {
+  width: 1.5rem; height: 1.5rem; border-radius: 50%;
+  background: var(--s-accent, #6366f1); border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2); cursor: pointer;
+}
+.color-editor-range-hue {
+  background: linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);
+  border-radius: 999px; height: 0.5rem; align-self: center;
+}
+.color-editor-range-hue::-webkit-slider-runnable-track { background: linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00); }
+.color-editor-range-hue::-moz-range-track { background: linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00); }
+.color-editor-value { flex: 0 0 3rem; font-size: 0.875rem; font-variant-numeric: tabular-nums; color: #555; }
 
 /* ─── Fonts ─── */
 .font-options { display: flex; flex-direction: column; gap: 0.5rem; }
@@ -1513,8 +2177,8 @@ async function doDelete() {
 .layout-opt.selected { border-color: var(--s-accent); background: color-mix(in srgb, var(--s-accent) 6%, var(--bg-card)); }
 .layout-icon { font-size: 1.5rem; color: var(--text-secondary); }
 .layout-opt.selected .layout-icon { color: var(--s-accent); }
-.layout-label { font-size: 0.9375rem; font-weight: 700; color: var(--text-primary); }
-.layout-desc { font-size: 0.75rem; color: var(--text-secondary); }
+.layout-label { font-size: 0.9375rem; font-weight: 700; color: var(--text-primary); display: block; }
+.layout-desc { font-size: 0.75rem; color: var(--text-secondary); display: block; }
 
 /* ─── Toggle group ─── */
 .toggle-group { display: flex; gap: 0.5rem; }
@@ -1661,6 +2325,8 @@ async function doDelete() {
   z-index: 1;
 }
 .cover-drag-remove:hover { background: rgba(0,0,0,0.85); }
+.cover-drag-remove--delete { right: 2.5rem; }
+.cover-drag-preview--social { height: 160px; }
 
 .branding-item-header { display: flex; flex-direction: column; gap: 0.25rem; }
 .branding-label { font-size: 0.9375rem; font-weight: 600; color: var(--text-primary); }
@@ -1926,6 +2592,127 @@ async function doDelete() {
 .btn-remove-member:hover { color: #ef4444; background: #fef2f2; }
 
 .empty-members { padding: 1.5rem; text-align: center; color: var(--text-tertiary); font-size: 0.9375rem; }
+
+/* ─── Sections Manager ─── */
+.sections-manager {
+  background: var(--bg-card); border: 1px solid var(--border-light);
+  border-radius: var(--radius-md, 8px); padding: 1.25rem; margin-bottom: 1.75rem;
+}
+
+.sections-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 0.25rem;
+}
+
+.new-section-form {
+  display: flex; flex-direction: column; gap: 0.75rem;
+  padding: 1rem; background: var(--bg-secondary);
+  border-radius: var(--radius-sm, 6px); margin-bottom: 1rem;
+}
+
+.section-layout-row {
+  display: flex; flex-wrap: wrap; gap: 0.5rem;
+}
+
+.section-layout-btn {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.3rem 0.7rem; border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--border-light); background: var(--bg-card);
+  color: var(--text-secondary); font-size: 0.8125rem; font-family: inherit;
+  cursor: pointer; transition: all 0.15s;
+}
+.section-layout-btn.active,
+.section-layout-btn:hover {
+  border-color: var(--s-accent); color: var(--s-accent);
+  background: color-mix(in srgb, var(--s-accent) 8%, transparent);
+}
+
+.new-section-actions { display: flex; gap: 0.5rem; }
+
+.sections-list { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.section-card {
+  border: 1px solid var(--border-light); border-radius: var(--radius-sm, 6px);
+  background: var(--bg-secondary); position: relative;
+  transition: box-shadow 0.15s;
+}
+.section-card.dragging { opacity: 0.5; }
+.section-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+
+.section-card-header {
+  display: flex; align-items: center; gap: 0.5rem;
+  flex-wrap: wrap; padding: 0.75rem 1rem; cursor: pointer; user-select: none;
+}
+
+.section-card-actions {
+  display: flex; align-items: center; gap: 0.375rem; flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+  .section-card-actions {
+    width: 100%; justify-content: flex-end;
+    border-top: 1px solid var(--border-light);
+    padding-top: 0.4rem; margin-top: 0.125rem;
+  }
+  .sec-layout-label { display: none; }
+}
+
+.section-drag-icon {
+  color: var(--text-tertiary); cursor: grab; font-size: 0.875rem; flex-shrink: 0;
+}
+
+.section-name-text {
+  flex: 1; font-size: 0.9375rem; font-weight: 600; color: var(--text-primary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.section-name-edit {
+  flex: 1; font-size: 0.9375rem; font-weight: 600; font-family: inherit;
+  padding: 0.2rem 0.4rem; border-radius: 4px;
+  border: 1px solid var(--s-accent); background: var(--bg-card);
+  color: var(--text-primary); outline: none;
+}
+
+.section-icon-btn {
+  width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; background: none; border: none; cursor: pointer;
+  color: var(--text-tertiary); font-size: 0.75rem; flex-shrink: 0;
+  transition: color 0.15s, background 0.15s;
+}
+.section-icon-btn:hover { color: var(--s-accent); background: color-mix(in srgb, var(--s-accent) 10%, transparent); }
+
+.add-post-dropdown-wrap { display: block; width: 100%; }
+.add-post-trigger { width: 100%; justify-content: flex-start; font-size: 0.875rem; padding: 0.4rem 0.75rem; }
+.add-post-trigger .s-dropdown-chevron { margin-left: auto; }
+.add-post-panel { max-height: 220px; overflow-y: auto; }
+.add-post-empty { padding: 0.5rem 1rem; font-size: 0.875rem; color: var(--text-secondary); margin: 0; }
+
+.section-chevron {
+  color: var(--text-tertiary); font-size: 0.75rem; flex-shrink: 0; margin-right: auto;
+}
+
+.section-card-body {
+  border-top: 1px solid var(--border-light);
+  padding: 0.75rem 1rem; background: var(--bg-card);
+}
+
+.section-posts-list { display: flex; flex-direction: column; gap: 0.375rem; margin-bottom: 0.75rem; }
+
+.section-post-item {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.5rem 0.75rem; border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--border-light); background: var(--bg-secondary);
+  cursor: grab; transition: box-shadow 0.15s;
+}
+.section-post-item.dragging { opacity: 0.5; }
+.section-post-item:hover { box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+
+.section-post-title {
+  flex: 1; font-size: 0.875rem; color: var(--text-primary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.add-post-row { margin-top: 0.5rem; }
 
 /* ─── Posts ─── */
 .pending-section {

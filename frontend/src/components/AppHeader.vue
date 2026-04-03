@@ -1,6 +1,9 @@
 <template>
   <header class="header" :class="{ 'header--hidden': !headerVisible }">
-    <router-link :to="auth.isLoggedIn ? '/feed' : '/'" class="logo" :aria-label="auth.isLoggedIn ? 'WriteSpace feed' : 'WriteSpace home'">WriteSpace</router-link>
+    <router-link :to="auth.isLoggedIn ? '/feed' : '/'" class="logo" :aria-label="auth.isLoggedIn ? 'WriteSpace feed' : 'WriteSpace home'">
+      <span class="logo-full">WriteSpace</span>
+      <span class="logo-short" aria-hidden="true">WS</span>
+    </router-link>
 
     <div class="search-wrap">
       <form class="search-form" @submit.prevent="onSearch">
@@ -21,7 +24,7 @@
         <router-link to="/feed" class="nav-btn" v-tooltip.bottom="'Feed'" aria-label="Feed">
           <i class="pi pi-home"></i>
         </router-link>
-        <router-link to="/series" class="nav-btn" v-tooltip.bottom="'Series'" aria-label="Series">
+        <router-link to="/series" class="nav-btn nav-btn--series" v-tooltip.bottom="'Series'" aria-label="Series">
           <i class="pi pi-book"></i>
         </router-link>
         <div class="notif-wrap" ref="notifWrapRef">
@@ -158,7 +161,7 @@
         <router-link to="/feed" class="nav-btn" v-tooltip.bottom="'Feed'" aria-label="Feed">
           <i class="pi pi-home"></i>
         </router-link>
-        <router-link to="/series" class="nav-btn" v-tooltip.bottom="'Series'" aria-label="Series">
+        <router-link to="/series" class="nav-btn nav-btn--series" v-tooltip.bottom="'Series'" aria-label="Series">
           <i class="pi pi-book"></i>
         </router-link>
         <router-link to="/login" class="nav-btn" v-tooltip.bottom="'Log in'" aria-label="Log in">
@@ -406,6 +409,7 @@ onUnmounted(() => {
   opacity: 0.8;
   text-decoration: none;
 }
+.logo-short { display: none; }
 
 .search-wrap {
   flex: 1 1 auto;
@@ -642,8 +646,10 @@ onUnmounted(() => {
 @media (max-width: 768px) {
   .header { padding: 0.75rem 1rem; }
   .search-wrap { order: 3; width: 100%; max-width: none; margin-top: 0.75rem; flex: 1 1 100%; }
-  .nav { flex-wrap: wrap; }
+  .nav { flex-wrap: nowrap; }
   .nav-btn, .avatar-btn { width: 40px; height: 40px; font-size: 1.125rem; }
+  .logo-full { display: none; }
+  .logo-short { display: inline; }
   .notif-dropdown {
     position: fixed;
     left: 0.75rem;

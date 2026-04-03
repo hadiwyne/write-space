@@ -12,6 +12,8 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { mapPost } from '../utils/response.utils';
 import { CreateSeriesDto } from './dto/create-series.dto';
 import { UpdateSeriesDto } from './dto/update-series.dto';
+import { CreateSectionDto } from './dto/create-section.dto';
+import { UpdateSectionDto, ReorderDto } from './dto/update-section.dto';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
 const sharp = require('sharp') as typeof import('sharp');
@@ -65,13 +67,12 @@ const SERIES_PUBLIC_SELECT = {
   bgColor: true,
   bgImageMimeType: true,
   coverFocalY: true,
+  socialFocalY: true,
   fontFamily: true,
   layoutMode: true,
   postListMode: true,
-  showTopPosts: true,
   navLinks: true,
   pinnedPostIds: true,
-  showTagline: true,
   visibility: true,
   createdAt: true,
   updatedAt: true,
@@ -303,11 +304,10 @@ export class SeriesService {
         ...(dto.accentColor !== undefined && { accentColor: dto.accentColor }),
         ...(dto.bgColor !== undefined && { bgColor: dto.bgColor }),
         ...(dto.coverFocalY !== undefined && { coverFocalY: dto.coverFocalY }),
+        ...(dto.socialFocalY !== undefined && { socialFocalY: dto.socialFocalY }),
         ...(dto.fontFamily !== undefined && { fontFamily: dto.fontFamily }),
         ...(dto.layoutMode !== undefined && { layoutMode: dto.layoutMode }),
         ...(dto.postListMode !== undefined && { postListMode: dto.postListMode }),
-        ...(dto.showTopPosts !== undefined && { showTopPosts: dto.showTopPosts }),
-        ...(dto.showTagline !== undefined && { showTagline: dto.showTagline }),
         ...(dto.navLinks !== undefined && { navLinks: dto.navLinks === null ? Prisma.JsonNull : dto.navLinks }),
         ...(dto.pinnedPostIds !== undefined && { pinnedPostIds: dto.pinnedPostIds }),
       },
@@ -490,6 +490,12 @@ export class SeriesService {
       });
     }
 
+    // Update the invitee's SERIES_INVITE notification so it persists as accepted
+    await this.prisma.notification.updateMany({
+      where: { userId, type: 'SERIES_INVITE', inviteToken: token },
+      data: { type: 'SERIES_INVITE_ACCEPTED', readAt: new Date() },
+    });
+
     await this.prisma.seriesInviteToken.delete({ where: { token } });
 
     await this.notifications.create({
@@ -511,6 +517,12 @@ export class SeriesService {
     if (invite.targetUserId && invite.targetUserId !== userId) {
       throw new ForbiddenException('This invite is not for you');
     }
+
+    // Update the invitee's SERIES_INVITE notification so it persists as rejected
+    await this.prisma.notification.updateMany({
+      where: { userId, type: 'SERIES_INVITE', inviteToken: token },
+      data: { type: 'SERIES_INVITE_REJECTED', readAt: new Date() },
+    });
 
     await this.prisma.seriesInviteToken.delete({ where: { token } });
 
@@ -1003,6 +1015,195 @@ export class SeriesService {
       .map((sp) => ({ id: sp.post.id, title: sp.post.title, views: sp.post.viewCount }));
 
     return { totalViews, totalPosts, followerCount, topPosts };
+  }
+
+  // ─── Sections ────────────────────────────────────────────────────────────────
+
+  private readonly SECTION_SELECT = {
+    id: true,
+    name: true,
+    slug: true,
+    layoutMode: true,
+    order: true,
+    posts: {
+      orderBy: { order: 'asc' as const },
+      select: { postId: true, order: true },
+    },
+  } as const;
+
+  async getSections(slug: string, viewerUserId: string | null) {
+    const s = await this.getSeries(slug);
+    if (s.visibility === 'PRIVATE') {
+      if (!viewerUserId) throw new ForbiddenException('This series is private');
+      const member = await this.prisma.seriesMember.findUnique({
+        where: { seriesId_userId: { seriesId: s.id, userId: viewerUserId } },
+      });
+      if (!member) throw new ForbiddenException('This series is private');
+    }
+    return this.prisma.seriesSection.findMany({
+      where: { seriesId: s.id },
+      orderBy: { order: 'asc' },
+      select: this.SECTION_SELECT,
+    });
+  }
+
+  async createSection(slug: string, userId: string, dto: CreateSectionDto) {
+    const s = await this.getSeries(slug);
+    await this.assertMember(s.id, userId, 'CONTRIBUTOR');
+
+    const base = slugify(dto.name) || 'section';
+    let sectionSlug = base;
+    let attempt = 0;
+    while (
+      await this.prisma.seriesSection.findUnique({
+        where: { seriesId_slug: { seriesId: s.id, slug: sectionSlug } },
+      })
+    ) {
+      sectionSlug = `${base}-${++attempt}`;
+    }
+
+    const agg = await this.prisma.seriesSection.aggregate({
+      where: { seriesId: s.id },
+      _max: { order: true },
+    });
+    const order = (agg._max.order ?? -1) + 1;
+
+    return this.prisma.seriesSection.create({
+      data: { seriesId: s.id, name: dto.name, slug: sectionSlug, layoutMode: dto.layoutMode ?? 'list', order },
+      select: this.SECTION_SELECT,
+    });
+  }
+
+  async updateSection(slug: string, sectionId: string, userId: string, dto: UpdateSectionDto) {
+    const s = await this.getSeries(slug);
+    await this.assertMember(s.id, userId, 'CONTRIBUTOR');
+
+    const section = await this.prisma.seriesSection.findUnique({ where: { id: sectionId } });
+    if (!section || section.seriesId !== s.id) throw new NotFoundException('Section not found');
+
+    let sectionSlug = section.slug;
+    if (dto.name !== undefined && dto.name !== section.name) {
+      const base = slugify(dto.name) || 'section';
+      sectionSlug = base;
+      let attempt = 0;
+      while (
+        await this.prisma.seriesSection.findFirst({
+          where: { seriesId: s.id, slug: sectionSlug, id: { not: sectionId } },
+        })
+      ) {
+        sectionSlug = `${base}-${++attempt}`;
+      }
+    }
+
+    return this.prisma.seriesSection.update({
+      where: { id: sectionId },
+      data: {
+        ...(dto.name !== undefined && { name: dto.name, slug: sectionSlug }),
+        ...(dto.layoutMode !== undefined && { layoutMode: dto.layoutMode }),
+      },
+      select: this.SECTION_SELECT,
+    });
+  }
+
+  async deleteSection(slug: string, sectionId: string, userId: string) {
+    const s = await this.getSeries(slug);
+    await this.assertMember(s.id, userId, 'CONTRIBUTOR');
+
+    const section = await this.prisma.seriesSection.findUnique({ where: { id: sectionId } });
+    if (!section || section.seriesId !== s.id) throw new NotFoundException('Section not found');
+
+    await this.prisma.seriesSection.delete({ where: { id: sectionId } });
+    return { deleted: true };
+  }
+
+  async reorderSections(slug: string, userId: string, dto: ReorderDto) {
+    const s = await this.getSeries(slug);
+    await this.assertMember(s.id, userId, 'CONTRIBUTOR');
+
+    await Promise.all(
+      dto.ids.map((id, idx) =>
+        this.prisma.seriesSection.updateMany({ where: { id, seriesId: s.id }, data: { order: idx } }),
+      ),
+    );
+    return { reordered: true };
+  }
+
+  async getSectionPosts(slug: string, sectionId: string, viewerUserId: string | null) {
+    const s = await this.getSeries(slug);
+    if (s.visibility === 'PRIVATE') {
+      if (!viewerUserId) throw new ForbiddenException('This series is private');
+      const member = await this.prisma.seriesMember.findUnique({
+        where: { seriesId_userId: { seriesId: s.id, userId: viewerUserId } },
+      });
+      if (!member) throw new ForbiddenException('This series is private');
+    }
+
+    const section = await this.prisma.seriesSection.findUnique({ where: { id: sectionId } });
+    if (!section || section.seriesId !== s.id) throw new NotFoundException('Section not found');
+
+    const sectionPosts = await this.prisma.seriesSectionPost.findMany({
+      where: { sectionId },
+      orderBy: { order: 'asc' },
+      include: { post: { include: postInclude(viewerUserId) } },
+    });
+
+    return {
+      section: { id: section.id, name: section.name, slug: section.slug, layoutMode: section.layoutMode },
+      posts: sectionPosts.map((sp) => mapPost(sp.post as any, viewerUserId)),
+    };
+  }
+
+  async addPostToSection(slug: string, sectionId: string, userId: string, postId: string) {
+    const s = await this.getSeries(slug);
+    await this.assertMember(s.id, userId, 'CONTRIBUTOR');
+
+    const section = await this.prisma.seriesSection.findUnique({ where: { id: sectionId } });
+    if (!section || section.seriesId !== s.id) throw new NotFoundException('Section not found');
+
+    const seriesPost = await this.prisma.seriesPost.findUnique({
+      where: { seriesId_postId: { seriesId: s.id, postId } },
+    });
+    if (!seriesPost || seriesPost.status !== 'APPROVED')
+      throw new BadRequestException('Post must be an approved series post');
+
+    const existing = await this.prisma.seriesSectionPost.findUnique({
+      where: { sectionId_postId: { sectionId, postId } },
+    });
+    if (existing) throw new ConflictException('Post is already in this section');
+
+    const agg = await this.prisma.seriesSectionPost.aggregate({
+      where: { sectionId },
+      _max: { order: true },
+    });
+    const order = (agg._max.order ?? -1) + 1;
+
+    return this.prisma.seriesSectionPost.create({ data: { sectionId, postId, order } });
+  }
+
+  async removePostFromSection(slug: string, sectionId: string, userId: string, postId: string) {
+    const s = await this.getSeries(slug);
+    await this.assertMember(s.id, userId, 'CONTRIBUTOR');
+
+    const section = await this.prisma.seriesSection.findUnique({ where: { id: sectionId } });
+    if (!section || section.seriesId !== s.id) throw new NotFoundException('Section not found');
+
+    await this.prisma.seriesSectionPost.deleteMany({ where: { sectionId, postId } });
+    return { removed: true };
+  }
+
+  async reorderSectionPosts(slug: string, sectionId: string, userId: string, dto: ReorderDto) {
+    const s = await this.getSeries(slug);
+    await this.assertMember(s.id, userId, 'CONTRIBUTOR');
+
+    const section = await this.prisma.seriesSection.findUnique({ where: { id: sectionId } });
+    if (!section || section.seriesId !== s.id) throw new NotFoundException('Section not found');
+
+    await Promise.all(
+      dto.ids.map((postId, idx) =>
+        this.prisma.seriesSectionPost.updateMany({ where: { sectionId, postId }, data: { order: idx } }),
+      ),
+    );
+    return { reordered: true };
   }
 
   // ─── Map helper ─────────────────────────────────────────────────────────────

@@ -14,7 +14,7 @@
     </Transition>
 
     <!-- Hero / Cover Header -->
-    <header class="series-hero" :style="heroStyle">
+    <header class="series-hero" :class="{ 'series-hero--has-cover': series.coverMimeType }" :style="heroStyle">
       <div class="series-hero-inner">
         <!-- Wordmark or Logo + Name -->
         <div class="series-identity">
@@ -35,7 +35,7 @@
           </div>
         </div>
 
-        <p v-if="series.showTagline && series.tagline" class="series-tagline">
+        <p v-if="series.tagline" class="series-tagline">
           {{ series.tagline }}
         </p>
 
@@ -44,7 +44,7 @@
           <router-link
             v-for="m in seriesMembers"
             :key="m.user.id"
-            :to="'/@' + m.user.username"
+            :to="'/u/' + m.user.username"
             class="series-member-chip"
             :title="m.role === 'OWNER' ? 'Owner' : m.role === 'EDITOR' ? 'Editor' : 'Contributor'"
           >
@@ -87,7 +87,7 @@
           </button>
 
           <router-link
-            v-if="isMember"
+            v-if="memberRole === 'OWNER' || memberRole === 'CONTRIBUTOR'"
             :to="'/series/' + series.slug + '/settings'"
             class="btn-settings"
           >
@@ -119,16 +119,160 @@
       />
     </header>
 
+    <!-- Section navigation tabs -->
+    <nav v-if="sections.length" class="section-tabs-bar" :style="{ '--s-accent': series.accentColor || 'var(--accent-primary)' }">
+      <button
+        type="button"
+        class="section-tab"
+        :class="{ active: activeSectionId === null }"
+        @click="selectSection(null)"
+      >All Posts</button>
+      <button
+        v-for="sec in sections"
+        :key="sec.id"
+        type="button"
+        class="section-tab"
+        :class="{ active: activeSectionId === sec.id }"
+        @click="selectSection(sec.id)"
+      >{{ sec.name }}</button>
+    </nav>
+
     <div class="series-content">
-      <!-- Description / About -->
-      <div v-if="series.description" class="series-about">
+      <!-- Description / About (only in All view) -->
+      <div v-if="series.description && activeSectionId === null" class="series-about">
         <p class="series-description">{{ series.description }}</p>
       </div>
 
       <!-- Loading -->
-      <div v-if="loadingPosts" class="posts-loading">
+      <div v-if="loadingPosts || loadingSection" class="posts-loading">
         <i class="pi pi-spin pi-spinner"></i>
       </div>
+
+      <!-- ── Active Section view ── -->
+      <template v-else-if="activeSectionId !== null">
+        <div v-if="!sectionPosts.length" class="posts-loading" style="padding:3rem;color:var(--text-tertiary);">
+          No posts in this section yet.
+        </div>
+        <template v-else>
+          <!-- Section: feature layout -->
+          <template v-if="activeSection?.layoutMode === 'feature'">
+            <div class="layout-feature">
+              <router-link :to="'/posts/' + sectionPosts[0].id" class="feature-hero-card">
+                <div class="feature-hero-img-wrap" v-if="getThumb(sectionPosts[0])">
+                  <img :src="avatarSrc(getThumb(sectionPosts[0]) || '')" alt="" class="feature-hero-img" loading="lazy" />
+                </div>
+                <div class="feature-hero-body">
+                  <h2 class="feature-hero-title">{{ sectionPosts[0].title }}</h2>
+                  <p v-if="getExcerpt(sectionPosts[0])" class="feature-hero-excerpt">{{ getExcerpt(sectionPosts[0]) }}</p>
+                  <div class="feature-hero-meta">
+                    <span class="meta-author">{{ sectionPosts[0].author?.displayName || sectionPosts[0].author?.username }}</span>
+                    <span class="meta-dot">·</span>
+                    <span class="meta-date">{{ formatDate(sectionPosts[0].publishedAt || sectionPosts[0].createdAt) }}</span>
+                  </div>
+                </div>
+              </router-link>
+              <div class="feature-rest post-list">
+                <router-link v-for="p in sectionPosts.slice(1)" :key="p.id" :to="'/posts/' + p.id" class="post-item">
+                  <div class="post-item-body">
+                    <h3 class="post-item-title">{{ p.title }}</h3>
+                    <p class="post-item-excerpt">{{ getExcerpt(p, 100) }}</p>
+                    <div class="post-item-meta">
+                      <span>{{ p.author?.displayName || p.author?.username }}</span>
+                      <span class="meta-dot">·</span>
+                      <span>{{ formatDate(p.publishedAt || p.createdAt) }}</span>
+                    </div>
+                  </div>
+                </router-link>
+              </div>
+            </div>
+          </template>
+
+          <!-- Section: magazine layout -->
+          <template v-else-if="activeSection?.layoutMode === 'magazine'">
+            <div class="layout-magazine">
+              <router-link :to="'/posts/' + sectionPosts[0].id" class="magazine-main">
+                <div class="magazine-main-img" v-if="getThumb(sectionPosts[0])">
+                  <img :src="avatarSrc(getThumb(sectionPosts[0]) || '')" alt="" loading="lazy" />
+                </div>
+                <div class="magazine-main-overlay">
+                  <h2 class="magazine-main-title">{{ sectionPosts[0].title }}</h2>
+                  <div class="magazine-main-meta">
+                    {{ sectionPosts[0].author?.displayName || sectionPosts[0].author?.username }}
+                    · {{ formatDate(sectionPosts[0].publishedAt || sectionPosts[0].createdAt) }}
+                  </div>
+                </div>
+              </router-link>
+              <div class="magazine-side">
+                <router-link v-for="p in sectionPosts.slice(1, 5)" :key="p.id" :to="'/posts/' + p.id" class="magazine-side-item">
+                  <div class="magazine-side-img" v-if="getThumb(p)">
+                    <img :src="avatarSrc(getThumb(p) || '')" alt="" loading="lazy" />
+                  </div>
+                  <div class="magazine-side-body">
+                    <h3 class="magazine-side-title">{{ p.title }}</h3>
+                    <span class="magazine-side-meta">{{ formatDate(p.publishedAt || p.createdAt) }}</span>
+                  </div>
+                </router-link>
+              </div>
+            </div>
+            <div class="post-grid magazine-extra" v-if="sectionPosts.length > 5">
+              <router-link v-for="p in sectionPosts.slice(5)" :key="p.id" :to="'/posts/' + p.id" class="post-item">
+                <div v-if="getThumb(p)" class="post-item-thumb"><img :src="avatarSrc(getThumb(p) || '')" alt="" loading="lazy" /></div>
+                <div class="post-item-body">
+                  <h3 class="post-item-title">{{ p.title }}</h3>
+                  <div class="post-item-meta">{{ formatDate(p.publishedAt || p.createdAt) }}</div>
+                </div>
+              </router-link>
+            </div>
+          </template>
+
+          <!-- Section: newspaper layout -->
+          <template v-else-if="activeSection?.layoutMode === 'newspaper'">
+            <div class="layout-newspaper">
+              <router-link v-for="p in sectionPosts" :key="p.id" :to="'/posts/' + p.id" class="newspaper-item">
+                <div v-if="getThumb(p)" class="newspaper-thumb"><img :src="avatarSrc(getThumb(p) || '')" alt="" loading="lazy" /></div>
+                <div class="newspaper-body">
+                  <h3 class="newspaper-title">{{ p.title }}</h3>
+                  <div class="newspaper-meta">{{ p.author?.displayName || p.author?.username }} · {{ formatDate(p.publishedAt || p.createdAt) }}</div>
+                </div>
+              </router-link>
+            </div>
+          </template>
+
+          <!-- Section: grid layout -->
+          <template v-else-if="activeSection?.layoutMode === 'grid'">
+            <div class="post-grid">
+              <router-link v-for="p in sectionPosts" :key="p.id" :to="'/posts/' + p.id" class="post-item">
+                <div v-if="getThumb(p)" class="post-item-thumb"><img :src="avatarSrc(getThumb(p) || '')" alt="" loading="lazy" /></div>
+                <div class="post-item-body">
+                  <h3 class="post-item-title">{{ p.title }}</h3>
+                  <div class="post-item-meta">
+                    <span>{{ p.author?.displayName || p.author?.username }}</span>
+                    <span class="meta-dot">·</span>
+                    <span>{{ formatDate(p.publishedAt || p.createdAt) }}</span>
+                  </div>
+                </div>
+              </router-link>
+            </div>
+          </template>
+
+          <!-- Section: list layout (default) -->
+          <template v-else>
+            <div class="post-list">
+              <router-link v-for="p in sectionPosts" :key="p.id" :to="'/posts/' + p.id" class="post-item">
+                <div class="post-item-body">
+                  <h3 class="post-item-title">{{ p.title }}</h3>
+                  <p class="post-item-excerpt">{{ getExcerpt(p, 120) }}</p>
+                  <div class="post-item-meta">
+                    <span>{{ p.author?.displayName || p.author?.username }}</span>
+                    <span class="meta-dot">·</span>
+                    <span>{{ formatDate(p.publishedAt || p.createdAt) }}</span>
+                  </div>
+                </div>
+              </router-link>
+            </div>
+          </template>
+        </template>
+      </template>
 
       <!-- Feature Layout: 1 pinned hero + list -->
       <template v-else-if="series.layoutMode === 'feature'">
@@ -248,27 +392,8 @@
         </div>
       </template>
 
-      <!-- Top Posts Sidebar Section -->
-      <section v-if="series.showTopPosts && topPosts.length" class="top-posts">
-        <h2 class="section-title">Top Posts</h2>
-        <div class="top-posts-list">
-          <router-link
-            v-for="(p, i) in topPosts"
-            :key="p.id"
-            :to="'/posts/' + p.id"
-            class="top-post-item"
-          >
-            <span class="top-post-rank" :style="accentColor ? { color: accentColor } : {}">{{ i + 1 }}</span>
-            <div class="top-post-body">
-              <span class="top-post-title">{{ p.title }}</span>
-              <span class="top-post-meta">{{ p._count?.likes || 0 }} likes · {{ p._count?.comments || 0 }} comments</span>
-            </div>
-          </router-link>
-        </div>
-      </section>
-
-      <!-- Load More -->
-      <div v-if="hasMore && !loadingPosts" class="load-more-wrap">
+      <!-- Load More (All view only) -->
+      <div v-if="activeSectionId === null && hasMore && !loadingPosts" class="load-more-wrap">
         <button type="button" class="btn-load-more" :style="accentBg" @click="loadMore">
           Load more posts
         </button>
@@ -298,7 +423,7 @@
             </div>
             <ul v-else class="followers-list">
               <li v-for="u in followersList" :key="u.id" class="followers-item">
-                <router-link :to="'/@' + u.username" class="followers-item-link" @click="closeFollowersModal">
+                <router-link :to="'/u/' + u.username" class="followers-item-link" @click="closeFollowersModal">
                   <img
                     v-if="u.avatarUrl"
                     :src="avatarSrc(u.avatarUrl)"
@@ -351,11 +476,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch, watchEffect } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, watchEffect, reactive } from 'vue'
 import { useRoute } from 'vue-router'
 import { api, avatarSrc, apiBaseUrl } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import type { SeriesInfo } from '@/stores/series'
+import { applyOgMeta, clearOgMeta } from '@/utils/ogMeta'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -373,6 +499,7 @@ const error = ref('')
 const isFollowing = ref(false)
 const followerCount = ref(0)
 const isMember = ref(false)
+const memberRole = ref<string | null>(null)
 const followLoading = ref(false)
 const hasMore = ref(false)
 const offset = ref(0)
@@ -424,13 +551,45 @@ async function fetchFollowers(reset = false) {
 }
 function loadMoreFollowers() { fetchFollowers(false) }
 
-const heroPosts = computed(() => posts.value)
-const topPosts = computed(() =>
-  [...posts.value]
-    .sort((a, b) => ((b._count?.likes ?? 0) * 2 + (b._count?.comments ?? 0)) - ((a._count?.likes ?? 0) * 2 + (a._count?.comments ?? 0)))
-    .slice(0, 5)
+// Sections
+const sections = ref<any[]>([])
+const activeSectionId = ref<string | null>(null)
+const loadingSection = ref(false)
+const sectionPostsCache = reactive<Record<string, any[]>>({})
+const sectionPosts = computed(() =>
+  activeSectionId.value ? (sectionPostsCache[activeSectionId.value] ?? []) : []
+)
+const activeSection = computed(() =>
+  activeSectionId.value ? sections.value.find((s) => s.id === activeSectionId.value) ?? null : null
 )
 
+async function loadSections() {
+  const slug = route.params.slug as string
+  try {
+    const { data } = await api.get<any[]>(`/series/${slug}/sections`, { cache: false })
+    sections.value = Array.isArray(data) ? data : []
+  } catch {
+    sections.value = []
+  }
+}
+
+async function selectSection(sectionId: string | null) {
+  activeSectionId.value = sectionId
+  if (!sectionId) return
+  if (sectionPostsCache[sectionId]) return
+  loadingSection.value = true
+  try {
+    const slug = route.params.slug as string
+    const { data } = await api.get(`/series/${slug}/sections/${sectionId}/posts`, { cache: false })
+    sectionPostsCache[sectionId] = data.posts ?? []
+  } catch {
+    sectionPostsCache[sectionId] = []
+  } finally {
+    loadingSection.value = false
+  }
+}
+
+const heroPosts = computed(() => posts.value)
 const accentColor = computed(() => series.value?.accentColor || null)
 const accentBg = computed(() =>
   accentColor.value ? { background: accentColor.value, color: '#fff' } : {}
@@ -483,6 +642,7 @@ onUnmounted(() => {
   document.body.style.backgroundPosition = ''
   document.body.style.backgroundAttachment = ''
   document.body.style.backgroundRepeat = ''
+  clearOgMeta()
 })
 
 const heroStyle = computed(() => {
@@ -536,7 +696,23 @@ async function loadSeries() {
     isFollowing.value = data.isFollowing ?? false
     followerCount.value = data.followerCount ?? 0
     isMember.value = data.isMember ?? false
-    await loadPosts(true)
+    memberRole.value = data.memberRole ?? null
+
+    // Set OG / social preview meta tags
+    const base = apiBaseUrl.replace(/\/$/, '')
+    const ogImage = data.socialPreviewMimeType
+      ? `${base}/series/${encodeURIComponent(slug)}/images/social-preview`
+      : data.coverMimeType
+        ? `${base}/series/${encodeURIComponent(slug)}/images/cover`
+        : ''
+    applyOgMeta({
+      title: data.name,
+      description: data.description || data.tagline || '',
+      image: ogImage,
+      url: window.location.href,
+      type: 'website',
+    })
+    await Promise.all([loadPosts(true), loadSections()])
   } catch (e: any) {
     error.value = e?.response?.data?.message || 'Series not found'
   } finally {
@@ -656,6 +832,22 @@ watch(() => route.params.slug, loadSeries)
   height: 100%;
   object-fit: cover;
   z-index: 0;
+}
+
+/* Gradient scrim so text stays legible over dark cover photos */
+.series-hero--has-cover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.60) 0%,
+    rgba(0, 0, 0, 0.28) 50%,
+    rgba(0, 0, 0, 0.04) 100%
+  );
+  pointer-events: none;
+  border-radius: inherit;
 }
 
 .series-identity { margin-bottom: 0.75rem; }
@@ -871,6 +1063,34 @@ watch(() => route.params.slug, loadSeries)
 .series-nav-link:hover { border-color: var(--series-accent); }
 
 /* ─── Content ─── */
+/* ─── Section Tabs ─── */
+.section-tabs-bar {
+  display: flex; align-items: center; gap: 0;
+  margin: 0.5rem 1.5rem 0;
+  border-radius: 1.25rem;
+  padding: 0 0.5rem;
+  overflow-x: auto; scrollbar-width: none;
+  background: color-mix(in srgb, var(--bg-card) 75%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.section-tabs-bar::-webkit-scrollbar { display: none; }
+
+.section-tab {
+  padding: 0.5rem 1.1rem;
+  font-size: 0.9375rem; font-weight: 600; font-family: inherit;
+  color: var(--text-tertiary); background: none; border: none;
+  border-radius: 2rem;
+  margin: 0.375rem 0.125rem;
+  cursor: pointer; white-space: nowrap;
+  transition: color 0.15s, background 0.15s;
+}
+.section-tab:hover { color: var(--text-primary); background: color-mix(in srgb, var(--s-accent) 8%, transparent); }
+.section-tab.active {
+  color: var(--s-accent);
+  background: color-mix(in srgb, var(--s-accent) 14%, transparent);
+}
+
 .series-content {
   max-width: 1100px;
   margin: 0 auto;
@@ -879,8 +1099,12 @@ watch(() => route.params.slug, loadSeries)
 
 .series-about {
   margin-bottom: 2rem;
-  padding-bottom: 2rem;
-  border-bottom: 1px solid var(--border-light);
+  padding: 1.25rem 1.5rem;
+  background: color-mix(in srgb, var(--bg-card) 75%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md, 8px);
 }
 
 .series-description {
@@ -1169,59 +1393,6 @@ watch(() => route.params.slug, loadSeries)
 
 .newspaper-meta { font-size: 0.6875rem; color: var(--text-tertiary); }
 
-/* ─── Top Posts ─── */
-.top-posts {
-  margin-top: 3rem;
-  padding-top: 2rem;
-  border-top: 1px solid var(--border-light);
-}
-
-.section-title {
-  font-size: 1.125rem;
-  font-weight: 800;
-  color: var(--text-primary);
-  margin: 0 0 1rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.top-posts-list { display: flex; flex-direction: column; gap: 0.625rem; }
-
-.top-post-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-  text-decoration: none;
-  padding: 0.75rem 1rem;
-  background: var(--bg-card);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md, 8px);
-  transition: border-color 0.15s;
-}
-
-.top-post-item:hover { border-color: var(--series-accent); }
-
-.top-post-rank {
-  font-size: 1.25rem;
-  font-weight: 900;
-  color: var(--series-accent);
-  flex-shrink: 0;
-  width: 1.5rem;
-  text-align: center;
-}
-
-.top-post-body { display: flex; flex-direction: column; gap: 0.125rem; }
-
-.top-post-title {
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.top-post-item:hover .top-post-title { color: var(--series-accent); }
-
-.top-post-meta { font-size: 0.8125rem; color: var(--text-tertiary); }
-
 /* ─── Load More ─── */
 .load-more-wrap { text-align: center; margin-top: 2rem; }
 
@@ -1299,6 +1470,7 @@ watch(() => route.params.slug, loadSeries)
 
 @media (max-width: 640px) {
   .series-hero { padding: 2rem 1rem 1.5rem; margin: 0.75rem 0.75rem 0; border-radius: 1rem; }
+  .section-tabs-bar { margin: 0.375rem 0.75rem 0; border-radius: 1rem; padding: 0 1rem; }
   .series-content { padding: 1.5rem 1rem; }
   .series-name { font-size: 1.75rem; }
   .layout-newspaper { grid-template-columns: repeat(2, 1fr); }

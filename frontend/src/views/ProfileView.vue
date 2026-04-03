@@ -86,7 +86,6 @@
             :class="{ active: profileTab === 'series' }"
             @click="switchToSeries"
           >
-            <i class="pi pi-book" style="font-size:0.875rem;margin-right:0.25rem"></i>
             Series
           </button>
         </div>
@@ -972,8 +971,9 @@ onUnmounted(() => {
   .stat-item { padding: 0.375rem 0.75rem; }
   .stat-value { font-size: 1.125rem; }
   .stat-label { font-size: 0.75rem; }
-  .profile-tabs { flex-wrap: wrap; }
-  .profile-tab { flex: 1 1 auto; min-width: 0; }
+  .profile-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .profile-tabs::-webkit-scrollbar { display: none; }
+  .profile-tab { flex-shrink: 0; white-space: nowrap; }
   .modal { max-width: min(400px, calc(100vw - 2rem)); max-height: 85vh; }
   .modal-backdrop { padding: 0.75rem; }
 }

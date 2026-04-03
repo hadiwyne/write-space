@@ -32,10 +32,10 @@
               </button>
             </div>
             <span v-else-if="n._inviteResult === 'accepted'" class="invite-result invite-result--accepted">
-              <i class="pi pi-check-circle"></i> You joined as a contributor
+              <i class="pi pi-check-circle"></i> You accepted the invitation to join {{ n.series?.name ?? 'the series' }}
             </span>
             <span v-else-if="n._inviteResult" class="invite-result invite-result--rejected">
-              <i class="pi pi-times-circle"></i> Invitation declined
+              <i class="pi pi-times-circle"></i> You declined the invitation to join {{ n.series?.name ?? 'the series' }}
             </span>
           </div>
         </div>
@@ -138,9 +138,13 @@ function notificationText(n: NotifRecord) {
     case 'FOLLOW':             return `${actor} started following you`
     case 'FOLLOW_REQUEST':     return `${actor} requested to follow you`
     case 'MENTION':            return n.commentId ? `${actor} mentioned you in a comment` : `${actor} mentioned you in a post`
-    case 'SERIES_INVITE':           return `${actor} invited you as a contributor for ${series}`
-    case 'SERIES_INVITE_ACCEPTED':  return `${actor} accepted your invite to join ${series} as contributor`
-    case 'SERIES_INVITE_REJECTED':  return `${actor} declined your invite to join ${series} as contributor`
+    case 'SERIES_INVITE':           return `${actor} invited you to join ${series}`
+    case 'SERIES_INVITE_ACCEPTED':  return n.inviteToken
+      ? `You accepted the invitation to join ${series}`
+      : `${actor} accepted your invite to join ${series}`
+    case 'SERIES_INVITE_REJECTED':  return n.inviteToken
+      ? `You declined the invitation to join ${series}`
+      : `${actor} declined your invite to join ${series}`
     case 'SERIES_POST_SUBMITTED':   return `${actor} submitted "${(n as any).post?.title ?? 'a post'}" to ${series} for review`
     case 'SERIES_POST_APPROVED':    return `Your post "${(n as any).post?.title ?? 'Post'}" was approved in ${series}`
     case 'SERIES_POST_REJECTED':    return `Your post "${(n as any).post?.title ?? 'Post'}" was not approved for ${series}`

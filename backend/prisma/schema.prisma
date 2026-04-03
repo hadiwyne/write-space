@@ -109,7 +109,8 @@ model Post {
   cardStyle     Json?     @map("card_style")
   contentFontFamily String? @map("content_font_family")
 
-  seriesPosts   SeriesPost[]
+  seriesPosts        SeriesPost[]
+  seriesSectionPosts SeriesSectionPost[]
 
   lastEditedById String?  @map("last_edited_by_id")
   lastEditedBy  User?     @relation("PostLastEditedBy", fields: [lastEditedById], references: [id], onDelete: SetNull)
@@ -423,19 +424,19 @@ model Series {
   bgColor       String?          @map("bg_color")
   bgImageData   Bytes?           @map("bg_image_data")
   bgImageMimeType String?        @map("bg_image_mime_type")
-  coverFocalY   Float?           @map("cover_focal_y")
+  coverFocalY      Float?        @map("cover_focal_y")
+  socialFocalY     Float?        @map("social_focal_y")
   fontFamily    String?          @map("font_family")
   layoutMode    String           @default("feature") @map("layout_mode")
   postListMode  String           @default("list") @map("post_list_mode")
-  showTopPosts  Boolean          @default(true) @map("show_top_posts")
   navLinks      Json?            @map("nav_links")
   pinnedPostIds String[]         @map("pinned_post_ids")
-  showTagline   Boolean          @default(true) @map("show_tagline")
 
   visibility    SeriesVisibility @default(PUBLIC)
   
   members       SeriesMember[]
   posts         SeriesPost[]
+  sections      SeriesSection[]
   follows       SeriesFollow[]
   inviteTokens  SeriesInviteToken[]
   notifications Notification[]
@@ -508,4 +509,36 @@ model SeriesInviteToken {
 
   @@index([seriesId])
   @@map("series_invite_tokens")
+}
+
+model SeriesSection {
+  id         String              @id @default(uuid())
+  seriesId   String              @map("series_id")
+  series     Series              @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  name       String
+  slug       String
+  layoutMode String              @default("list") @map("layout_mode")
+  order      Int                 @default(0)
+  posts      SeriesSectionPost[]
+  createdAt  DateTime            @default(now()) @map("created_at")
+  updatedAt  DateTime            @updatedAt @map("updated_at")
+
+  @@unique([seriesId, slug])
+  @@index([seriesId])
+  @@map("series_sections")
+}
+
+model SeriesSectionPost {
+  id        String        @id @default(uuid())
+  sectionId String        @map("section_id")
+  section   SeriesSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  postId    String        @map("post_id")
+  post      Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  order     Int           @default(0)
+  addedAt   DateTime      @default(now()) @map("added_at")
+
+  @@unique([sectionId, postId])
+  @@index([sectionId])
+  @@index([postId])
+  @@map("series_section_posts")
 }
