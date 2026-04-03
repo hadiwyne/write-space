@@ -56,7 +56,7 @@ const baseWhere = {
  */
 function seriesVisibilityAnd(userId: string | null): any[] {
   if (!userId) {
-    // Unauthenticated: exclude posts in any non-PUBLIC approved series
+    // Unauthenticated: only PUBLIC series + PUBLIC post visibility
     return [
       {
         NOT: {
@@ -68,9 +68,21 @@ function seriesVisibilityAnd(userId: string | null): any[] {
           },
         },
       },
+      // Block FOLLOWERS_ONLY post visibility (unauthenticated can't follow series)
+      {
+        NOT: {
+          seriesPosts: {
+            some: {
+              status: 'APPROVED',
+              postVisibility: 'FOLLOWERS_ONLY',
+            } as any,
+          },
+        },
+      },
     ];
   }
   return [
+    // Block PRIVATE series the viewer is not a member of
     {
       NOT: {
         seriesPosts: {
@@ -84,6 +96,7 @@ function seriesVisibilityAnd(userId: string | null): any[] {
         },
       },
     },
+    // Block FOLLOWERS_ONLY series the viewer can't access
     {
       NOT: {
         seriesPosts: {
@@ -98,6 +111,22 @@ function seriesVisibilityAnd(userId: string | null): any[] {
               ],
             },
           },
+        },
+      },
+    },
+    // Block FOLLOWERS_ONLY post visibility when viewer doesn't follow the series and isn't a member
+    {
+      NOT: {
+        seriesPosts: {
+          some: {
+            status: 'APPROVED',
+            postVisibility: 'FOLLOWERS_ONLY',
+            series: {
+              visibility: { not: 'PRIVATE' }, // PRIVATE series access is handled above
+              follows: { none: { userId } },
+              members: { none: { userId } },
+            },
+          } as any,
         },
       },
     },
@@ -116,6 +145,13 @@ function seriesVisibilitySql(userId: string | null): string {
     ? `EXISTS (SELECT 1 FROM follows f WHERE f.following_id = ser.owner_id AND f.follower_id = '${userId}')`
     : 'false';
   const isOwner = userId ? `ser.owner_id = '${userId}'` : 'false';
+  // Whether the viewer follows the series itself (for post-level FOLLOWERS_ONLY)
+  const seriesFollowCheck = userId
+    ? `EXISTS (SELECT 1 FROM series_follows sf WHERE sf.series_id = ser.id AND sf.user_id = '${userId}')`
+    : 'false';
+
+  // post_visibility gate: PUBLIC always passes; FOLLOWERS_ONLY requires series follow or membership
+  const postVisGate = `(sp_v.post_visibility = 'PUBLIC' OR (sp_v.post_visibility = 'FOLLOWERS_ONLY' AND (${seriesFollowCheck} OR ${memberCheck})))`;
 
   // Cast visibility to text to avoid PostgreSQL enum comparison errors
   return `
@@ -130,8 +166,8 @@ function seriesVisibilitySql(userId: string | null): string {
         JOIN series ser ON sp_v.series_id = ser.id
         WHERE sp_v.post_id = p.id AND sp_v.status = 'APPROVED'
         AND (
-          ser.visibility::text = 'PUBLIC'
-          OR (ser.visibility::text = 'FOLLOWERS_ONLY' AND (${isOwner} OR ${followCheck} OR ${memberCheck}))
+          (ser.visibility::text = 'PUBLIC' AND ${postVisGate})
+          OR (ser.visibility::text = 'FOLLOWERS_ONLY' AND (${isOwner} OR ${followCheck} OR ${memberCheck}) AND ${postVisGate})
           OR (ser.visibility::text = 'PRIVATE' AND ${memberCheck})
         )
       )

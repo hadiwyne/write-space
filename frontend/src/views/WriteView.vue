@@ -407,7 +407,7 @@
           </button>
           <Transition name="dropdown">
             <div v-if="seriesDropdownOpen" class="dropdown-panel" role="menu">
-              <button type="button" class="dropdown-option" role="menuitem" :class="{ active: selectedSeriesSlug === '' }" @click="selectedSeriesSlug = ''; seriesThumbnailUrl = ''; thumbnailPosition = 50; seriesDropdownOpen = false">
+              <button type="button" class="dropdown-option" role="menuitem" :class="{ active: selectedSeriesSlug === '' }" @click="selectedSeriesSlug = ''; seriesThumbnailUrl = ''; thumbnailPosition = 50; postVisibility = 'PUBLIC'; seriesDropdownOpen = false">
                 <i class="pi pi-times-circle" aria-hidden="true"></i> None
               </button>
               <button
@@ -425,9 +425,34 @@
             </div>
           </Transition>
         </div>
-        <p v-if="selectedSeriesSlug" class="series-visibility-note">
-          <i class="pi pi-info-circle"></i>
-          This post will inherit the series visibility settings.
+        <!-- Post visibility selector (hidden for PRIVATE series — all posts are members-only there) -->
+        <Transition name="fade">
+          <div v-if="selectedSeriesSlug && selectedSeriesVisibility !== 'PRIVATE'" class="series-post-visibility">
+            <label class="series-post-vis-label">
+              <i class="pi pi-eye"></i>
+              Post visibility
+            </label>
+            <div class="series-post-vis-options">
+              <label
+                v-for="opt in postVisibilityOptions"
+                :key="opt.value"
+                class="series-post-vis-opt"
+                :class="{ selected: postVisibility === opt.value }"
+              >
+                <input type="radio" :value="opt.value" v-model="postVisibility" class="series-post-vis-radio" />
+                <i :class="opt.icon"></i>
+                <div>
+                  <span class="series-post-vis-opt-label">{{ opt.label }}</span>
+                  <span class="series-post-vis-opt-desc">{{ opt.desc }}</span>
+                </div>
+              </label>
+            </div>
+          </div>
+        </Transition>
+
+        <p v-if="selectedSeriesSlug && selectedSeriesVisibility === 'PRIVATE'" class="series-visibility-note">
+          <i class="pi pi-lock"></i>
+          This series is members only — all posts are visible to members only.
         </p>
 
         <!-- Series Thumbnail -->
@@ -656,6 +681,17 @@ const postType = ref<'post' | 'poll'>('post')
 const seriesStore = useSeriesStore()
 const authStore = useAuthStore()
 const selectedSeriesSlug = ref<string>('')
+const postVisibility = ref<'PUBLIC' | 'FOLLOWERS_ONLY'>('PUBLIC')
+
+const selectedSeriesVisibility = computed(() => {
+  if (!selectedSeriesSlug.value) return null
+  return seriesStore.mySeries.find(s => s.slug === selectedSeriesSlug.value)?.visibility ?? null
+})
+
+const postVisibilityOptions = [
+  { value: 'PUBLIC', label: 'Public', desc: 'Visible to all viewers of this series', icon: 'pi pi-globe' },
+  { value: 'FOLLOWERS_ONLY', label: 'Followers only', desc: 'Only series followers can see this post', icon: 'pi pi-users' },
+]
 const seriesDropdownOpen = ref(false)
 const seriesThumbnailUrl = ref<string>('')
 const seriesThumbnailLoading = ref(false)
@@ -1271,7 +1307,7 @@ async function doPublish(anonymous: boolean) {
     // Add to series if selected
     if (selectedSeriesSlug.value) {
       try {
-        const addResult = await api.post(`/series/${selectedSeriesSlug.value}/posts/${data.id}`, {}, { cache: false })
+        const addResult = await api.post(`/series/${selectedSeriesSlug.value}/posts/${data.id}`, { postVisibility: postVisibility.value }, { cache: false })
         // Contributors' posts go to PENDING review — redirect to the series page
         if (addResult.data?.status === 'PENDING') {
           router.push({
@@ -2271,6 +2307,47 @@ function resetCardColor(target: 'backgroundColor' | 'borderColor' | { type: 'gra
   display: flex; align-items: center; gap: 0.375rem;
   font-size: 0.8125rem; color: var(--text-secondary); margin: 0;
 }
+
+/* ── Post Visibility ── */
+.series-post-visibility {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.series-post-vis-label {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.series-post-vis-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.series-post-vis-opt {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1.5px solid var(--border-light);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  font-size: 0.85rem;
+}
+.series-post-vis-opt:hover { background: var(--bg-tertiary); }
+.series-post-vis-opt.selected {
+  border-color: var(--accent, #6366f1);
+  background: color-mix(in srgb, var(--accent, #6366f1) 8%, transparent);
+}
+.series-post-vis-radio { display: none; }
+.series-post-vis-opt i { font-size: 1rem; color: var(--text-secondary); flex-shrink: 0; }
+.series-post-vis-opt.selected i { color: var(--accent, #6366f1); }
+.series-post-vis-opt-label { display: block; font-weight: 600; color: var(--text-primary); }
+.series-post-vis-opt-desc { display: block; font-size: 0.75rem; color: var(--text-muted); margin-top: 0.1rem; }
 .series-role-badge {
   margin-left: auto;
   font-size: 0.6875rem;

@@ -457,14 +457,15 @@ model SeriesMember {
 }
 
 model SeriesPost {
-  id        String   @id @default(uuid())
-  seriesId  String   @map("series_id")
-  series    Series   @relation(fields: [seriesId], references: [id], onDelete: Cascade)
-  postId    String   @map("post_id")
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  order     Int      @default(0)
-  status    String   @default("APPROVED") // PENDING | APPROVED | REJECTED
-  addedAt   DateTime @default(now()) @map("added_at")
+  id             String   @id @default(uuid())
+  seriesId       String   @map("series_id")
+  series         Series   @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  postId         String   @map("post_id")
+  post           Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  order          Int      @default(0)
+  status         String   @default("APPROVED") // PENDING | APPROVED | REJECTED
+  postVisibility String   @default("PUBLIC") @map("post_visibility") // PUBLIC | FOLLOWERS_ONLY
+  addedAt        DateTime @default(now()) @map("added_at")
 
   @@unique([seriesId, postId])
   @@index([seriesId])

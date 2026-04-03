@@ -49,7 +49,7 @@
           <textarea v-model="basics.description" class="field-textarea" rows="5"></textarea>
         </div>
         <div class="field">
-          <label class="field-label">Visibility</label>
+          <label class="field-label">Series visibility</label>
           <div class="vis-group">
             <label v-for="opt in visibilityOptions" :key="opt.value" class="vis-opt" :class="{ selected: basics.visibility === opt.value }">
               <input type="radio" :value="opt.value" v-model="basics.visibility" class="vis-radio" />
@@ -717,9 +717,9 @@ const isOwnerOrEditor = computed(() => memberRole.value === 'OWNER' || memberRol
 
 // ─── Options ─────────────────────────────────────────────────────────────────
 const visibilityOptions = [
-  { value: 'PUBLIC', label: 'Public', desc: 'Anyone can view', icon: 'pi pi-globe' },
-  { value: 'FOLLOWERS_ONLY', label: 'Followers only', desc: 'Only your followers', icon: 'pi pi-users' },
-  { value: 'PRIVATE', label: 'Private', desc: 'Members only', icon: 'pi pi-lock' },
+  { value: 'PUBLIC', label: 'Public', desc: 'Anyone can discover and view this series', icon: 'pi pi-globe' },
+  { value: 'FOLLOWERS_ONLY', label: 'Followers only', desc: 'Only followers of the series owner can see this series', icon: 'pi pi-users' },
+  { value: 'PRIVATE', label: 'Private (Members only)', desc: 'Only invited members can access this series', icon: 'pi pi-lock' },
 ]
 
 const fontOptions = [

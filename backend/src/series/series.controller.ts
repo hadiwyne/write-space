@@ -252,8 +252,9 @@ export class SeriesController {
     @Param('slug') slug: string,
     @Param('postId') postId: string,
     @CurrentUser() user: { id: string },
+    @Body('postVisibility') postVisibility?: string,
   ) {
-    return this.seriesService.addPost(slug, user.id, postId);
+    return this.seriesService.addPost(slug, user.id, postId, postVisibility ?? 'PUBLIC');
   }
 
   @Delete(':slug/posts/:postId')

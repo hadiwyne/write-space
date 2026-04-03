@@ -639,9 +639,31 @@ export class SeriesService {
   async getPosts(slug: string, viewerUserId: string | null, limit = 50, offset = 0) {
     const s = await this.getSeries(slug);
 
-    // Always return only APPROVED posts for the public series homepage
+    // For PRIVATE series, all approved posts are visible (viewer must be a member to reach this point).
+    // For PUBLIC/FOLLOWERS_ONLY series, additionally filter by post-level visibility:
+    //   - If viewer follows the series OR is a member → show all (PUBLIC + FOLLOWERS_ONLY)
+    //   - Otherwise → show only PUBLIC posts
+    let postVisibilityWhere: any = {};
+    if ((s as any).visibility !== 'PRIVATE') {
+      let canSeeFollowersOnlyPosts = false;
+      if (viewerUserId) {
+        const [follow, member] = await Promise.all([
+          this.prisma.seriesFollow.findUnique({
+            where: { seriesId_userId: { seriesId: s.id, userId: viewerUserId } },
+          }),
+          this.prisma.seriesMember.findUnique({
+            where: { seriesId_userId: { seriesId: s.id, userId: viewerUserId } },
+          }),
+        ]);
+        canSeeFollowersOnlyPosts = !!(follow || member);
+      }
+      if (!canSeeFollowersOnlyPosts) {
+        postVisibilityWhere = { postVisibility: 'PUBLIC' };
+      }
+    }
+
     const seriesPosts = await this.prisma.seriesPost.findMany({
-      where: { seriesId: s.id, status: 'APPROVED' },
+      where: { seriesId: s.id, status: 'APPROVED', ...postVisibilityWhere },
       orderBy: { order: 'asc' },
       take: limit,
       skip: offset,
@@ -652,6 +674,7 @@ export class SeriesService {
       ...mapPost(sp.post as any, viewerUserId),
       seriesOrder: sp.order,
       seriesStatus: sp.status,
+      postVisibility: (sp as any).postVisibility,
       series: { id: s.id, name: s.name, slug: s.slug, logoMimeType: s.logoMimeType, accentColor: s.accentColor },
     }));
   }
@@ -674,7 +697,7 @@ export class SeriesService {
     }));
   }
 
-  async addPost(slug: string, userId: string, postId: string) {
+  async addPost(slug: string, userId: string, postId: string, postVisibility = 'PUBLIC') {
     const s = await this.getSeries(slug);
     const member = await this.assertMember(s.id, userId);
 
@@ -697,9 +720,11 @@ export class SeriesService {
 
     // Contributors submit for approval; editors/owners approve immediately
     const status = member.role === 'CONTRIBUTOR' ? 'PENDING' : 'APPROVED';
+    // Post privacy has no meaning when series is PRIVATE — everything is members-only
+    const resolvedVisibility = (s as any).visibility === 'PRIVATE' ? 'PUBLIC' : postVisibility;
 
     const sp = await this.prisma.seriesPost.create({
-      data: { seriesId: s.id, postId, order, status },
+      data: { seriesId: s.id, postId, order, status, postVisibility: resolvedVisibility },
     });
 
     // Notify the series owner when a contributor submits a post for review
