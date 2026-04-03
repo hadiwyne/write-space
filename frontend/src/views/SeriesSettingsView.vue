@@ -327,6 +327,14 @@
       <!-- Invite by username -->
       <div v-if="isOwnerOrEditor" class="invite-section">
         <h3 class="subsection-title">Invite by Username</h3>
+        <!-- Role selector for username invite -->
+        <div v-if="invitableRoles.length > 1" class="field" style="margin-bottom:.5rem">
+          <label class="field-label">Invite as</label>
+          <select v-model="inviteRole" class="role-select">
+            <option v-for="r in invitableRoles" :key="r.value" :value="r.value">{{ r.label }}</option>
+          </select>
+        </div>
+
         <div class="invite-row">
           <div class="invite-search-wrap">
             <input
@@ -378,7 +386,14 @@
         <!-- Invite Link -->
         <div class="invite-link-section">
           <h3 class="subsection-title">Invite Link</h3>
-          <p class="field-hint">Anyone with this link can join as a contributor.</p>
+          <p class="field-hint">Generate a single-use link that grants the chosen role when accepted.</p>
+          <!-- Role selector for invite link -->
+          <div v-if="invitableRoles.length > 1" class="field" style="margin-bottom:.5rem">
+            <label class="field-label">Link role</label>
+            <select v-model="inviteLinkRole" class="role-select" @change="inviteLink = ''">
+              <option v-for="r in invitableRoles" :key="r.value" :value="r.value">{{ r.label }}</option>
+            </select>
+          </div>
           <div v-if="inviteLink" class="invite-link-row">
             <input type="text" :value="inviteLink" class="field-input" readonly @click="selectInviteLink($event)" />
             <button type="button" class="btn-secondary" @click="copyInviteLink">
@@ -411,13 +426,14 @@
           <span class="member-role" :class="m.role.toLowerCase()">{{ m.role }}</span>
           <div v-if="canManageMember(m)" class="member-actions">
             <select
-              v-if="m.role !== 'OWNER'"
+              v-if="m.role !== 'OWNER' && memberRole === 'OWNER'"
               class="role-select"
               :value="m.role"
               @change="changeRoleFromEvent(m, $event)"
             >
-              <option value="EDITOR">Editor</option>
               <option value="CONTRIBUTOR">Contributor</option>
+              <option value="EDITOR">Editor</option>
+              <option v-if="basics.visibility === 'PRIVATE'" value="VIEWER">Viewer</option>
             </select>
             <button
               v-if="m.role !== 'OWNER'"
@@ -466,6 +482,40 @@
               </button>
               <button type="button" class="btn-reject" :disabled="p._saving" @click="rejectPost(p)">
                 <i class="pi pi-times"></i> Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pending Deletion Requests (owner only) -->
+      <div v-if="memberRole === 'OWNER' && pendingDeletions.length" class="pending-section" style="margin-top:1.5rem">
+        <h3 class="subsection-title pending-title">
+          <i class="pi pi-trash"></i> Deletion Requests ({{ pendingDeletions.length }})
+        </h3>
+        <p class="field-hint" style="margin-bottom:.75rem">A contributor requested to delete these posts. Review and approve or restore them.</p>
+        <div class="pending-list">
+          <div v-for="p in pendingDeletions" :key="p.id" class="pending-item">
+            <div class="pending-thumb-wrap">
+              <img
+                v-if="p.imageUrls?.[0]"
+                :src="avatarSrc(p.imageUrls[0])"
+                alt=""
+                class="pending-thumb"
+                :style="{ objectPosition: `center ${p.cardStyle?.thumbnailPosition ?? 50}%` }"
+              />
+              <div v-else class="pending-thumb-placeholder"><i class="pi pi-book"></i></div>
+            </div>
+            <div class="pending-info">
+              <a :href="`/posts/${p.id}`" target="_blank" class="pending-post-title">{{ p.title }}</a>
+              <span class="pending-author">by {{ p.author?.displayName || p.author?.username }}</span>
+            </div>
+            <div class="pending-actions">
+              <button type="button" class="btn-reject" :disabled="p._saving" @click="approveDeletion(p)" title="Approve deletion">
+                <i class="pi pi-trash"></i> Delete
+              </button>
+              <button type="button" class="btn-approve" :disabled="p._saving" @click="rejectDeletion(p)" title="Restore post">
+                <i class="pi pi-undo"></i> Restore
               </button>
             </div>
           </div>
@@ -588,7 +638,7 @@ const members = ref<any[]>([])
 const allPosts = ref<any[]>([])
 const loadingPage = ref(true)
 const loadError = ref('')
-const memberRole = ref<'OWNER' | 'EDITOR' | 'CONTRIBUTOR' | null>(null)
+const memberRole = ref<'OWNER' | 'CONTRIBUTOR' | 'EDITOR' | 'VIEWER' | null>(null)
 const activeTab = ref('basics')
 const saving = ref(false)
 const saved = ref(false)
@@ -642,12 +692,33 @@ const bgImageInput = ref<HTMLInputElement | null>(null)
 
 // Members tab
 const inviteUsername = ref('')
+const inviteRole = ref('EDITOR')
 const inviting = ref(false)
 const inviteMsg = ref('')
 const inviteIsError = ref(false)
 const inviteLink = ref('')
+const inviteLinkRole = ref('EDITOR')
 const generatingLink = ref(false)
 const copiedLink = ref(false)
+
+// Pending deletions (owner only)
+const pendingDeletions = ref<any[]>([])
+
+// Computed: what roles can the current member invite as?
+const invitableRoles = computed(() => {
+  const isPrivate = basics.visibility === 'PRIVATE'
+  const roles: { value: string; label: string }[] = []
+  if (memberRole.value === 'OWNER' || memberRole.value === 'CONTRIBUTOR') {
+    roles.push({ value: 'EDITOR', label: 'Editor' })
+  }
+  if (memberRole.value === 'OWNER') {
+    roles.push({ value: 'CONTRIBUTOR', label: 'Contributor' })
+  }
+  if (isPrivate && (memberRole.value === 'OWNER' || memberRole.value === 'CONTRIBUTOR')) {
+    roles.push({ value: 'VIEWER', label: 'Viewer' })
+  }
+  return roles
+})
 
 // User search for invite
 const inviteSearchResults = ref<{ id: string; username: string; displayName: string; avatarUrl: string | null }[]>([])
@@ -705,15 +776,19 @@ const availableTabs = computed(() => {
     { id: 'branding', label: 'Branding', icon: 'pi pi-palette' },
     { id: 'theme', label: 'Theme', icon: 'pi pi-sliders-h' },
     { id: 'members', label: 'Members', icon: 'pi pi-users' },
-    { id: 'posts', label: pendingPosts.value.length ? `Posts (${pendingPosts.value.length})` : 'Posts', icon: 'pi pi-book' },
-  ]
+    ]
+  const totalPending = pendingPosts.value.length + (memberRole.value === 'OWNER' ? pendingDeletions.value.length : 0)
+  tabs.push({ id: 'posts', label: totalPending ? `Posts (${totalPending})` : 'Posts', icon: 'pi pi-book' })
   if (memberRole.value === 'OWNER') {
     tabs.push({ id: 'danger', label: 'Danger Zone', icon: 'pi pi-exclamation-triangle' })
   }
   return tabs
 })
 
-const isOwnerOrEditor = computed(() => memberRole.value === 'OWNER' || memberRole.value === 'EDITOR')
+// CONTRIBUTOR+ can approve/reject posts
+const isOwnerOrContributor = computed(() => memberRole.value === 'OWNER' || memberRole.value === 'CONTRIBUTOR')
+// Alias for template compatibility
+const isOwnerOrEditor = computed(() => isOwnerOrContributor.value)
 
 // ─── Options ─────────────────────────────────────────────────────────────────
 const visibilityOptions = [
@@ -756,8 +831,8 @@ async function loadAll() {
     // Approved posts come from the public endpoint
     approvedPosts.value = approvedRes.data
 
-    // Pending posts come from the dedicated review endpoint (owners/editors only)
-    if (seriesRes.data.memberRole === 'OWNER' || seriesRes.data.memberRole === 'EDITOR') {
+    // Pending posts (for owner / contributor to approve)
+    if (seriesRes.data.memberRole === 'OWNER' || seriesRes.data.memberRole === 'CONTRIBUTOR') {
       try {
         const pendingRes = await api.get(`/series/${slug}/posts/pending`, { cache: false })
         allPosts.value = [...approvedRes.data, ...(Array.isArray(pendingRes.data) ? pendingRes.data : [])]
@@ -766,6 +841,16 @@ async function loadAll() {
       }
     } else {
       allPosts.value = approvedRes.data
+    }
+
+    // Pending deletion requests (owner only)
+    if (seriesRes.data.memberRole === 'OWNER') {
+      try {
+        const delRes = await api.get(`/series/${slug}/posts/pending-deletions`, { cache: false })
+        pendingDeletions.value = Array.isArray(delRes.data) ? delRes.data : []
+      } catch {
+        pendingDeletions.value = []
+      }
     }
 
     // Populate form state
@@ -952,8 +1037,9 @@ async function inviteUser() {
   try {
     const slug = route.params.slug as string
     const username = inviteUsername.value.trim().replace(/^@/, '')
-    await api.post(`/series/${slug}/members/invite`, { username }, { cache: false })
-    inviteMsg.value = `Invite sent to @${username}`
+    await api.post(`/series/${slug}/members/invite`, { username, role: inviteRole.value }, { cache: false })
+    const roleLabel = inviteRole.value.charAt(0) + inviteRole.value.slice(1).toLowerCase()
+    inviteMsg.value = `Invite sent to @${username} as ${roleLabel}`
     inviteUsername.value = ''
     inviteSearchResults.value = []
     showInviteDropdown.value = false
@@ -967,9 +1053,10 @@ async function inviteUser() {
 
 async function generateInviteLink() {
   generatingLink.value = true
+  inviteLink.value = ''
   try {
     const slug = route.params.slug as string
-    const { data } = await api.get(`/series/${slug}/invite-link`, { cache: false })
+    const { data } = await api.get(`/series/${slug}/invite-link?role=${inviteLinkRole.value}`, { cache: false })
     const base = window.location.origin
     inviteLink.value = `${base}/series/join/${data.token}`
   } catch (e: any) {
@@ -987,8 +1074,9 @@ async function copyInviteLink() {
 }
 
 function canManageMember(m: any): boolean {
-  if (memberRole.value === 'OWNER') return true
-  if (memberRole.value === 'EDITOR' && m.role === 'CONTRIBUTOR') return true
+  if (memberRole.value === 'OWNER') return m.role !== 'OWNER'
+  // CONTRIBUTOR can manage EDITORs and VIEWERs
+  if (memberRole.value === 'CONTRIBUTOR') return m.role === 'EDITOR' || m.role === 'VIEWER'
   return false
 }
 
@@ -1045,6 +1133,37 @@ async function rejectPost(p: any) {
     allPosts.value = allPosts.value.filter((x) => x.id !== p.id)
   } catch (e: any) {
     alert(e?.response?.data?.message || 'Failed to reject post')
+    p._saving = false
+  }
+}
+
+async function approveDeletion(p: any) {
+  if (p._saving) return
+  p._saving = true
+  try {
+    const slug = route.params.slug as string
+    await api.patch(`/series/${slug}/posts/${p.id}/approve-deletion`, {}, { cache: false })
+    pendingDeletions.value = pendingDeletions.value.filter((x) => x.id !== p.id)
+    approvedPosts.value = approvedPosts.value.filter((x) => x.id !== p.id)
+    allPosts.value = allPosts.value.filter((x) => x.id !== p.id)
+  } catch (e: any) {
+    alert(e?.response?.data?.message || 'Failed to approve deletion')
+    p._saving = false
+  }
+}
+
+async function rejectDeletion(p: any) {
+  if (p._saving) return
+  p._saving = true
+  try {
+    const slug = route.params.slug as string
+    await api.patch(`/series/${slug}/posts/${p.id}/reject-deletion`, {}, { cache: false })
+    // Restore post back to approved list
+    approvedPosts.value = [...approvedPosts.value, { ...p, _saving: false }]
+    allPosts.value = [...allPosts.value, { ...p, _saving: false }]
+    pendingDeletions.value = pendingDeletions.value.filter((x) => x.id !== p.id)
+  } catch (e: any) {
+    alert(e?.response?.data?.message || 'Failed to reject deletion')
     p._saving = false
   }
 }

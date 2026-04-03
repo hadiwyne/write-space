@@ -86,18 +86,21 @@ export class SeriesService {
 
   // ─── Helpers ────────────────────────────────────────────────────────────────
 
+  // New role hierarchy: OWNER(4) > CONTRIBUTOR(3) > EDITOR(2) > VIEWER(1)
+  private readonly ROLE_RANK: Record<string, number> = { VIEWER: 1, EDITOR: 2, CONTRIBUTOR: 3, OWNER: 4 };
+
   private async assertMember(
     seriesId: string,
     userId: string,
-    minRole: 'OWNER' | 'EDITOR' | 'CONTRIBUTOR' = 'CONTRIBUTOR',
+    minRole: 'OWNER' | 'CONTRIBUTOR' | 'EDITOR' | 'VIEWER' = 'EDITOR',
   ) {
     const member = await this.prisma.seriesMember.findUnique({
       where: { seriesId_userId: { seriesId, userId } },
     });
     if (!member) throw new ForbiddenException('Not a member of this series');
-    const order = { OWNER: 3, EDITOR: 2, CONTRIBUTOR: 1 };
-    if (order[member.role] < order[minRole]) {
-      throw new ForbiddenException(`Requires ${minRole} role`);
+    const rank = this.ROLE_RANK[member.role] ?? 0;
+    if (rank < this.ROLE_RANK[minRole]) {
+      throw new ForbiddenException(`Requires ${minRole} role or higher`);
     }
     return member;
   }
@@ -277,7 +280,7 @@ export class SeriesService {
 
   async update(slug: string, userId: string, dto: UpdateSeriesDto) {
     const s = await this.getSeries(slug);
-    await this.assertMember(s.id, userId, 'EDITOR');
+    await this.assertMember(s.id, userId, 'CONTRIBUTOR');
 
     if (dto.slug !== undefined) {
       const newSlug = slugify(dto.slug);
@@ -427,9 +430,22 @@ export class SeriesService {
     });
   }
 
-  async inviteByUsername(slug: string, inviterId: string, username: string) {
+  async inviteByUsername(slug: string, inviterId: string, username: string, inviteRole: string = 'EDITOR') {
     const s = await this.getSeries(slug);
-    await this.assertMember(s.id, inviterId, 'EDITOR');
+    const inviter = await this.assertMember(s.id, inviterId, 'CONTRIBUTOR');
+
+    // Validate the requested role and check inviter's permission to grant it
+    const allowedRoles = ['EDITOR', 'CONTRIBUTOR', 'VIEWER'];
+    if (!allowedRoles.includes(inviteRole)) throw new BadRequestException('Invalid role');
+
+    // VIEWER role only available for PRIVATE series
+    if (inviteRole === 'VIEWER' && (s as any).visibility !== 'PRIVATE') {
+      throw new BadRequestException('Viewer role is only available for private series');
+    }
+    // Only OWNER can invite as CONTRIBUTOR; CONTRIBUTORs can only invite as EDITOR or VIEWER
+    if (inviteRole === 'CONTRIBUTOR' && inviter.role !== 'OWNER') {
+      throw new ForbiddenException('Only the owner can invite contributors');
+    }
 
     const target = await this.prisma.user.findUnique({ where: { username } });
     if (!target) throw new NotFoundException('User not found');
@@ -439,13 +455,11 @@ export class SeriesService {
     });
     if (existing) throw new ConflictException('User is already a member');
 
-    // Generate a single-use invite token tied to the specific invited user
     const token = randomBytes(24).toString('hex');
     await this.prisma.seriesInviteToken.create({
-      data: { seriesId: s.id, token, createdById: inviterId, targetUserId: target.id },
+      data: { seriesId: s.id, token, role: inviteRole, createdById: inviterId, targetUserId: target.id },
     });
 
-    // Notify the target with series context and the token for accept/reject
     await this.notifications.create({
       userId: target.id,
       type: 'SERIES_INVITE',
@@ -472,13 +486,12 @@ export class SeriesService {
     });
     if (!existing) {
       await this.prisma.seriesMember.create({
-        data: { seriesId: invite.seriesId, userId, role: 'CONTRIBUTOR' },
+        data: { seriesId: invite.seriesId, userId, role: invite.role as any },
       });
     }
 
     await this.prisma.seriesInviteToken.delete({ where: { token } });
 
-    // Notify the series owner
     await this.notifications.create({
       userId: invite.series.ownerId,
       type: 'SERIES_INVITE_ACCEPTED',
@@ -486,7 +499,7 @@ export class SeriesService {
       seriesId: invite.series.id,
     });
 
-    return { accepted: true, series: invite.series };
+    return { accepted: true, series: invite.series, role: invite.role };
   }
 
   async rejectInvite(token: string, userId: string) {
@@ -512,22 +525,31 @@ export class SeriesService {
     return { rejected: true };
   }
 
-  async getOrCreateInviteLink(slug: string, userId: string) {
+  async getOrCreateInviteLink(slug: string, userId: string, linkRole: string = 'EDITOR') {
     const s = await this.getSeries(slug);
-    await this.assertMember(s.id, userId, 'OWNER');
+    const member = await this.assertMember(s.id, userId, 'CONTRIBUTOR');
 
-    // Reuse existing non-expired token if present
+    const allowedRoles = ['EDITOR', 'CONTRIBUTOR', 'VIEWER'];
+    if (!allowedRoles.includes(linkRole)) throw new BadRequestException('Invalid role');
+    if (linkRole === 'VIEWER' && (s as any).visibility !== 'PRIVATE') {
+      throw new BadRequestException('Viewer role is only available for private series');
+    }
+    if (linkRole === 'CONTRIBUTOR' && member.role !== 'OWNER') {
+      throw new ForbiddenException('Only the owner can generate contributor invite links');
+    }
+
+    // Reuse existing non-expired token for the same role
     const existing = await this.prisma.seriesInviteToken.findFirst({
-      where: { seriesId: s.id, createdById: userId, expiresAt: null },
+      where: { seriesId: s.id, createdById: userId, role: linkRole, expiresAt: null, targetUserId: null },
       orderBy: { createdAt: 'desc' },
     });
-    if (existing) return { token: existing.token };
+    if (existing) return { token: existing.token, role: linkRole };
 
     const token = randomBytes(24).toString('hex');
     await this.prisma.seriesInviteToken.create({
-      data: { seriesId: s.id, token, createdById: userId },
+      data: { seriesId: s.id, token, role: linkRole, createdById: userId },
     });
-    return { token };
+    return { token, role: linkRole };
   }
 
   async previewInviteLink(token: string) {
@@ -545,7 +567,7 @@ export class SeriesService {
     return {
       series: invite.series,
       inviter: invite.createdBy,
-      role: 'CONTRIBUTOR' as const,
+      role: invite.role,
     };
   }
 
@@ -565,7 +587,7 @@ export class SeriesService {
     if (existing) throw new ConflictException('Already a member');
 
     await this.prisma.seriesMember.create({
-      data: { seriesId: invite.seriesId, userId, role: 'CONTRIBUTOR' },
+      data: { seriesId: invite.seriesId, userId, role: invite.role as any },
     });
 
     // Single-use: delete the token after acceptance
@@ -603,10 +625,13 @@ export class SeriesService {
     return { declined: true };
   }
 
-  async updateMemberRole(slug: string, ownerId: string, targetUserId: string, role: 'EDITOR' | 'CONTRIBUTOR') {
+  async updateMemberRole(slug: string, ownerId: string, targetUserId: string, role: 'EDITOR' | 'CONTRIBUTOR' | 'VIEWER') {
     const s = await this.getSeries(slug);
     await this.assertMember(s.id, ownerId, 'OWNER');
     if (targetUserId === ownerId) throw new BadRequestException('Cannot change owner role');
+    if (role === 'VIEWER' && (s as any).visibility !== 'PRIVATE') {
+      throw new BadRequestException('Viewer role is only available for private series');
+    }
 
     const member = await this.prisma.seriesMember.findUnique({
       where: { seriesId_userId: { seriesId: s.id, userId: targetUserId } },
@@ -638,6 +663,15 @@ export class SeriesService {
 
   async getPosts(slug: string, viewerUserId: string | null, limit = 50, offset = 0) {
     const s = await this.getSeries(slug);
+
+    // For PRIVATE series, only members (any role) can see posts
+    if ((s as any).visibility === 'PRIVATE') {
+      if (!viewerUserId) throw new ForbiddenException('This series is private');
+      const membership = await this.prisma.seriesMember.findUnique({
+        where: { seriesId_userId: { seriesId: s.id, userId: viewerUserId } },
+      });
+      if (!membership) throw new ForbiddenException('This series is private');
+    }
 
     // For PRIVATE series, all approved posts are visible (viewer must be a member to reach this point).
     // For PUBLIC/FOLLOWERS_ONLY series, additionally filter by post-level visibility:
@@ -681,7 +715,7 @@ export class SeriesService {
 
   async getPendingPosts(slug: string, requesterId: string) {
     const s = await this.getSeries(slug);
-    await this.assertMember(s.id, requesterId, 'EDITOR');
+    await this.assertMember(s.id, requesterId, 'CONTRIBUTOR');
 
     const seriesPosts = await this.prisma.seriesPost.findMany({
       where: { seriesId: s.id, status: 'PENDING' },
@@ -699,12 +733,14 @@ export class SeriesService {
 
   async addPost(slug: string, userId: string, postId: string, postVisibility = 'PUBLIC') {
     const s = await this.getSeries(slug);
-    const member = await this.assertMember(s.id, userId);
+    // Only EDITOR+ can add posts; VIEWERs cannot
+    const member = await this.assertMember(s.id, userId, 'EDITOR');
 
     const post = await this.prisma.post.findUnique({ where: { id: postId } });
     if (!post) throw new NotFoundException('Post not found');
-    if (post.authorId !== userId && member.role === 'CONTRIBUTOR') {
-      throw new ForbiddenException('Contributors can only add their own posts');
+    // Editors can only add their own posts
+    if (post.authorId !== userId && member.role === 'EDITOR') {
+      throw new ForbiddenException('Editors can only add their own posts');
     }
 
     const existing = await this.prisma.seriesPost.findUnique({
@@ -718,16 +754,15 @@ export class SeriesService {
     });
     const order = (maxOrder._max.order ?? -1) + 1;
 
-    // Contributors submit for approval; editors/owners approve immediately
-    const status = member.role === 'CONTRIBUTOR' ? 'PENDING' : 'APPROVED';
-    // Post privacy has no meaning when series is PRIVATE — everything is members-only
+    // Editors submit for owner/contributor approval; contributors/owners go directly to series
+    const status = member.role === 'EDITOR' ? 'PENDING' : 'APPROVED';
     const resolvedVisibility = (s as any).visibility === 'PRIVATE' ? 'PUBLIC' : postVisibility;
 
     const sp = await this.prisma.seriesPost.create({
       data: { seriesId: s.id, postId, order, status, postVisibility: resolvedVisibility },
     });
 
-    // Notify the series owner when a contributor submits a post for review
+    // Notify the series owner when an editor submits a post for review
     if (status === 'PENDING' && s.ownerId !== userId) {
       await this.notifications.create({
         userId: s.ownerId,
@@ -743,14 +778,85 @@ export class SeriesService {
 
   async removePost(slug: string, userId: string, postId: string) {
     const s = await this.getSeries(slug);
-    await this.assertMember(s.id, userId, 'EDITOR');
-    await this.prisma.seriesPost.deleteMany({ where: { seriesId: s.id, postId } });
-    return { removed: true };
+    const member = await this.assertMember(s.id, userId, 'CONTRIBUTOR');
+
+    if (member.role === 'OWNER') {
+      // Owner deletes immediately
+      await this.prisma.seriesPost.deleteMany({ where: { seriesId: s.id, postId } });
+      return { removed: true, immediate: true };
+    }
+
+    // Contributor: request deletion (hides the post, owner reviews in admin panel)
+    const sp = await this.prisma.seriesPost.findUnique({
+      where: { seriesId_postId: { seriesId: s.id, postId } },
+    });
+    if (!sp) throw new NotFoundException('Post not in series');
+
+    await this.prisma.seriesPost.update({
+      where: { seriesId_postId: { seriesId: s.id, postId } },
+      data: { status: 'DELETION_PENDING' },
+    });
+
+    // Notify the owner about the deletion request
+    if (s.ownerId !== userId) {
+      await this.notifications.create({
+        userId: s.ownerId,
+        type: 'SERIES_POST_SUBMITTED' as any,
+        actorId: userId,
+        seriesId: s.id,
+        postId,
+      } as any);
+    }
+
+    return { removed: false, pending: true };
+  }
+
+  async getPendingDeletions(slug: string, requesterId: string) {
+    const s = await this.getSeries(slug);
+    await this.assertMember(s.id, requesterId, 'OWNER');
+
+    const seriesPosts = await this.prisma.seriesPost.findMany({
+      where: { seriesId: s.id, status: 'DELETION_PENDING' },
+      orderBy: { addedAt: 'asc' },
+      include: { post: { include: postInclude(requesterId) } },
+    });
+
+    return seriesPosts.map((sp) => ({
+      ...mapPost(sp.post as any, requesterId),
+      seriesOrder: sp.order,
+      seriesStatus: sp.status,
+      series: { id: s.id, name: s.name, slug: s.slug, logoMimeType: s.logoMimeType, accentColor: s.accentColor },
+    }));
+  }
+
+  async approveDeletion(slug: string, userId: string, postId: string) {
+    const s = await this.getSeries(slug);
+    await this.assertMember(s.id, userId, 'OWNER');
+    const sp = await this.prisma.seriesPost.findUnique({
+      where: { seriesId_postId: { seriesId: s.id, postId } },
+    });
+    if (!sp || sp.status !== 'DELETION_PENDING') throw new NotFoundException('No pending deletion for this post');
+    await this.prisma.seriesPost.delete({ where: { seriesId_postId: { seriesId: s.id, postId } } });
+    return { deleted: true };
+  }
+
+  async rejectDeletion(slug: string, userId: string, postId: string) {
+    const s = await this.getSeries(slug);
+    await this.assertMember(s.id, userId, 'OWNER');
+    const sp = await this.prisma.seriesPost.findUnique({
+      where: { seriesId_postId: { seriesId: s.id, postId } },
+    });
+    if (!sp || sp.status !== 'DELETION_PENDING') throw new NotFoundException('No pending deletion for this post');
+    await this.prisma.seriesPost.update({
+      where: { seriesId_postId: { seriesId: s.id, postId } },
+      data: { status: 'APPROVED' },
+    });
+    return { restored: true };
   }
 
   async approvePost(slug: string, userId: string, postId: string) {
     const s = await this.getSeries(slug);
-    await this.assertMember(s.id, userId, 'EDITOR');
+    await this.assertMember(s.id, userId, 'CONTRIBUTOR');
 
     const sp = await this.prisma.seriesPost.findUnique({
       where: { seriesId_postId: { seriesId: s.id, postId } },
@@ -779,7 +885,7 @@ export class SeriesService {
 
   async rejectPost(slug: string, userId: string, postId: string) {
     const s = await this.getSeries(slug);
-    await this.assertMember(s.id, userId, 'EDITOR');
+    await this.assertMember(s.id, userId, 'CONTRIBUTOR');
     const sp = await this.prisma.seriesPost.findUnique({
       where: { seriesId_postId: { seriesId: s.id, postId } },
       include: { post: { select: { authorId: true } } },
@@ -803,7 +909,7 @@ export class SeriesService {
 
   async reorderPosts(slug: string, userId: string, orderedPostIds: string[]) {
     const s = await this.getSeries(slug);
-    await this.assertMember(s.id, userId, 'EDITOR');
+    await this.assertMember(s.id, userId, 'CONTRIBUTOR');
 
     await Promise.all(
       orderedPostIds.map((postId, idx) =>

@@ -15,7 +15,6 @@ export class LikesService {
       author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
       _count: { select: { likes: true, comments: true, reposts: true } },
       seriesPosts: {
-        where: { status: 'APPROVED' },
         take: 1,
         orderBy: { addedAt: 'desc' as const },
         select: {

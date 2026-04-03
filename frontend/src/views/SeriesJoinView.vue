@@ -59,7 +59,7 @@
         <strong>{{ invite.inviter.displayName || invite.inviter.username }}</strong>
         invited you to join
         <strong>{{ invite.series.name }}</strong>
-        as a <span class="join-role">{{ invite.role }}</span>.
+        as a <span class="join-role">{{ invite.role.charAt(0) + invite.role.slice(1).toLowerCase() }}</span>.
       </p>
 
       <!-- Not logged in -->
@@ -73,7 +73,7 @@
       <!-- Logged in -->
       <template v-else>
         <div class="join-actions">
-          <button type="button" class="btn-primary" :disabled="acting" @click="acceptInvite">
+          <button type="button" class="btn-primary" :disabled="!!acting" @click="acceptInvite">
             <i v-if="acting === 'accept'" class="pi pi-spin pi-spinner"></i>
             Accept
           </button>

@@ -126,7 +126,6 @@ export class PostsService {
       _count: { select: { likes: true, comments: true, reposts: true } },
       poll: this.pollInclude(userId ?? null),
       seriesPosts: {
-        where: { status: 'APPROVED' },
         take: 1,
         orderBy: { addedAt: 'desc' as const },
         select: {
@@ -440,7 +439,7 @@ export class PostsService {
         isPublished: true,
         archivedAt: null,
         // Hide posts that are pending series review — they're not public yet
-        NOT: { seriesPosts: { some: { status: 'PENDING' } } },
+        NOT: { seriesPosts: { some: { status: { in: ['PENDING', 'DELETION_PENDING'] } } } },
         ...visibilityFilter,
         ...anonymousFilter,
       },

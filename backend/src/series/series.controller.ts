@@ -158,15 +158,20 @@ export class SeriesController {
     @Param('slug') slug: string,
     @CurrentUser() user: { id: string },
     @Body('username') username: string,
+    @Body('role') role?: string,
   ) {
     if (!username) throw new BadRequestException('username is required');
-    return this.seriesService.inviteByUsername(slug, user.id, username);
+    return this.seriesService.inviteByUsername(slug, user.id, username, role ?? 'EDITOR');
   }
 
   @Get(':slug/invite-link')
   @UseGuards(JwtAuthGuard)
-  getInviteLink(@Param('slug') slug: string, @CurrentUser() user: { id: string }) {
-    return this.seriesService.getOrCreateInviteLink(slug, user.id);
+  getInviteLink(
+    @Param('slug') slug: string,
+    @CurrentUser() user: { id: string },
+    @Query('role') role?: string,
+  ) {
+    return this.seriesService.getOrCreateInviteLink(slug, user.id, role ?? 'EDITOR');
   }
 
   @Get('join/:token')
@@ -205,10 +210,10 @@ export class SeriesController {
     @Param('slug') slug: string,
     @Param('userId') targetUserId: string,
     @CurrentUser() user: { id: string },
-    @Body('role') role: 'EDITOR' | 'CONTRIBUTOR',
+    @Body('role') role: 'EDITOR' | 'CONTRIBUTOR' | 'VIEWER',
   ) {
-    if (!role || !['EDITOR', 'CONTRIBUTOR'].includes(role)) {
-      throw new BadRequestException('role must be EDITOR or CONTRIBUTOR');
+    if (!role || !['EDITOR', 'CONTRIBUTOR', 'VIEWER'].includes(role)) {
+      throw new BadRequestException('role must be EDITOR, CONTRIBUTOR, or VIEWER');
     }
     return this.seriesService.updateMemberRole(slug, user.id, targetUserId, role);
   }
@@ -285,6 +290,32 @@ export class SeriesController {
     @CurrentUser() user: { id: string },
   ) {
     return this.seriesService.rejectPost(slug, user.id, postId);
+  }
+
+  @Get(':slug/posts/pending-deletions')
+  @UseGuards(JwtAuthGuard)
+  getPendingDeletions(@Param('slug') slug: string, @CurrentUser() user: { id: string }) {
+    return this.seriesService.getPendingDeletions(slug, user.id);
+  }
+
+  @Patch(':slug/posts/:postId/approve-deletion')
+  @UseGuards(JwtAuthGuard)
+  approveDeletion(
+    @Param('slug') slug: string,
+    @Param('postId') postId: string,
+    @CurrentUser() user: { id: string },
+  ) {
+    return this.seriesService.approveDeletion(slug, user.id, postId);
+  }
+
+  @Patch(':slug/posts/:postId/reject-deletion')
+  @UseGuards(JwtAuthGuard)
+  rejectDeletion(
+    @Param('slug') slug: string,
+    @Param('postId') postId: string,
+    @CurrentUser() user: { id: string },
+  ) {
+    return this.seriesService.rejectDeletion(slug, user.id, postId);
   }
 
   @Patch(':slug/posts/reorder')

@@ -16,7 +16,6 @@ function postInclude(userId: string | null) {
       },
     },
     seriesPosts: {
-      where: { status: 'APPROVED' },
       take: 1,
       orderBy: { addedAt: 'desc' as const },
       select: {
@@ -42,7 +41,7 @@ function postInclude(userId: string | null) {
 const baseWhere = {
   isPublished: true,
   archivedAt: null,
-  NOT: { seriesPosts: { some: { status: 'PENDING' } } },
+  NOT: { seriesPosts: { some: { status: { in: ['PENDING', 'DELETION_PENDING'] } } } },
 };
 
 /**
@@ -190,7 +189,7 @@ export class FeedService {
     const authorIdsStr = authorIds.map(id => `'${id}'`).join(',');
     const tagPart = tag ? `AND '${tag}' = ANY(p.tags)` : '';
 
-    const pendingFilter = `AND NOT EXISTS (SELECT 1 FROM series_posts sp WHERE sp.post_id = p.id AND sp.status = 'PENDING')`;
+    const pendingFilter = `AND NOT EXISTS (SELECT 1 FROM series_posts sp WHERE sp.post_id = p.id AND sp.status IN ('PENDING', 'DELETION_PENDING'))`;
     const seriesFilter = seriesVisibilitySql(userId);
     const sql = `
       WITH timeline AS (
@@ -246,7 +245,7 @@ export class FeedService {
     }
 
     const tagPart = tag ? `AND '${tag}' = ANY(p.tags)` : '';
-    const pendingFilter = `AND NOT EXISTS (SELECT 1 FROM series_posts sp WHERE sp.post_id = p.id AND sp.status = 'PENDING')`;
+    const pendingFilter = `AND NOT EXISTS (SELECT 1 FROM series_posts sp WHERE sp.post_id = p.id AND sp.status IN ('PENDING', 'DELETION_PENDING'))`;
     const seriesFilter = seriesVisibilitySql(userId);
 
     // Unified query: original posts (as events) + reposts (as events)

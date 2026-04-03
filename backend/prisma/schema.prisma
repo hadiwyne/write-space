@@ -390,8 +390,9 @@ enum SeriesVisibility {
 
 enum SeriesRole {
   OWNER
-  EDITOR
   CONTRIBUTOR
+  EDITOR
+  VIEWER
 }
 
 model Series {
@@ -492,6 +493,7 @@ model SeriesInviteToken {
   seriesId      String   @map("series_id")
   series        Series   @relation(fields: [seriesId], references: [id], onDelete: Cascade)
   token         String   @unique
+  role          String   @default("CONTRIBUTOR") // CONTRIBUTOR | EDITOR | VIEWER
   createdById   String   @map("created_by_id")
   createdBy     User     @relation("SeriesInviteTokens", fields: [createdById], references: [id], onDelete: Cascade)
   targetUserId  String?  @map("target_user_id")

@@ -398,7 +398,7 @@
         </Transition>
       </div>
       <!-- Add to Series -->
-      <div v-if="seriesStore.mySeries.length" class="form-group series-row">
+      <div v-if="postableSeries.length" class="form-group series-row">
         <div class="dropdown-wrap">
           <button type="button" class="dropdown-trigger" :aria-expanded="seriesDropdownOpen" @click="seriesDropdownOpen = !seriesDropdownOpen">
             <i class="pi pi-book" aria-hidden="true"></i>
@@ -411,7 +411,7 @@
                 <i class="pi pi-times-circle" aria-hidden="true"></i> None
               </button>
               <button
-                v-for="s in seriesStore.mySeries"
+                v-for="s in postableSeries"
                 :key="s.slug"
                 type="button"
                 class="dropdown-option"
@@ -687,6 +687,11 @@ const selectedSeriesVisibility = computed(() => {
   if (!selectedSeriesSlug.value) return null
   return seriesStore.mySeries.find(s => s.slug === selectedSeriesSlug.value)?.visibility ?? null
 })
+
+// VIEWERs cannot post — filter them out from the series dropdown
+const postableSeries = computed(() =>
+  seriesStore.mySeries.filter(s => (s as any).memberRole !== 'VIEWER')
+)
 
 const postVisibilityOptions = [
   { value: 'PUBLIC', label: 'Public', desc: 'Visible to all viewers of this series', icon: 'pi pi-globe' },
