@@ -110,6 +110,11 @@
                 :reposted="!!isOwnProfile"
                 @like="handleLike"
               />
+              <SeriesPostCard
+                v-else-if="postHasSeries(item.post)"
+                :key="'s-' + item.post.id"
+                :post="item.post"
+              />
               <PostCard
                 v-else
                 :post="item.post"
@@ -197,15 +202,22 @@
             <template v-else>No liked posts yet.</template>
           </div>
           <div v-else class="post-list">
-            <PostCard
-              v-for="(p, i) in likedPosts"
-              :key="p.id"
-              :post="p"
-              :show-repost="!!auth.token"
-              :style="{ animationDelay: `${0.05 * i}s` }"
-              @like="handleLike"
-              @poll-update="handlePollUpdate"
-            />
+            <template v-for="(p, i) in likedPosts">
+              <SeriesPostCard
+                v-if="postHasSeries(p)"
+                :key="'s-' + p.id"
+                :post="p"
+              />
+              <PostCard
+                v-else
+                :key="p.id"
+                :post="p"
+                :show-repost="!!auth.token"
+                :style="{ animationDelay: `${0.05 * i}s` }"
+                @like="handleLike"
+                @poll-update="handlePollUpdate"
+              />
+            </template>
           </div>
         </div>
       </div>
@@ -292,6 +304,7 @@ import type { AvatarFrame as AvatarFrameType } from '@/types/avatarFrame'
 import { useAuthStore } from '@/stores/auth'
 import { getCachedProfile, setCachedProfile, setCachedProfiles } from '@/utils/indexedDBCache'
 import PostCard from '@/components/PostCard.vue'
+import SeriesPostCard from '@/components/SeriesPostCard.vue'
 import RepostCard from '@/components/RepostCard.vue'
 import PostCardSkeleton from '@/components/skeletons/PostCardSkeleton.vue'
 import ProfileHeaderSkeleton from '@/components/skeletons/ProfileHeaderSkeleton.vue'
@@ -363,6 +376,10 @@ type FeedItem = { type: 'post'; post: Record<string, unknown> } | { type: 'repos
 function feedItemKey(item: FeedItem) {
   const id = (item.post as { id?: string }).id
   return item.type === 'repost' ? `r-${id ?? ''}` : String(id ?? '')
+}
+
+function postHasSeries(post: Record<string, unknown>): boolean {
+  return !!(post as any).series
 }
 
 const combinedFeed = computed<FeedItem[]>(() => {

@@ -434,21 +434,17 @@ export class PostsService {
           ? { isAnonymous: true as const }
           : { isAnonymous: false as const }
         : { isAnonymous: false as const };
-    return this.prisma.post.findMany({
+    const posts = await this.prisma.post.findMany({
       where: { authorId: user.id, isPublished: true, archivedAt: null, ...visibilityFilter, ...anonymousFilter },
       orderBy: { publishedAt: 'desc' },
       take: limit,
       skip: offset,
-      include: {
-        author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
-        _count: { select: { likes: true, comments: true, reposts: true } },
-        poll: this.pollInclude(viewerUserId ?? null),
-        ...(viewerUserId ? {
-          likes: { where: { userId: viewerUserId }, take: 1, select: { id: true } },
-          bookmarks: { where: { userId: viewerUserId }, take: 1, select: { id: true } },
-          reposts: { where: { userId: viewerUserId }, take: 1, select: { id: true } },
-        } : {}),
-      },
+      include: this.postInclude(viewerUserId),
+    });
+    return posts.map((p) => {
+      const mapped: any = { ...p };
+      mapped.series = (p as any).seriesPosts?.[0]?.series ?? null;
+      return mapped;
     });
   }
 

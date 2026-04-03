@@ -14,12 +14,22 @@ export class LikesService {
     return {
       author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
       _count: { select: { likes: true, comments: true, reposts: true } },
+      seriesPosts: {
+        where: { status: 'APPROVED' },
+        take: 1,
+        orderBy: { addedAt: 'desc' as const },
+        select: {
+          series: {
+            select: { id: true, name: true, slug: true, logoMimeType: true, accentColor: true },
+          },
+        },
+      },
       ...(userId ? {
         likes: { where: { userId }, take: 1, select: { id: true } },
         bookmarks: { where: { userId }, take: 1, select: { id: true } },
         reposts: { where: { userId }, take: 1, select: { id: true } },
       } : {}),
-    } as const;
+    };
   }
 
   async toggle(postId: string, userId: string) {
@@ -82,6 +92,10 @@ export class LikesService {
         },
       },
     });
-    return items.map((l) => mapPost(l.post, viewerId));
+    return items.map((l) => {
+      const mapped: any = mapPost(l.post, viewerId);
+      mapped.series = (l.post as any).seriesPosts?.[0]?.series ?? null;
+      return mapped;
+    });
   }
 }
