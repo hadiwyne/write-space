@@ -139,8 +139,8 @@ function notificationText(n: NotifRecord) {
     case 'FOLLOW_REQUEST':     return `${actor} requested to follow you`
     case 'MENTION':            return n.commentId ? `${actor} mentioned you in a comment` : `${actor} mentioned you in a post`
     case 'SERIES_INVITE':           return `${actor} invited you as a contributor for ${series}`
-    case 'SERIES_INVITE_ACCEPTED':  return `${actor} accepted your invitation to ${series}`
-    case 'SERIES_INVITE_REJECTED':  return `${actor} declined your invitation to ${series}`
+    case 'SERIES_INVITE_ACCEPTED':  return `${actor} accepted your invite to join ${series} as contributor`
+    case 'SERIES_INVITE_REJECTED':  return `${actor} declined your invite to join ${series} as contributor`
     case 'SERIES_POST_SUBMITTED':   return `${actor} submitted "${(n as any).post?.title ?? 'a post'}" to ${series} for review`
     case 'SERIES_POST_APPROVED':    return `Your post "${(n as any).post?.title ?? 'Post'}" was approved in ${series}`
     case 'SERIES_POST_REJECTED':    return `Your post "${(n as any).post?.title ?? 'Post'}" was not approved for ${series}`

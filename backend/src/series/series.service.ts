@@ -550,7 +550,10 @@ export class SeriesService {
   }
 
   async joinViaToken(token: string, userId: string) {
-    const invite = await this.prisma.seriesInviteToken.findUnique({ where: { token } });
+    const invite = await this.prisma.seriesInviteToken.findUnique({
+      where: { token },
+      include: { series: { select: { id: true, slug: true, name: true, ownerId: true } } },
+    });
     if (!invite) throw new NotFoundException('Invalid or expired invite link');
     if (invite.expiresAt && invite.expiresAt < new Date()) {
       throw new BadRequestException('This invite link has expired');
@@ -568,18 +571,35 @@ export class SeriesService {
     // Single-use: delete the token after acceptance
     await this.prisma.seriesInviteToken.delete({ where: { token } });
 
-    const series = await this.prisma.series.findUnique({
-      where: { id: invite.seriesId },
-      select: { id: true, slug: true, name: true },
+    // Notify the series owner
+    await this.notifications.create({
+      userId: invite.series.ownerId,
+      type: 'SERIES_INVITE_ACCEPTED',
+      actorId: userId,
+      seriesId: invite.series.id,
     });
-    return { joined: true, series };
+
+    return { joined: true, series: invite.series };
   }
 
-  async declineInviteLink(token: string) {
-    const invite = await this.prisma.seriesInviteToken.findUnique({ where: { token } });
+  async declineInviteLink(token: string, userId: string) {
+    const invite = await this.prisma.seriesInviteToken.findUnique({
+      where: { token },
+      include: { series: { select: { id: true, slug: true, name: true, ownerId: true } } },
+    });
     if (!invite) throw new NotFoundException('Invalid or expired invite link');
+
     // Delete the token so the same link cannot be used again
     await this.prisma.seriesInviteToken.delete({ where: { token } });
+
+    // Notify the series owner
+    await this.notifications.create({
+      userId: invite.series.ownerId,
+      type: 'SERIES_INVITE_REJECTED',
+      actorId: userId,
+      seriesId: invite.series.id,
+    });
+
     return { declined: true };
   }
 
@@ -787,6 +807,7 @@ export class SeriesService {
         userId: s.ownerId,
         type: 'SERIES_FOLLOW' as any,
         actorId: userId,
+        seriesId: s.id,
       } as any);
     }
     return { following: true };

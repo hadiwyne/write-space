@@ -183,8 +183,8 @@ export class SeriesController {
 
   @Post('join/:token/decline')
   @UseGuards(JwtAuthGuard)
-  declineInviteLink(@Param('token') token: string) {
-    return this.seriesService.declineInviteLink(token);
+  declineInviteLink(@Param('token') token: string, @CurrentUser() user: { id: string }) {
+    return this.seriesService.declineInviteLink(token, user.id);
   }
 
   @Post('invites/:token/accept')

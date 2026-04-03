@@ -275,8 +275,8 @@ function notifText(n: NotificationItem) {
     case 'FOLLOW_REQUEST':         return `${name} requested to follow you`
     case 'MENTION':                return n.commentId ? `${name} mentioned you in a comment` : `${name} mentioned you in a post`
     case 'SERIES_INVITE':           return `${name} invited you as a contributor for ${series}`
-    case 'SERIES_INVITE_ACCEPTED':  return `${name} accepted your invite to ${series}`
-    case 'SERIES_INVITE_REJECTED':  return `${name} declined your invite to ${series}`
+    case 'SERIES_INVITE_ACCEPTED':  return `${name} accepted your invite to join ${series} as contributor`
+    case 'SERIES_INVITE_REJECTED':  return `${name} declined your invite to join ${series} as contributor`
     case 'SERIES_POST_SUBMITTED':   return `${name} submitted "${n.post?.title ?? 'a post'}" to ${series} for review`
     case 'SERIES_POST_APPROVED':    return `Your post "${n.post?.title ?? 'Post'}" was approved in ${series}`
     case 'SERIES_POST_REJECTED':    return `Your post "${n.post?.title ?? 'Post'}" was not approved for ${series}`
