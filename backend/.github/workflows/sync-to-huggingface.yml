@@ -1,0 +1,38 @@
+# Sync this repo to a Hugging Face Space on push to main.
+# Deployments show under the repo's Environments tab (e.g. "huggingface").
+#
+# One-time setup:
+# 1. In GitHub: Settings → Secrets and variables → Actions → New repository secret
+#    Name: HF_TOKEN   Value: your Hugging Face token (Profile → Settings → Access Tokens)
+# 2. Replace HF_USERNAME and SPACE_NAME below with your HF user and Space slug.
+
+name: Deploy to Hugging Face Space
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  HF_USERNAME: hadiwyne
+  SPACE_NAME: write-space-api
+
+jobs:
+  deploy:
+    name: Sync to Hugging Face
+    runs-on: ubuntu-latest
+    # Makes this job show under repo → Environments → "huggingface" and in Deployments
+    environment: huggingface
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Push to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          git push --force https://${{ env.HF_USERNAME }}:${HF_TOKEN}@huggingface.co/spaces/${{ env.HF_USERNAME }}/${{ env.SPACE_NAME }} main

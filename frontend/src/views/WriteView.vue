@@ -178,7 +178,7 @@
         </label>
       </div>
       </template>
-      <div class="form-group visibility-row">
+      <div v-if="!selectedSeriesSlug" class="form-group visibility-row">
         <div class="dropdown-wrap" ref="visibilityDropdownRef">
           <button type="button" class="dropdown-trigger" :aria-expanded="visibilityDropdownOpen" @click="visibilityDropdownOpen = !visibilityDropdownOpen">
             <i :class="visibilityIcon" aria-hidden="true"></i>
@@ -197,7 +197,7 @@
           </Transition>
         </div>
       </div>
-      <div class="form-group card-style-section">
+      <div v-if="!selectedSeriesSlug" class="form-group card-style-section">
         <button
           type="button"
           class="card-style-toggle"
@@ -397,6 +397,114 @@
           </div>
         </Transition>
       </div>
+      <!-- Add to Series -->
+      <div v-if="postableSeries.length" class="form-group series-row">
+        <div class="dropdown-wrap">
+          <button type="button" class="dropdown-trigger" :aria-expanded="seriesDropdownOpen" @click="seriesDropdownOpen = !seriesDropdownOpen">
+            <i class="pi pi-book" aria-hidden="true"></i>
+            <span>{{ selectedSeriesSlug ? seriesStore.mySeries.find(s => s.slug === selectedSeriesSlug)?.name || 'Series' : 'Add to Series' }}</span>
+            <i class="pi pi-chevron-down dropdown-chevron" aria-hidden="true"></i>
+          </button>
+          <Transition name="dropdown">
+            <div v-if="seriesDropdownOpen" class="dropdown-panel" role="menu">
+              <button type="button" class="dropdown-option" role="menuitem" :class="{ active: selectedSeriesSlug === '' }" @click="selectedSeriesSlug = ''; seriesThumbnailUrl = ''; thumbnailPosition = 50; postVisibility = 'PUBLIC'; seriesDropdownOpen = false">
+                <i class="pi pi-times-circle" aria-hidden="true"></i> None
+              </button>
+              <button
+                v-for="s in postableSeries"
+                :key="s.slug"
+                type="button"
+                class="dropdown-option"
+                role="menuitem"
+                :class="{ active: selectedSeriesSlug === s.slug }"
+                @click="selectedSeriesSlug = s.slug; seriesDropdownOpen = false"
+              >
+                <i class="pi pi-book" aria-hidden="true"></i> {{ s.name }}
+                <span class="series-role-badge">{{ s.memberRole }}</span>
+              </button>
+            </div>
+          </Transition>
+        </div>
+        <!-- Post visibility selector (hidden for PRIVATE series — all posts are members-only there) -->
+        <Transition name="fade">
+          <div v-if="selectedSeriesSlug && selectedSeriesVisibility !== 'PRIVATE'" class="series-post-visibility">
+            <label class="series-post-vis-label">
+              <i class="pi pi-eye"></i>
+              Post visibility
+            </label>
+            <div class="series-post-vis-options">
+              <label
+                v-for="opt in postVisibilityOptions"
+                :key="opt.value"
+                class="series-post-vis-opt"
+                :class="{ selected: postVisibility === opt.value }"
+              >
+                <input type="radio" :value="opt.value" v-model="postVisibility" class="series-post-vis-radio" />
+                <i :class="opt.icon"></i>
+                <div>
+                  <span class="series-post-vis-opt-label">{{ opt.label }}</span>
+                  <span class="series-post-vis-opt-desc">{{ opt.desc }}</span>
+                </div>
+              </label>
+            </div>
+          </div>
+        </Transition>
+
+        <p v-if="selectedSeriesSlug && selectedSeriesVisibility === 'PRIVATE'" class="series-visibility-note">
+          <i class="pi pi-lock"></i>
+          This series is members only — all posts are visible to members only.
+        </p>
+
+        <!-- Series Thumbnail -->
+        <Transition name="fade">
+          <div v-if="selectedSeriesSlug" class="series-thumbnail-section">
+            <p class="series-thumbnail-label">
+              <i class="pi pi-image" aria-hidden="true"></i>
+              Post thumbnail <span class="series-thumbnail-hint">(shown on the series card in the feed)</span>
+            </p>
+            <div
+              v-if="!seriesThumbnailUrl"
+              class="series-thumbnail-drop"
+              :class="{ loading: seriesThumbnailLoading }"
+            >
+              <i v-if="seriesThumbnailLoading" class="pi pi-spin pi-spinner"></i>
+              <template v-else>
+                <i class="pi pi-upload"></i>
+                <span>Click to upload thumbnail</span>
+                <span class="series-thumbnail-drop-sub">JPG, PNG or WebP · max 5 MB · recommended 16:9</span>
+              </template>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                class="series-thumbnail-file-input"
+                @change="onSeriesThumbnailUpload"
+              />
+            </div>
+            <div
+              v-else
+              class="series-thumbnail-preview"
+              :class="{ dragging: isDraggingThumbnail }"
+              @mousedown="onThumbnailDragStart"
+              @touchstart.passive="onThumbnailDragStart"
+            >
+              <img
+                :src="avatarSrc(seriesThumbnailUrl)"
+                alt="Thumbnail preview"
+                class="series-thumbnail-img"
+                :style="{ objectPosition: `center ${thumbnailPosition}%` }"
+                draggable="false"
+              />
+              <div class="series-thumbnail-drag-hint">
+                <i class="pi pi-arrows-v"></i> Drag to reposition
+              </div>
+              <button type="button" class="series-thumbnail-remove" @click.stop="removeSeriesThumbnail" title="Remove thumbnail">
+                <i class="pi pi-times"></i>
+              </button>
+            </div>
+          </div>
+        </Transition>
+      </div>
+
       <p v-if="error" class="error">{{ error }}</p>
       <div v-if="conflictDraft" class="conflict-banner">
         <p>This draft was updated elsewhere. Choose:</p>
@@ -409,7 +517,7 @@
           <i v-if="publishLoading" class="pi pi-spin pi-spinner publish-spinner" aria-hidden="true"></i>
           <span>{{ publishLoading ? 'Publishing' : 'Publish' }}</span>
         </button>
-        <button type="button" class="btn btn-outline btn-publish-anonymous" :disabled="publishLoading || publishAnonymousLoading" @click="publishAnonymously">
+        <button v-if="!selectedSeriesSlug" type="button" class="btn btn-outline btn-publish-anonymous" :disabled="publishLoading || publishAnonymousLoading" @click="publishAnonymously">
           <i v-if="publishAnonymousLoading" class="pi pi-spin pi-spinner publish-spinner" aria-hidden="true"></i>
           <span>{{ publishAnonymousLoading ? 'Publishing' : 'Publish anonymously' }}</span>
         </button>
@@ -506,6 +614,8 @@ import PostCard from '@/components/PostCard.vue'
 import type { PostCardStyle, PostCardBorderStyle } from '@/types/postCardStyle'
 import { BORDER_STYLE_LABELS } from '@/types/postCardStyle'
 import { useMentionAutocomplete } from '@/composables/useMentionAutocomplete'
+import { useSeriesStore } from '@/stores/series'
+import { useAuthStore } from '@/stores/auth'
 
 const MAX_IMAGES_PER_POST = 5
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
@@ -566,6 +676,56 @@ const richTextEditorRef = ref<{ addImage: (url: string) => void; replaceSelected
 const tagsStr = ref('')
 const visibility = ref<'PUBLIC' | 'FOLLOWERS_ONLY'>('PUBLIC')
 const postType = ref<'post' | 'poll'>('post')
+
+// Series
+const seriesStore = useSeriesStore()
+const authStore = useAuthStore()
+const selectedSeriesSlug = ref<string>('')
+const postVisibility = ref<'PUBLIC' | 'FOLLOWERS_ONLY'>('PUBLIC')
+
+const selectedSeriesVisibility = computed(() => {
+  if (!selectedSeriesSlug.value) return null
+  return seriesStore.mySeries.find(s => s.slug === selectedSeriesSlug.value)?.visibility ?? null
+})
+
+// VIEWERs cannot post — filter them out from the series dropdown
+const postableSeries = computed(() =>
+  seriesStore.mySeries.filter(s => (s as any).memberRole !== 'VIEWER')
+)
+
+const postVisibilityOptions = [
+  { value: 'PUBLIC', label: 'Public', desc: 'Visible to all viewers of this series', icon: 'pi pi-globe' },
+  { value: 'FOLLOWERS_ONLY', label: 'Followers only', desc: 'Only series followers can see this post', icon: 'pi pi-users' },
+]
+const seriesDropdownOpen = ref(false)
+const seriesThumbnailUrl = ref<string>('')
+const seriesThumbnailLoading = ref(false)
+const thumbnailPosition = ref(50) // 0–100 vertical object-position %
+const isDraggingThumbnail = ref(false)
+let _thumbDragStartY = 0
+let _thumbDragStartPos = 0
+
+function onThumbnailDragStart(e: MouseEvent | TouchEvent) {
+  isDraggingThumbnail.value = true
+  _thumbDragStartY = 'touches' in e ? e.touches[0].clientY : e.clientY
+  _thumbDragStartPos = thumbnailPosition.value
+}
+
+function _onThumbnailDragMove(e: MouseEvent | TouchEvent) {
+  if (!isDraggingThumbnail.value) return
+  const currentY = 'touches' in e ? (e as TouchEvent).touches[0].clientY : (e as MouseEvent).clientY
+  // Drag up → show more of bottom (increase %), drag down → show more of top (decrease %)
+  const delta = (_thumbDragStartY - currentY) * 0.35
+  thumbnailPosition.value = Math.max(0, Math.min(100, _thumbDragStartPos + delta))
+}
+
+function _onThumbnailDragEnd() {
+  isDraggingThumbnail.value = false
+}
+
+if (authStore.isLoggedIn) {
+  seriesStore.fetchMySeries()
+}
 const pollOptions = ref<string[]>(['', ''])
 const pollIsOpen = ref(false)
 const pollResultsVisible = ref(true)
@@ -1050,9 +1210,17 @@ onMounted(async () => {
     }
   }
   document.addEventListener('click', onWritePageDocumentClick)
+  document.addEventListener('mousemove', _onThumbnailDragMove)
+  document.addEventListener('mouseup', _onThumbnailDragEnd)
+  document.addEventListener('touchmove', _onThumbnailDragMove)
+  document.addEventListener('touchend', _onThumbnailDragEnd)
 })
 onUnmounted(() => {
   document.removeEventListener('click', onWritePageDocumentClick)
+  document.removeEventListener('mousemove', _onThumbnailDragMove)
+  document.removeEventListener('mouseup', _onThumbnailDragEnd)
+  document.removeEventListener('touchmove', _onThumbnailDragMove)
+  document.removeEventListener('touchend', _onThumbnailDragEnd)
   if (autoSaveTimer) clearTimeout(autoSaveTimer)
 })
 
@@ -1136,7 +1304,27 @@ async function doPublish(anonymous: boolean) {
     }
     const cardStyle = buildCardStylePayload(cardStyleForm.value)
     if (cardStyle != null) payload.cardStyle = cardStyle
+    if (selectedSeriesSlug.value && seriesThumbnailUrl.value) {
+      payload.imageUrls = [seriesThumbnailUrl.value]
+      payload.cardStyle = { thumbnailPosition: Math.round(thumbnailPosition.value) }
+    }
     const { data } = await api.post('/posts', payload)
+    // Add to series if selected
+    if (selectedSeriesSlug.value) {
+      try {
+        const addResult = await api.post(`/series/${selectedSeriesSlug.value}/posts/${data.id}`, { postVisibility: postVisibility.value }, { cache: false })
+        // Contributors' posts go to PENDING review — redirect to the series page
+        if (addResult.data?.status === 'PENDING') {
+          router.push({
+            path: `/series/${selectedSeriesSlug.value}`,
+            query: { submitted: '1' },
+          })
+          return
+        }
+      } catch {
+        // Don't fail the whole publish if series add fails
+      }
+    }
     router.push(`/posts/${data.id}`)
   } catch (e: unknown) {
     error.value = (e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to publish'
@@ -1231,6 +1419,34 @@ function getUploadErrorMessage(err: unknown): string {
   if (Array.isArray(msg)) return msg[0] ?? 'Failed to upload image'
   if (typeof msg === 'string') return msg
   return 'Failed to upload image'
+}
+
+async function onSeriesThumbnailUpload(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  input.value = ''
+  if (file.size > MAX_IMAGE_SIZE_BYTES) {
+    error.value = 'Thumbnail must be 5 MB or smaller.'
+    return
+  }
+  seriesThumbnailLoading.value = true
+  error.value = ''
+  try {
+    const formData = new FormData()
+    formData.append('image', file)
+    const { data } = await api.post<{ url: string }>('/posts/upload-image', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+    seriesThumbnailUrl.value = data.url
+  } catch (err) {
+    error.value = getUploadErrorMessage(err)
+  } finally {
+    seriesThumbnailLoading.value = false
+  }
+}
+
+function removeSeriesThumbnail() {
+  seriesThumbnailUrl.value = ''
+  thumbnailPosition.value = 50
 }
 
 async function onImageUpload(e: Event) {
@@ -2088,5 +2304,187 @@ function resetCardColor(target: 'backgroundColor' | 'borderColor' | { type: 'gra
   .card-style-gradient-row { flex-direction: column; align-items: flex-start; }
   .card-style-upload-row { flex-direction: column; align-items: stretch; }
   .card-style-input-url { min-width: 0; }
+}
+
+/* Series selector */
+.series-row { display: flex; flex-direction: column; gap: 0.375rem; }
+.series-visibility-note {
+  display: flex; align-items: center; gap: 0.375rem;
+  font-size: 0.8125rem; color: var(--text-secondary); margin: 0;
+}
+
+/* ── Post Visibility ── */
+.series-post-visibility {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.series-post-vis-label {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.series-post-vis-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.series-post-vis-opt {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1.5px solid var(--border-light);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  font-size: 0.85rem;
+}
+.series-post-vis-opt:hover { background: var(--bg-tertiary); }
+.series-post-vis-opt.selected {
+  border-color: var(--accent, #6366f1);
+  background: color-mix(in srgb, var(--accent, #6366f1) 8%, transparent);
+}
+.series-post-vis-radio { display: none; }
+.series-post-vis-opt i { font-size: 1rem; color: var(--text-secondary); flex-shrink: 0; }
+.series-post-vis-opt.selected i { color: var(--accent, #6366f1); }
+.series-post-vis-opt-label { display: block; font-weight: 600; color: var(--text-primary); }
+.series-post-vis-opt-desc { display: block; font-size: 0.75rem; color: var(--text-muted); margin-top: 0.1rem; }
+.series-role-badge {
+  margin-left: auto;
+  font-size: 0.6875rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  background: var(--bg-secondary);
+  color: var(--text-tertiary);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* ── Series Thumbnail ── */
+.series-thumbnail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+.series-thumbnail-label {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+.series-thumbnail-hint {
+  font-weight: 400;
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+}
+.series-thumbnail-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 1.25rem 1rem;
+  border: 2px dashed var(--border-light);
+  border-radius: var(--radius-md, 8px);
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  transition: border-color 0.15s, background 0.15s;
+  position: relative;
+  background: var(--bg-secondary);
+}
+.series-thumbnail-drop:hover {
+  border-color: var(--accent-primary);
+  background: color-mix(in srgb, var(--accent-primary) 5%, var(--bg-secondary));
+  color: var(--text-primary);
+}
+.series-thumbnail-drop.loading {
+  cursor: default;
+  opacity: 0.7;
+}
+.series-thumbnail-drop .pi-upload {
+  font-size: 1.5rem;
+  color: var(--accent-primary);
+}
+.series-thumbnail-drop-sub {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+.series-thumbnail-file-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+.series-thumbnail-preview {
+  position: relative;
+  border-radius: var(--radius-md, 8px);
+  overflow: hidden;
+  line-height: 0;
+  height: 180px;
+  cursor: grab;
+  user-select: none;
+}
+.series-thumbnail-preview.dragging {
+  cursor: grabbing;
+}
+.series-thumbnail-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+}
+.series-thumbnail-drag-hint {
+  position: absolute;
+  bottom: 0.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+}
+.series-thumbnail-preview.dragging .series-thumbnail-drag-hint {
+  opacity: 0;
+}
+.series-thumbnail-remove {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  transition: background 0.15s;
+  z-index: 1;
+}
+.series-thumbnail-remove:hover {
+  background: rgba(0,0,0,0.85);
 }
 </style>

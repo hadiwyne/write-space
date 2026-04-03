@@ -1,6 +1,9 @@
 <template>
   <header class="header" :class="{ 'header--hidden': !headerVisible }">
-    <router-link :to="auth.isLoggedIn ? '/feed' : '/'" class="logo" :aria-label="auth.isLoggedIn ? 'WriteSpace feed' : 'WriteSpace home'">WriteSpace</router-link>
+    <router-link :to="auth.isLoggedIn ? '/feed' : '/'" class="logo" :aria-label="auth.isLoggedIn ? 'WriteSpace feed' : 'WriteSpace home'">
+      <span class="logo-full">WriteSpace</span>
+      <span class="logo-short" aria-hidden="true">WS</span>
+    </router-link>
 
     <div class="search-wrap">
       <form class="search-form" @submit.prevent="onSearch">
@@ -21,6 +24,9 @@
         <router-link to="/feed" class="nav-btn" v-tooltip.bottom="'Feed'" aria-label="Feed">
           <i class="pi pi-home"></i>
         </router-link>
+        <router-link to="/series" class="nav-btn nav-btn--series" v-tooltip.bottom="'Series'" aria-label="Series">
+          <i class="pi pi-book"></i>
+        </router-link>
         <div class="notif-wrap" ref="notifWrapRef">
           <button type="button" class="nav-btn notif-btn" aria-label="Notifications" :aria-expanded="notifOpen" @click="notifOpen = !notifOpen">
             <i class="pi pi-bell"></i>
@@ -40,26 +46,65 @@
                 <template v-if="displayedNotifications.length === 0">
                   <div class="notif-empty">{{ notifTab === 'unread' ? 'No unread notifications.' : 'No notifications yet.' }}</div>
                 </template>
-                <router-link
-                  v-for="n in displayedNotifications"
-                  :key="n.id"
-                  :to="notifLink(n)"
-                  class="notif-item"
-                  :class="{ unread: !n.readAt }"
-                  @click="onNotifClick(n)"
-                >
-                  <span class="notif-dot" :class="{ unread: !n.readAt }" aria-hidden="true"></span>
-                  <div class="notif-avatar-wrap">
-                    <AvatarFrame :frame="actorFrame(n.actor)" :shape-class="avatarShapeClass(n.actor?.avatarShape)" :badge-url="actorBadgeUrl(n.actor)">
-                      <img v-if="notifAvatarUrl(n)" :src="notifAvatarUrl(n)" alt="" class="notif-avatar" :class="avatarShapeClass(n.actor?.avatarShape)" />
-                      <span v-else class="notif-avatar-placeholder" :class="avatarShapeClass(n.actor?.avatarShape)">{{ (n.actor?.displayName || n.actor?.username || '?')[0] }}</span>
-                    </AvatarFrame>
+                <template v-for="n in displayedNotifications">
+                  <!-- Series invite: non-navigable card with action buttons -->
+                  <div
+                    v-if="n.type === 'SERIES_INVITE'"
+                    :key="'invite-' + n.id"
+                    class="notif-item notif-item--invite"
+                    :class="{ unread: !n.readAt }"
+                  >
+                    <span class="notif-dot" :class="{ unread: !n.readAt }" aria-hidden="true"></span>
+                    <div class="notif-avatar-wrap">
+                      <AvatarFrame :frame="actorFrame(n.actor)" :shape-class="avatarShapeClass(n.actor?.avatarShape)" :badge-url="actorBadgeUrl(n.actor)">
+                        <img v-if="notifAvatarUrl(n)" :src="notifAvatarUrl(n)" alt="" class="notif-avatar" :class="avatarShapeClass(n.actor?.avatarShape)" />
+                        <span v-else class="notif-avatar-placeholder" :class="avatarShapeClass(n.actor?.avatarShape)">{{ (n.actor?.displayName || n.actor?.username || '?')[0] }}</span>
+                      </AvatarFrame>
+                    </div>
+                    <div class="notif-body">
+                      <span class="notif-text">{{ notifText(n) }}</span>
+                      <span class="notif-time">{{ notifTime(n.createdAt) }}</span>
+                      <!-- Invite actions -->
+                      <div v-if="!inviteState[n.id]" class="notif-invite-actions">
+                        <button type="button" class="notif-invite-btn notif-invite-btn--accept" @click.stop="handleInviteAction(n, 'accept')">
+                          <i class="pi pi-check"></i> Accept
+                        </button>
+                        <button type="button" class="notif-invite-btn notif-invite-btn--decline" @click.stop="handleInviteAction(n, 'reject')">
+                          Decline
+                        </button>
+                      </div>
+                      <span v-else-if="inviteState[n.id] === 'loading'" class="notif-invite-status">…</span>
+                      <span v-else-if="inviteState[n.id] === 'accepted'" class="notif-invite-status notif-invite-status--accepted">
+                        <i class="pi pi-check-circle"></i> Joined as contributor
+                      </span>
+                      <span v-else class="notif-invite-status notif-invite-status--rejected">
+                        <i class="pi pi-times-circle"></i> Declined
+                      </span>
+                    </div>
                   </div>
-                  <div class="notif-body">
-                    <span class="notif-text">{{ notifText(n) }}</span>
-                    <span class="notif-time">{{ notifTime(n.createdAt) }}</span>
-                  </div>
-                </router-link>
+
+                  <!-- All other notifications: standard link -->
+                  <router-link
+                    v-else
+                    :key="'notif-' + n.id"
+                    :to="notifLink(n)"
+                    class="notif-item"
+                    :class="{ unread: !n.readAt }"
+                    @click="onNotifClick(n)"
+                  >
+                    <span class="notif-dot" :class="{ unread: !n.readAt }" aria-hidden="true"></span>
+                    <div class="notif-avatar-wrap">
+                      <AvatarFrame :frame="actorFrame(n.actor)" :shape-class="avatarShapeClass(n.actor?.avatarShape)" :badge-url="actorBadgeUrl(n.actor)">
+                        <img v-if="notifAvatarUrl(n)" :src="notifAvatarUrl(n)" alt="" class="notif-avatar" :class="avatarShapeClass(n.actor?.avatarShape)" />
+                        <span v-else class="notif-avatar-placeholder" :class="avatarShapeClass(n.actor?.avatarShape)">{{ (n.actor?.displayName || n.actor?.username || '?')[0] }}</span>
+                      </AvatarFrame>
+                    </div>
+                    <div class="notif-body">
+                      <span class="notif-text">{{ notifText(n) }}</span>
+                      <span class="notif-time">{{ notifTime(n.createdAt) }}</span>
+                    </div>
+                  </router-link>
+                </template>
               </div>
               <router-link to="/notifications" class="notif-see-all" @click="notifOpen = false">See all</router-link>
             </div>
@@ -116,6 +161,9 @@
         <router-link to="/feed" class="nav-btn" v-tooltip.bottom="'Feed'" aria-label="Feed">
           <i class="pi pi-home"></i>
         </router-link>
+        <router-link to="/series" class="nav-btn nav-btn--series" v-tooltip.bottom="'Series'" aria-label="Series">
+          <i class="pi pi-book"></i>
+        </router-link>
         <router-link to="/login" class="nav-btn" v-tooltip.bottom="'Log in'" aria-label="Log in">
           <i class="pi pi-sign-in"></i>
         </router-link>
@@ -128,12 +176,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, reactive, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 import { useNotificationsStore } from '@/stores/notifications'
-import { avatarSrc } from '@/api/client'
+import { avatarSrc, api } from '@/api/client'
 import { avatarShapeClass } from '@/utils/avatar'
 import { getAnonAvatarUrl } from '@/utils/anonAvatar'
 import AvatarFrame from '@/components/AvatarFrame.vue'
@@ -221,21 +269,22 @@ function authUserBadgeUrl(): string | null {
 
 function notifText(n: NotificationItem) {
   const name = n.actor?.displayName || n.actor?.username || 'Someone'
+  const series = n.series?.name ?? 'a series'
   switch (n.type) {
-    case 'LIKE':
-      return `${name} liked your post`
-    case 'COMMENT':
-      return `${name} commented on your post`
-    case 'COMMENT_REPLY':
-      return `${name} replied to your comment`
-    case 'FOLLOW':
-      return `${name} started following you`
-    case 'FOLLOW_REQUEST':
-      return `${name} requested to follow you`
-    case 'MENTION':
-      return (n.commentId ? `${name} mentioned you in a comment` : `${name} mentioned you in a post`)
-    default:
-      return `${name} notified you`
+    case 'LIKE':                   return `${name} liked your post`
+    case 'COMMENT':                return `${name} commented on your post`
+    case 'COMMENT_REPLY':          return `${name} replied to your comment`
+    case 'FOLLOW':                 return `${name} started following you`
+    case 'FOLLOW_REQUEST':         return `${name} requested to follow you`
+    case 'MENTION':                return n.commentId ? `${name} mentioned you in a comment` : `${name} mentioned you in a post`
+    case 'SERIES_INVITE':           return `${name} invited you as a contributor for ${series}`
+    case 'SERIES_INVITE_ACCEPTED':  return `${name} accepted your invite to join ${series} as contributor`
+    case 'SERIES_INVITE_REJECTED':  return `${name} declined your invite to join ${series} as contributor`
+    case 'SERIES_POST_SUBMITTED':   return `${name} submitted "${n.post?.title ?? 'a post'}" to ${series} for review`
+    case 'SERIES_POST_APPROVED':    return `Your post "${n.post?.title ?? 'Post'}" was approved in ${series}`
+    case 'SERIES_POST_REJECTED':    return `Your post "${n.post?.title ?? 'Post'}" was not approved for ${series}`
+    case 'SERIES_FOLLOW':           return `${name} followed your series ${series}`
+    default:                        return `${name} notified you`
   }
 }
 
@@ -258,6 +307,17 @@ function notifAvatarUrl(n: NotificationItem): string {
 }
 
 function notifLink(n: NotificationItem) {
+  // Series owner: go to the pending review tab
+  if (n.type === 'SERIES_POST_SUBMITTED') {
+    return n.series?.slug ? `/series/${n.series.slug}/settings?tab=posts` : '/feed'
+  }
+  if (n.type === 'SERIES_INVITE_ACCEPTED' || n.type === 'SERIES_INVITE_REJECTED' ||
+      n.type === 'SERIES_POST_REJECTED') {
+    return n.series?.slug ? `/series/${n.series.slug}` : '/feed'
+  }
+  if (n.type === 'SERIES_POST_APPROVED') {
+    return n.post?.id ? `/posts/${n.post.id}` : (n.series?.slug ? `/series/${n.series.slug}` : '/feed')
+  }
   if (n.post?.id) return `/posts/${n.post.id}`
   if (n.postId) return `/posts/${n.postId}`
   if (n.isAnonymousActor) return '/feed'
@@ -269,6 +329,22 @@ function onNotifClick(n: NotificationItem) {
   notifOpen.value = false
   if (!n.readAt) notifications.markOneRead(n.id)
 }
+
+// invite accept/reject state keyed by notification id
+const inviteState = reactive<Record<string, 'loading' | 'accepted' | 'rejected'>>({})
+
+async function handleInviteAction(n: NotificationItem, action: 'accept' | 'reject') {
+  if (!n.inviteToken || inviteState[n.id]) return
+  inviteState[n.id] = 'loading'
+  try {
+    await api.post(`/series/invites/${n.inviteToken}/${action}`, {}, { cache: false })
+    inviteState[n.id] = action === 'accept' ? 'accepted' : 'rejected'
+    notifications.markOneRead(n.id)
+  } catch {
+    delete inviteState[n.id]
+  }
+}
+
 
 watch(notifOpen, (open) => {
   if (open) unreadCountWhenOpened.value = notifications.unreadCount
@@ -333,6 +409,7 @@ onUnmounted(() => {
   opacity: 0.8;
   text-decoration: none;
 }
+.logo-short { display: none; }
 
 .search-wrap {
   flex: 1 1 auto;
@@ -519,6 +596,17 @@ onUnmounted(() => {
 .notif-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; color: inherit; text-decoration: none; }
 .notif-item:hover { background: var(--bg-primary); }
 .notif-item.unread { background: rgba(139, 69, 19, 0.05); }
+.notif-item--invite { align-items: flex-start; cursor: default; }
+.notif-item--invite:hover { background: var(--bg-card); }
+.notif-invite-actions { display: flex; gap: 0.4rem; margin-top: 0.5rem; }
+.notif-invite-btn { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.625rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; font-family: inherit; cursor: pointer; border: none; transition: opacity 0.15s; }
+.notif-invite-btn--accept { background: var(--accent-primary, #6366f1); color: #fff; }
+.notif-invite-btn--accept:hover { opacity: 0.85; }
+.notif-invite-btn--decline { background: transparent; color: var(--text-secondary); border: 1px solid var(--border-light); }
+.notif-invite-btn--decline:hover { background: var(--bg-secondary); }
+.notif-invite-status { display: inline-flex; align-items: center; gap: 0.25rem; margin-top: 0.4rem; font-size: 0.75rem; font-weight: 600; color: var(--text-tertiary); }
+.notif-invite-status--accepted { color: #17bf63; }
+.notif-invite-status--rejected { color: var(--text-tertiary); }
 .notif-avatar-wrap {
   width: 36px;
   height: 36px;
@@ -558,8 +646,10 @@ onUnmounted(() => {
 @media (max-width: 768px) {
   .header { padding: 0.75rem 1rem; }
   .search-wrap { order: 3; width: 100%; max-width: none; margin-top: 0.75rem; flex: 1 1 100%; }
-  .nav { flex-wrap: wrap; }
+  .nav { flex-wrap: nowrap; }
   .nav-btn, .avatar-btn { width: 40px; height: 40px; font-size: 1.125rem; }
+  .logo-full { display: none; }
+  .logo-short { display: inline; }
   .notif-dropdown {
     position: fixed;
     left: 0.75rem;

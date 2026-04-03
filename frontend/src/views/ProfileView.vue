@@ -80,6 +80,14 @@
           >
             Anonymous {{ profile._count?.anonymousPosts ?? 0 }}
           </button>
+          <button
+            type="button"
+            class="profile-tab"
+            :class="{ active: profileTab === 'series' }"
+            @click="switchToSeries"
+          >
+            Series
+          </button>
         </div>
         <div v-if="profileTab === 'posts'">
           <div v-if="loading && combinedFeed.length === 0" class="post-list">
@@ -100,6 +108,11 @@
                 :show-repost="!!auth.token"
                 :reposted="!!isOwnProfile"
                 @like="handleLike"
+              />
+              <SeriesPostCard
+                v-else-if="postHasSeries(item.post)"
+                :key="'s-' + item.post.id"
+                :post="item.post"
               />
               <PostCard
                 v-else
@@ -133,6 +146,50 @@
             />
           </div>
         </div>
+        <!-- Series Tab -->
+        <div v-if="profileTab === 'series'" class="profile-series-grid">
+          <div v-if="seriesLoading" class="post-list">
+            <PostCardSkeleton v-for="i in 3" :key="i" />
+          </div>
+          <div v-else-if="!profileSeries.length" class="empty">No series yet.</div>
+          <template v-else>
+            <router-link
+              v-for="s in profileSeries"
+              :key="s.id"
+              :to="'/series/' + s.slug"
+              class="profile-series-card"
+              :style="s.accentColor ? { '--ps-accent': s.accentColor } : {}"
+            >
+              <div class="profile-series-cover">
+                <img
+                  v-if="s.coverMimeType"
+                  :src="`${apiBaseUrl.replace(/\/$/, '')}/series/${encodeURIComponent(s.slug)}/images/cover`"
+                  alt=""
+                  class="profile-series-cover-img"
+                  loading="lazy"
+                />
+                <div v-else class="profile-series-cover-placeholder">
+                  <img
+                    v-if="s.logoMimeType"
+                    :src="`${apiBaseUrl.replace(/\/$/, '')}/series/${encodeURIComponent(s.slug)}/images/logo`"
+                    alt=""
+                    class="profile-series-logo-large"
+                  />
+                  <span v-else class="profile-series-initial">{{ s.name[0] }}</span>
+                </div>
+              </div>
+              <div class="profile-series-info">
+                <span class="profile-series-name">{{ s.name }}</span>
+                <span v-if="s.tagline" class="profile-series-tagline">{{ s.tagline }}</span>
+                <div class="profile-series-stats">
+                  <span>{{ s.postCount || 0 }} posts</span>
+                  <span>{{ s.followerCount || 0 }} followers</span>
+                </div>
+              </div>
+            </router-link>
+          </template>
+        </div>
+
         <div v-else>
           <div v-if="likedLoading" class="post-list">
             <PostCardSkeleton v-for="i in 2" :key="i" />
@@ -144,15 +201,22 @@
             <template v-else>No liked posts yet.</template>
           </div>
           <div v-else class="post-list">
-            <PostCard
-              v-for="(p, i) in likedPosts"
-              :key="p.id"
-              :post="p"
-              :show-repost="!!auth.token"
-              :style="{ animationDelay: `${0.05 * i}s` }"
-              @like="handleLike"
-              @poll-update="handlePollUpdate"
-            />
+            <template v-for="(p, i) in likedPosts">
+              <SeriesPostCard
+                v-if="postHasSeries(p)"
+                :key="'s-' + p.id"
+                :post="p"
+              />
+              <PostCard
+                v-else
+                :key="p.id"
+                :post="p"
+                :show-repost="!!auth.token"
+                :style="{ animationDelay: `${0.05 * i}s` }"
+                @like="handleLike"
+                @poll-update="handlePollUpdate"
+              />
+            </template>
           </div>
         </div>
       </div>
@@ -239,10 +303,12 @@ import type { AvatarFrame as AvatarFrameType } from '@/types/avatarFrame'
 import { useAuthStore } from '@/stores/auth'
 import { getCachedProfile, setCachedProfile, setCachedProfiles } from '@/utils/indexedDBCache'
 import PostCard from '@/components/PostCard.vue'
+import SeriesPostCard from '@/components/SeriesPostCard.vue'
 import RepostCard from '@/components/RepostCard.vue'
 import PostCardSkeleton from '@/components/skeletons/PostCardSkeleton.vue'
 import ProfileHeaderSkeleton from '@/components/skeletons/ProfileHeaderSkeleton.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
+import { apiBaseUrl } from '@/api/client'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -264,9 +330,11 @@ const likedPosts = ref<{ id: string; [key: string]: unknown }[]>([])
 const likedLoading = ref(false)
 const anonymousPosts = ref<{ id: string; [key: string]: unknown }[]>([])
 const anonymousLoading = ref(false)
-const profileTab = ref<'posts' | 'liked' | 'anonymous'>('posts')
+const profileTab = ref<'posts' | 'liked' | 'anonymous' | 'series'>('posts')
 const profileTabsRef = ref<HTMLElement | null>(null)
 const tabIndicatorStyle = ref<{ left: string; width: string }>({ left: '0px', width: '0px' })
+const profileSeries = ref<any[]>([])
+const seriesLoading = ref(false)
 const refreshing = ref(false)
 
 function profileFrame(p: typeof profile.value): AvatarFrameType | null {
@@ -290,7 +358,8 @@ function updateProfileTabIndicator() {
     const container = profileTabsRef.value
     if (!container) return
     const tabs = container.querySelectorAll<HTMLButtonElement>('.profile-tab')
-    const index = profileTab.value === 'posts' ? 0 : profileTab.value === 'liked' ? 1 : 2
+    const tabOrder = ['posts', 'liked', 'anonymous', 'series']
+    const index = tabOrder.indexOf(profileTab.value)
     const active = tabs[index]
     if (!active) return
     tabIndicatorStyle.value = {
@@ -306,6 +375,10 @@ type FeedItem = { type: 'post'; post: Record<string, unknown> } | { type: 'repos
 function feedItemKey(item: FeedItem) {
   const id = (item.post as { id?: string }).id
   return item.type === 'repost' ? `r-${id ?? ''}` : String(id ?? '')
+}
+
+function postHasSeries(post: Record<string, unknown>): boolean {
+  return !!(post as any).series
 }
 
 const combinedFeed = computed<FeedItem[]>(() => {
@@ -504,6 +577,25 @@ async function switchToAnonymous() {
     anonymousPosts.value = []
   } finally {
     anonymousLoading.value = false
+  }
+}
+
+async function switchToSeries() {
+  profileTab.value = 'series'
+  if (profileSeries.value.length > 0) return
+  seriesLoading.value = true
+  try {
+    const username = profile.value?.username
+    if (!username) return
+    // Use the dedicated per-user endpoint for both own and other profiles.
+    // It returns only series where the user is an owner/editor/contributor,
+    // filtering to PUBLIC-only when the viewer is not the profile owner.
+    const { data } = await api.get(`/series/user/${encodeURIComponent(username)}`, { cache: false })
+    profileSeries.value = Array.isArray(data) ? data : []
+  } catch {
+    profileSeries.value = []
+  } finally {
+    seriesLoading.value = false
   }
 }
 
@@ -879,8 +971,9 @@ onUnmounted(() => {
   .stat-item { padding: 0.375rem 0.75rem; }
   .stat-value { font-size: 1.125rem; }
   .stat-label { font-size: 0.75rem; }
-  .profile-tabs { flex-wrap: wrap; }
-  .profile-tab { flex: 1 1 auto; min-width: 0; }
+  .profile-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .profile-tabs::-webkit-scrollbar { display: none; }
+  .profile-tab { flex-shrink: 0; white-space: nowrap; }
   .modal { max-width: min(400px, calc(100vw - 2rem)); max-height: 85vh; }
   .modal-backdrop { padding: 0.75rem; }
 }
@@ -957,4 +1050,101 @@ onUnmounted(() => {
 .btn-modal:disabled { opacity: 0.6; cursor: not-allowed; }
 .btn-remove:hover:not(:disabled) { border-color: var(--like-color); color: var(--like-color); }
 .btn-unfollow:hover:not(:disabled) { border-color: var(--accent-primary); color: var(--accent-primary); }
+
+/* ─── Profile Series Grid ─── */
+.profile-series-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.25rem;
+  padding: 0.5rem 0;
+}
+
+.profile-series-card {
+  --ps-accent: var(--accent-primary);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg, 12px);
+  overflow: hidden;
+  text-decoration: none;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.profile-series-card:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  transform: translateY(-2px);
+}
+
+.profile-series-cover {
+  height: 130px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--ps-accent) 15%, var(--bg-secondary));
+}
+
+.profile-series-cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.3s;
+}
+
+.profile-series-card:hover .profile-series-cover-img { transform: scale(1.04); }
+
+.profile-series-cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-series-logo-large {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.profile-series-initial {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--ps-accent);
+  opacity: 0.6;
+  text-transform: uppercase;
+}
+
+.profile-series-info {
+  padding: 0.875rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.profile-series-name {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-series-tagline {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.profile-series-stats {
+  display: flex;
+  gap: 0.875rem;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-top: 0.25rem;
+}
 </style>

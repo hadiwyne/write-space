@@ -1,0 +1,2843 @@
+<template>
+  <div class="settings" v-if="series" :style="{ '--s-accent': series.accentColor || 'var(--accent-primary)' }">
+    <!-- Header -->
+    <div class="settings-header">
+      <router-link :to="'/series/' + series.slug" class="back-link">
+        <i class="pi pi-arrow-left"></i> View Series
+      </router-link>
+      <div class="settings-header-row">
+        <h1 class="settings-title">{{ series.name }} — Settings</h1>
+        <span class="role-badge" :class="memberRole?.toLowerCase()">{{ memberRole }}</span>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <nav class="tabs">
+      <button
+        v-for="tab in availableTabs"
+        :key="tab.id"
+        type="button"
+        class="tab-btn"
+        :class="{ active: activeTab === tab.id }"
+        @click="activeTab = tab.id"
+      >
+        <i :class="tab.icon"></i> {{ tab.label }}
+      </button>
+    </nav>
+
+    <!-- ── Basics ─────────────────────────────────────────────── -->
+    <section v-if="activeTab === 'basics'" class="tab-content">
+      <h2 class="section-title">Basics</h2>
+      <div class="fields">
+        <div class="field">
+          <label class="field-label">Series Name</label>
+          <input v-model="basics.name" type="text" class="field-input" maxlength="80" />
+        </div>
+        <div class="field">
+          <label class="field-label">Slug</label>
+          <div class="slug-wrap">
+            <span class="slug-prefix">/series/</span>
+            <input v-model="basics.slug" type="text" class="field-input slug-input" maxlength="60" />
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label">Tagline</label>
+          <input v-model="basics.tagline" type="text" class="field-input" maxlength="160" />
+        </div>
+        <div class="field">
+          <label class="field-label">Description</label>
+          <textarea v-model="basics.description" class="field-textarea" rows="5"></textarea>
+        </div>
+        <div class="field">
+          <label class="field-label">Series visibility</label>
+          <div class="vis-group">
+            <label v-for="opt in visibilityOptions" :key="opt.value" class="vis-opt" :class="{ selected: basics.visibility === opt.value }">
+              <input type="radio" :value="opt.value" v-model="basics.visibility" class="vis-radio" />
+              <i :class="opt.icon"></i>
+              <div>
+                <span class="vis-label">{{ opt.label }}</span>
+                <span class="vis-desc">{{ opt.desc }}</span>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+      <SaveBar :saving="saving" :saved="saved" :error="saveError" @save="saveBasics" />
+    </section>
+
+    <!-- ── Branding ───────────────────────────────────────────── -->
+    <section v-if="activeTab === 'branding'" class="tab-content">
+      <h2 class="section-title">Branding</h2>
+
+      <div class="branding-grid">
+        <!-- Logo -->
+        <div class="branding-item">
+          <div class="branding-item-header">
+            <span class="branding-label">Logo</span>
+            <span class="branding-hint">256×256px recommended. Transparent background.</span>
+          </div>
+          <div class="image-upload-area" @click="triggerUpload('logo')">
+            <img v-if="series.logoMimeType && !imageChanged.logo" :src="imgUrl('logo')" alt="Logo" class="preview-img preview-img--square" />
+            <img v-else-if="imagePreviews.logo" :src="imagePreviews.logo" alt="Logo" class="preview-img preview-img--square" />
+            <div v-else class="upload-placeholder">
+              <i class="pi pi-image"></i>
+              <span>Upload Logo</span>
+            </div>
+            <div class="upload-overlay"><i class="pi pi-upload"></i></div>
+          </div>
+          <div v-if="uploadProgress.logo" class="progress-bar"><div class="progress-fill" :style="{ width: uploadProgress.logo + '%' }"></div></div>
+          <button v-if="series.logoMimeType" type="button" class="btn-remove" @click.stop="removeImage('logo')">Remove logo</button>
+          <input ref="logoInput" type="file" accept="image/*" class="hidden-input" @change="onFileChange($event, 'logo')" />
+        </div>
+
+        <!-- Wordmark -->
+        <div class="branding-item">
+          <div class="branding-item-header">
+            <span class="branding-label">Wordmark</span>
+            <span class="branding-hint">Text logo, max 21:4 ratio. Transparent background.</span>
+          </div>
+          <div class="image-upload-area image-upload-area--wide" @click="triggerUpload('wordmark')">
+            <img v-if="series.wordmarkMimeType && !imageChanged.wordmark" :src="imgUrl('wordmark')" alt="Wordmark" class="preview-img preview-img--wide" />
+            <img v-else-if="imagePreviews.wordmark" :src="imagePreviews.wordmark" alt="Wordmark" class="preview-img preview-img--wide" />
+            <div v-else class="upload-placeholder">
+              <i class="pi pi-image"></i>
+              <span>Upload Wordmark</span>
+            </div>
+            <div class="upload-overlay"><i class="pi pi-upload"></i></div>
+          </div>
+          <div v-if="uploadProgress.wordmark" class="progress-bar"><div class="progress-fill" :style="{ width: uploadProgress.wordmark + '%' }"></div></div>
+          <button v-if="series.wordmarkMimeType" type="button" class="btn-remove" @click.stop="removeImage('wordmark')">Remove wordmark</button>
+          <input ref="wordmarkInput" type="file" accept="image/*" class="hidden-input" @change="onFileChange($event, 'wordmark')" />
+        </div>
+
+        <!-- Cover Photo -->
+        <div class="branding-item branding-item--full">
+          <div class="branding-item-header">
+            <span class="branding-label">Cover Photo</span>
+            <span class="branding-hint">Minimum 600×600px. Displayed as hero background.</span>
+          </div>
+
+          <!-- Upload placeholder – shown when no cover is set -->
+          <div
+            v-if="!series.coverMimeType && !imagePreviews.cover"
+            class="image-upload-area image-upload-area--cover"
+            @click="triggerUpload('cover')"
+          >
+            <div class="upload-placeholder">
+              <i class="pi pi-image"></i>
+              <span>Upload Cover Photo</span>
+            </div>
+            <div class="upload-overlay"><i class="pi pi-upload"></i></div>
+          </div>
+
+          <!-- Draggable preview – shown when cover is set -->
+          <div
+            v-else
+            class="cover-drag-preview"
+            :class="{ dragging: isDraggingCover }"
+            @mousedown="startCoverDrag"
+            @touchstart.passive="startCoverDrag"
+          >
+            <img
+              :src="imagePreviews.cover || imgUrl('cover')"
+              alt="Cover preview"
+              class="cover-drag-img"
+              :style="{ objectPosition: `center ${theme.coverFocalY}%` }"
+              draggable="false"
+            />
+            <div class="cover-drag-hint">
+              <i class="pi pi-arrows-v"></i> Drag to reposition
+            </div>
+            <button type="button" class="cover-drag-remove" @click.stop="removeImage('cover')" title="Remove cover">
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
+
+          <div v-if="uploadProgress.cover" class="progress-bar"><div class="progress-fill" :style="{ width: uploadProgress.cover + '%' }"></div></div>
+          <input ref="coverInput" type="file" accept="image/*" class="hidden-input" @change="onFileChange($event, 'cover')" />
+        </div>
+
+        <!-- Social Preview -->
+        <div class="branding-item branding-item--full">
+          <div class="branding-item-header">
+            <span class="branding-label">Social Preview</span>
+            <span class="branding-hint">14:10 ratio. Shown as thumbnail when the series URL is shared on social media.</span>
+          </div>
+
+          <!-- Upload area — shown when no image set -->
+          <div
+            v-if="!series.socialPreviewMimeType && !imagePreviews['social-preview']"
+            class="image-upload-area image-upload-area--social"
+            @click="triggerUpload('social-preview')"
+          >
+            <div class="upload-placeholder">
+              <i class="pi pi-image"></i>
+              <span>Upload Social Preview (14:10)</span>
+            </div>
+            <div class="upload-overlay"><i class="pi pi-upload"></i></div>
+          </div>
+
+          <!-- Draggable preview — shown when image is set -->
+          <div
+            v-else
+            class="cover-drag-preview cover-drag-preview--social"
+            :class="{ dragging: isDraggingSocial }"
+            @mousedown="startSocialDrag"
+            @touchstart.passive="startSocialDrag"
+          >
+            <img
+              :src="imagePreviews['social-preview'] || imgUrl('social-preview')"
+              alt="Social Preview"
+              class="cover-drag-img"
+              :style="{ objectPosition: `center ${theme.socialFocalY}%` }"
+              draggable="false"
+            />
+            <div class="cover-drag-hint">
+              <i class="pi pi-arrows-v"></i> Drag to reposition
+            </div>
+            <button type="button" class="cover-drag-remove" @click.stop="triggerUpload('social-preview')" title="Replace image">
+              <i class="pi pi-upload"></i>
+            </button>
+            <button type="button" class="cover-drag-remove cover-drag-remove--delete" @click.stop="removeImage('social-preview')" title="Remove image">
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
+
+          <div v-if="uploadProgress['social-preview']" class="progress-bar"><div class="progress-fill" :style="{ width: uploadProgress['social-preview'] + '%' }"></div></div>
+          <input ref="socialInput" type="file" accept="image/*" class="hidden-input" @change="onFileChange($event, 'social-preview')" />
+        </div>
+      </div>
+
+      <p v-if="uploadError" class="field-error">{{ uploadError }}</p>
+      <SaveBar :saving="saving" :saved="saved" :error="saveError" @save="saveBranding" />
+    </section>
+
+    <!-- ── Theme ─────────────────────────────────────────────── -->
+    <section v-if="activeTab === 'theme'" class="tab-content">
+      <h2 class="section-title">Theme</h2>
+      <div class="fields">
+        <!-- Colors -->
+        <div class="field">
+          <label class="field-label">Accent Color</label>
+          <div class="color-input-wrap">
+            <input type="color" :value="theme.accentColor" class="color-picker color-picker-desktop" @input="onNativeColor('accentColor', $event)" />
+            <button type="button" class="color-adjust-btn" :style="{ backgroundColor: theme.accentColor }" @click="openColorEditor('accentColor', 'Accent Color')">
+              <span class="color-adjust-btn-label">Adjust</span>
+            </button>
+            <input type="text" :value="theme.accentColor" class="color-hex" spellcheck="false" maxlength="7" placeholder="#6366f1" @input="onColorHex('accentColor', $event)" />
+          </div>
+          <span class="field-hint">Used for buttons, links, highlights.</span>
+        </div>
+        <div class="field">
+          <label class="field-label">Cover Background Color</label>
+          <div class="color-input-wrap">
+            <input type="color" :value="theme.coverBgColor || '#ffffff'" class="color-picker color-picker-desktop" @input="onNativeColor('coverBgColor', $event)" />
+            <button type="button" class="color-adjust-btn" :style="{ backgroundColor: theme.coverBgColor || '#ffffff' }" @click="openColorEditor('coverBgColor', 'Cover Background Color')">
+              <span class="color-adjust-btn-label">Adjust</span>
+            </button>
+            <input type="text" :value="theme.coverBgColor" class="color-hex" spellcheck="false" maxlength="7" placeholder="#ffffff" @input="onColorHex('coverBgColor', $event)" />
+            <button type="button" class="btn-clear-color" @click="theme.coverBgColor = ''">Clear</button>
+          </div>
+          <span class="field-hint">Only shown when no cover photo is set.</span>
+        </div>
+        <div class="field">
+          <label class="field-label">Page Background Color</label>
+          <div class="color-input-wrap">
+            <input type="color" :value="theme.bgColor || '#ffffff'" class="color-picker color-picker-desktop" @input="onNativeColor('bgColor', $event)" />
+            <button type="button" class="color-adjust-btn" :style="{ backgroundColor: theme.bgColor || '#ffffff' }" @click="openColorEditor('bgColor', 'Page Background Color')">
+              <span class="color-adjust-btn-label">Adjust</span>
+            </button>
+            <input type="text" :value="theme.bgColor" class="color-hex" spellcheck="false" maxlength="7" placeholder="#ffffff" @input="onColorHex('bgColor', $event)" />
+            <button type="button" class="btn-clear-color" @click="theme.bgColor = ''">Clear</button>
+          </div>
+        </div>
+
+        <!-- Background Image -->
+        <div class="field">
+          <label class="field-label">Page Background Image</label>
+          <span class="field-hint">Shown behind all page content. Supports JPEG, PNG, WebP, GIF (including animated).</span>
+          <div class="image-upload-area image-upload-area--bg-image" @click="triggerUpload('bg-image')">
+            <img v-if="series.bgImageMimeType && !imageChanged['bg-image']" :src="imgUrl('bg-image')" alt="Background" class="preview-img preview-img--bg-image" />
+            <img v-else-if="imagePreviews['bg-image']" :src="imagePreviews['bg-image']" alt="Background" class="preview-img preview-img--bg-image" />
+            <div v-else class="upload-placeholder">
+              <i class="pi pi-image"></i>
+              <span>Upload Background Image (GIF supported)</span>
+            </div>
+            <div class="upload-overlay"><i class="pi pi-upload"></i></div>
+          </div>
+          <div v-if="uploadProgress['bg-image']" class="progress-bar"><div class="progress-fill" :style="{ width: uploadProgress['bg-image'] + '%' }"></div></div>
+          <button v-if="series.bgImageMimeType || imagePreviews['bg-image']" type="button" class="btn-remove" @click.stop="removeImage('bg-image')">Remove background image</button>
+          <input ref="bgImageInput" type="file" accept="image/*" class="hidden-input" @change="onFileChange($event, 'bg-image')" />
+        </div>
+
+        <!-- Font -->
+        <div class="field">
+          <label class="field-label">Font Family</label>
+          <div class="font-options">
+            <label
+              v-for="f in fontOptions"
+              :key="f.value"
+              class="font-opt"
+              :class="{ selected: theme.fontFamily === f.value }"
+              :style="{ fontFamily: f.value || 'inherit' }"
+            >
+              <input type="radio" :value="f.value" v-model="theme.fontFamily" class="vis-radio" />
+              <span>{{ f.label }}</span>
+              <span class="font-sample">Aa Bb Cc</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Layout Mode -->
+        <div class="field">
+          <label class="field-label">Homepage Layout</label>
+          <div class="layout-options">
+            <label
+              v-for="l in layoutOptions"
+              :key="l.value"
+              class="layout-opt"
+              :class="{ selected: theme.layoutMode === l.value }"
+            >
+              <input type="radio" :value="l.value" v-model="theme.layoutMode" class="vis-radio" />
+              <i :class="l.icon" class="layout-icon"></i>
+              <div>
+                <span class="layout-label">{{ l.label }}</span>
+                <span class="layout-desc">{{ l.desc }}</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Post List Mode -->
+        <div class="field">
+          <label class="field-label">Post List Style</label>
+          <div class="toggle-group">
+            <label class="toggle-opt" :class="{ selected: theme.postListMode === 'list' }">
+              <input type="radio" value="list" v-model="theme.postListMode" class="vis-radio" />
+              <i class="pi pi-list"></i> List
+            </label>
+            <label class="toggle-opt" :class="{ selected: theme.postListMode === 'grid' }">
+              <input type="radio" value="grid" v-model="theme.postListMode" class="vis-radio" />
+              <i class="pi pi-th-large"></i> Grid
+            </label>
+          </div>
+        </div>
+
+      </div>
+      <SaveBar :saving="saving" :saved="saved" :error="saveError" @save="saveTheme" />
+    </section>
+
+    <!-- ── Members ───────────────────────────────────────────── -->
+    <section v-if="activeTab === 'members'" class="tab-content">
+      <h2 class="section-title">Members</h2>
+
+      <!-- Invite by username -->
+      <div v-if="isOwnerOrEditor" class="invite-section">
+        <h3 class="subsection-title">Invite by Username</h3>
+        <!-- Role selector for username invite -->
+        <div v-if="invitableRoles.length > 1" class="field" style="margin-bottom:.5rem">
+          <label class="field-label">Invite as</label>
+          <div class="s-dropdown-wrap">
+            <button type="button" class="s-dropdown-trigger" @click.stop="inviteRoleDropdownOpen = !inviteRoleDropdownOpen; inviteLinkRoleDropdownOpen = false; openMemberRoleDropdown = null">
+              <span>{{ invitableRoles.find(r => r.value === inviteRole)?.label || roleLabel(inviteRole) }}</span>
+              <i class="pi pi-chevron-down s-dropdown-chevron"></i>
+            </button>
+            <Transition name="s-dropdown">
+              <div v-if="inviteRoleDropdownOpen" class="s-dropdown-panel">
+                <button
+                  v-for="r in invitableRoles"
+                  :key="r.value"
+                  type="button"
+                  class="s-dropdown-option"
+                  :class="{ active: inviteRole === r.value }"
+                  @click.stop="inviteRole = r.value; inviteRoleDropdownOpen = false"
+                >{{ r.label }}</button>
+              </div>
+            </Transition>
+          </div>
+        </div>
+
+        <div class="invite-row">
+          <div class="invite-search-wrap">
+            <input
+              v-model="inviteUsername"
+              type="text"
+              class="field-input"
+              placeholder="Search by username…"
+              autocomplete="off"
+              @input="onInviteSearchInput"
+              @keyup.enter="inviteUser"
+              @focus="onInviteSearchInput"
+              @blur="hideSearchDropdown"
+            />
+            <!-- Live search dropdown -->
+            <ul v-if="showInviteDropdown && inviteSearchResults.length" class="invite-dropdown">
+              <li
+                v-for="u in inviteSearchResults"
+                :key="u.id"
+                class="invite-dropdown-item"
+                @mousedown.prevent="selectInviteUser(u)"
+              >
+                <img
+                  v-if="u.avatarUrl"
+                  :src="avatarSrc(u.avatarUrl)"
+                  :alt="u.username"
+                  class="invite-dropdown-avatar"
+                />
+                <span v-else class="invite-dropdown-avatar invite-dropdown-avatar--fallback">
+                  {{ (u.displayName || u.username)[0].toUpperCase() }}
+                </span>
+                <div class="invite-dropdown-info">
+                  <span class="invite-dropdown-name">{{ u.displayName || u.username }}</span>
+                  <span class="invite-dropdown-username">@{{ u.username }}</span>
+                </div>
+                <span v-if="isAlreadyMember(u.id)" class="invite-dropdown-badge">Member</span>
+              </li>
+            </ul>
+            <div v-else-if="showInviteDropdown && inviteSearchLoading" class="invite-dropdown invite-dropdown--loading">
+              <i class="pi pi-spin pi-spinner"></i>
+            </div>
+          </div>
+          <button type="button" class="btn-primary" :disabled="inviting || !inviteUsername.trim()" @click="inviteUser">
+            <i v-if="inviting" class="pi pi-spin pi-spinner"></i>
+            <span>{{ inviting ? 'Inviting…' : 'Send Invite' }}</span>
+          </button>
+        </div>
+        <p v-if="inviteMsg" class="invite-msg" :class="{ error: inviteIsError }">{{ inviteMsg }}</p>
+
+        <!-- Invite Link -->
+        <div class="invite-link-section">
+          <h3 class="subsection-title">Invite Link</h3>
+          <p class="field-hint">Generate a single-use link that grants the chosen role when accepted.</p>
+          <!-- Role selector for invite link -->
+          <div v-if="invitableRoles.length > 1" class="field" style="margin-bottom:.5rem">
+            <label class="field-label">Link role</label>
+            <div class="s-dropdown-wrap">
+              <button type="button" class="s-dropdown-trigger" @click.stop="inviteLinkRoleDropdownOpen = !inviteLinkRoleDropdownOpen; inviteRoleDropdownOpen = false; openMemberRoleDropdown = null">
+                <span>{{ invitableRoles.find(r => r.value === inviteLinkRole)?.label || roleLabel(inviteLinkRole) }}</span>
+                <i class="pi pi-chevron-down s-dropdown-chevron"></i>
+              </button>
+              <Transition name="s-dropdown">
+                <div v-if="inviteLinkRoleDropdownOpen" class="s-dropdown-panel">
+                  <button
+                    v-for="r in invitableRoles"
+                    :key="r.value"
+                    type="button"
+                    class="s-dropdown-option"
+                    :class="{ active: inviteLinkRole === r.value }"
+                    @click.stop="inviteLinkRole = r.value; inviteLinkRoleDropdownOpen = false; inviteLink = ''"
+                  >{{ r.label }}</button>
+                </div>
+              </Transition>
+            </div>
+          </div>
+          <div v-if="inviteLink" class="invite-link-row">
+            <input type="text" :value="inviteLink" class="field-input" readonly @click="selectInviteLink($event)" />
+            <button type="button" class="btn-secondary" @click="copyInviteLink">
+              <i :class="copiedLink ? 'pi pi-check' : 'pi pi-copy'"></i>
+              {{ copiedLink ? 'Copied!' : 'Copy' }}
+            </button>
+          </div>
+          <button v-else type="button" class="btn-secondary" :disabled="generatingLink" @click="generateInviteLink">
+            <i v-if="generatingLink" class="pi pi-spin pi-spinner"></i>
+            Generate Invite Link
+          </button>
+        </div>
+      </div>
+
+      <!-- Members List -->
+      <div class="members-list">
+        <div
+          v-for="m in members"
+          :key="m.user.id"
+          class="member-item"
+        >
+          <div class="member-avatar">
+            <img v-if="m.user.avatarUrl" :src="avatarSrc(m.user.avatarUrl)" alt="" class="member-img" />
+            <span v-else class="member-initial">{{ (m.user.displayName || m.user.username || '?')[0] }}</span>
+          </div>
+          <div class="member-info">
+            <span class="member-name">{{ m.user.displayName || m.user.username }}</span>
+            <span class="member-username">@{{ m.user.username }}</span>
+          </div>
+          <span class="member-role" :class="m.role.toLowerCase()">{{ m.role }}</span>
+          <div v-if="canManageMember(m)" class="member-actions">
+            <div v-if="m.role !== 'OWNER' && memberRole === 'OWNER'" class="s-dropdown-wrap">
+              <button type="button" class="s-dropdown-trigger s-dropdown-trigger--sm" @click.stop="openMemberRoleDropdown = openMemberRoleDropdown === m.user.id ? null : m.user.id; inviteRoleDropdownOpen = false; inviteLinkRoleDropdownOpen = false">
+                <span>{{ roleLabel(m.role) }}</span>
+                <i class="pi pi-chevron-down s-dropdown-chevron"></i>
+              </button>
+              <Transition name="s-dropdown">
+                <div v-if="openMemberRoleDropdown === m.user.id" class="s-dropdown-panel s-dropdown-panel--right">
+                  <button type="button" class="s-dropdown-option" :class="{ active: m.role === 'CONTRIBUTOR' }" @click.stop="setMemberRoleFromDropdown(m, 'CONTRIBUTOR')">Contributor</button>
+                  <button type="button" class="s-dropdown-option" :class="{ active: m.role === 'EDITOR' }" @click.stop="setMemberRoleFromDropdown(m, 'EDITOR')">Editor</button>
+                  <button v-if="basics.visibility === 'PRIVATE'" type="button" class="s-dropdown-option" :class="{ active: m.role === 'VIEWER' }" @click.stop="setMemberRoleFromDropdown(m, 'VIEWER')">Viewer</button>
+                </div>
+              </Transition>
+            </div>
+            <button
+              v-if="m.role !== 'OWNER'"
+              type="button"
+              class="btn-remove-member"
+              title="Remove member"
+              @click="removeMember(m)"
+            >
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
+        </div>
+        <div v-if="!members.length" class="empty-members">No members yet.</div>
+      </div>
+    </section>
+
+    <!-- ── Posts ─────────────────────────────────────────────── -->
+    <section v-if="activeTab === 'posts'" class="tab-content">
+      <h2 class="section-title">Posts</h2>
+
+      <!-- ── Sections Manager ───────────────────────────────────── -->
+      <div v-if="isOwnerOrContributor" class="sections-manager">
+        <div class="sections-header">
+          <h3 class="subsection-title"><i class="pi pi-th-large"></i> Sections</h3>
+          <button type="button" class="btn-secondary" @click="startNewSection">
+            <i class="pi pi-plus"></i> New Section
+          </button>
+        </div>
+        <p class="field-hint" style="margin-bottom:1rem">
+          Group posts into named sections that appear as tabs on the series homepage. Each section can have its own layout.
+        </p>
+
+        <!-- New section inline form -->
+        <div v-if="newSectionForm" class="new-section-form">
+          <input
+            v-model="newSectionName"
+            type="text"
+            class="field-input"
+            placeholder="Section name…"
+            maxlength="100"
+            @keyup.enter="createSection"
+            ref="newSectionInput"
+          />
+          <div class="section-layout-row">
+            <button
+              v-for="l in sectionLayoutOptions"
+              :key="l.value"
+              type="button"
+              class="section-layout-btn"
+              :class="{ active: newSectionLayout === l.value }"
+              @click="newSectionLayout = l.value"
+            >
+              <i :class="l.icon"></i> {{ l.label }}
+            </button>
+          </div>
+          <div class="new-section-actions">
+            <button type="button" class="btn-primary" :disabled="!newSectionName.trim() || creatingSec" @click="createSection">
+              <i v-if="creatingSec" class="pi pi-spin pi-spinner"></i> Create
+            </button>
+            <button type="button" class="btn-secondary" @click="cancelNewSection">Cancel</button>
+          </div>
+        </div>
+
+        <!-- Sections list -->
+        <div v-if="sections.length" class="sections-list">
+          <div
+            v-for="(sec, idx) in sections"
+            :key="sec.id"
+            class="section-card"
+            :class="{ dragging: secDragFromIdx === idx }"
+            draggable="true"
+            @dragstart="onSecDragStart(idx)"
+            @dragover.prevent="onSecDragOver(idx)"
+            @drop="onSecDrop"
+            @dragend="secDragFromIdx = -1"
+          >
+            <div class="section-card-header" @click="toggleExpandSection(sec.id)">
+              <i class="pi pi-bars section-drag-icon" @click.stop></i>
+              <span v-if="editingSectionId !== sec.id" class="section-name-text">{{ sec.name }}</span>
+              <input
+                v-else
+                type="text"
+                class="section-name-edit"
+                v-model="editingSectionName"
+                @keyup.enter="saveSectionName(sec)"
+                @blur="saveSectionName(sec)"
+                @click.stop
+              />
+              <i :class="expandedSectionId === sec.id ? 'pi pi-chevron-up' : 'pi pi-chevron-down'" class="section-chevron"></i>
+              <div class="section-card-actions" @click.stop>
+                <button v-if="editingSectionId !== sec.id" type="button" class="section-icon-btn" @click="startEditSectionName(sec)" title="Rename">
+                  <i class="pi pi-pencil"></i>
+                </button>
+                <div class="s-dropdown-wrap">
+                  <button
+                    type="button"
+                    class="s-dropdown-trigger s-dropdown-trigger--sm"
+                    @click="openSecLayoutDropdown = openSecLayoutDropdown === sec.id ? null : sec.id"
+                    :aria-expanded="openSecLayoutDropdown === sec.id"
+                  >
+                    <i :class="sectionLayoutOptions.find(l => l.value === sec.layoutMode)?.icon || 'pi pi-list'"></i>
+                    <span class="sec-layout-label">{{ sectionLayoutOptions.find(l => l.value === sec.layoutMode)?.label || 'List' }}</span>
+                    <i class="pi pi-chevron-down s-dropdown-chevron"></i>
+                  </button>
+                  <Transition name="s-dropdown">
+                    <div v-if="openSecLayoutDropdown === sec.id" class="s-dropdown-panel s-dropdown-panel--right" role="menu">
+                      <button
+                        v-for="l in sectionLayoutOptions"
+                        :key="l.value"
+                        type="button"
+                        class="s-dropdown-option"
+                        role="menuitem"
+                        :class="{ active: sec.layoutMode === l.value }"
+                        @click="selectSectionLayout(sec, l.value)"
+                      >
+                        <i :class="l.icon"></i> {{ l.label }}
+                      </button>
+                    </div>
+                  </Transition>
+                </div>
+                <button type="button" class="btn-remove-member" @click="doDeleteSection(sec)" title="Delete section">
+                  <i class="pi pi-trash"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Expanded posts panel -->
+            <div v-if="expandedSectionId === sec.id" class="section-card-body" @click.stop>
+              <div v-if="sec._posts && sec._posts.length" class="section-posts-list">
+                <div
+                  v-for="(sp, pidx) in sec._posts"
+                  :key="sp.id"
+                  class="section-post-item"
+                  :class="{ dragging: secPostDrag.fromSec === sec.id && secPostDrag.fromIdx === pidx }"
+                  draggable="true"
+                  @dragstart.stop="onSecPostDragStart(sec.id, pidx)"
+                  @dragover.prevent.stop="onSecPostDragOver(sec.id, pidx)"
+                  @drop.stop="onSecPostDrop(sec.id)"
+                  @dragend.stop="secPostDrag.fromSec = null"
+                >
+                  <i class="pi pi-bars drag-handle"></i>
+                  <span class="section-post-title">{{ sp.title }}</span>
+                  <button type="button" class="btn-remove-post" @click="removePostFromSection(sec, sp.id)" title="Remove from section">
+                    <i class="pi pi-minus-circle"></i>
+                  </button>
+                </div>
+              </div>
+              <div v-else class="empty-posts" style="padding:.75rem 0">No posts in this section yet.</div>
+
+              <!-- Add post dropdown -->
+              <div class="add-post-row">
+                <div class="s-dropdown-wrap add-post-dropdown-wrap">
+                  <button
+                    type="button"
+                    class="s-dropdown-trigger add-post-trigger"
+                    @click="openAddPostDropdown = openAddPostDropdown === sec.id ? null : sec.id"
+                    :aria-expanded="openAddPostDropdown === sec.id"
+                  >
+                    <i class="pi pi-plus"></i>
+                    <span>Add a post to this section…</span>
+                    <i class="pi pi-chevron-down s-dropdown-chevron"></i>
+                  </button>
+                  <Transition name="s-dropdown">
+                    <div v-if="openAddPostDropdown === sec.id" class="s-dropdown-panel add-post-panel" role="menu">
+                      <p v-if="!getUnassignedPosts(sec).length" class="add-post-empty">No posts available to add.</p>
+                      <button
+                        v-for="p in getUnassignedPosts(sec)"
+                        :key="p.id"
+                        type="button"
+                        class="s-dropdown-option"
+                        role="menuitem"
+                        @click="addPostToSection(sec, p.id)"
+                      >
+                        {{ p.title }}
+                      </button>
+                    </div>
+                  </Transition>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div v-else-if="!newSectionForm" class="empty-members">No sections yet. Sections group posts into tabs on your homepage.</div>
+      </div>
+
+      <!-- Pending Approvals -->
+      <div v-if="pendingPosts.length && isOwnerOrEditor" class="pending-section">
+        <h3 class="subsection-title pending-title">
+          <i class="pi pi-clock"></i> Pending Approval ({{ pendingPosts.length }})
+        </h3>
+        <div class="pending-list">
+          <div v-for="p in pendingPosts" :key="p.id" class="pending-item">
+            <!-- Thumbnail preview -->
+            <div class="pending-thumb-wrap">
+              <img
+                v-if="p.imageUrls?.[0]"
+                :src="avatarSrc(p.imageUrls[0])"
+                alt=""
+                class="pending-thumb"
+                :style="{ objectPosition: `center ${p.cardStyle?.thumbnailPosition ?? 50}%` }"
+              />
+              <div v-else class="pending-thumb-placeholder"><i class="pi pi-book"></i></div>
+            </div>
+            <div class="pending-info">
+              <a :href="`/posts/${p.id}`" target="_blank" class="pending-post-title">{{ p.title }}</a>
+              <span class="pending-author">by {{ p.author?.displayName || p.author?.username }}</span>
+            </div>
+            <div class="pending-actions">
+              <button type="button" class="btn-approve" :disabled="p._saving" @click="approvePost(p)">
+                <i class="pi pi-check"></i> Approve
+              </button>
+              <button type="button" class="btn-reject" :disabled="p._saving" @click="rejectPost(p)">
+                <i class="pi pi-times"></i> Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pending Deletion Requests (owner only) -->
+      <div v-if="memberRole === 'OWNER' && pendingDeletions.length" class="pending-section" style="margin-top:1.5rem">
+        <h3 class="subsection-title pending-title">
+          <i class="pi pi-trash"></i> Deletion Requests ({{ pendingDeletions.length }})
+        </h3>
+        <p class="field-hint" style="margin-bottom:.75rem">A contributor requested to delete these posts. Review and approve or restore them.</p>
+        <div class="pending-list">
+          <div v-for="p in pendingDeletions" :key="p.id" class="pending-item">
+            <div class="pending-thumb-wrap">
+              <img
+                v-if="p.imageUrls?.[0]"
+                :src="avatarSrc(p.imageUrls[0])"
+                alt=""
+                class="pending-thumb"
+                :style="{ objectPosition: `center ${p.cardStyle?.thumbnailPosition ?? 50}%` }"
+              />
+              <div v-else class="pending-thumb-placeholder"><i class="pi pi-book"></i></div>
+            </div>
+            <div class="pending-info">
+              <a :href="`/posts/${p.id}`" target="_blank" class="pending-post-title">{{ p.title }}</a>
+              <span class="pending-author">by {{ p.author?.displayName || p.author?.username }}</span>
+            </div>
+            <div class="pending-actions">
+              <button type="button" class="btn-reject" :disabled="p._saving" @click="approveDeletion(p)" title="Approve deletion">
+                <i class="pi pi-trash"></i> Delete
+              </button>
+              <button type="button" class="btn-approve" :disabled="p._saving" @click="rejectDeletion(p)" title="Restore post">
+                <i class="pi pi-undo"></i> Restore
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Post Order Hint -->
+      <p class="field-hint" style="margin-bottom:1rem">
+        Drag posts to reorder them on the series homepage. Click the minus button to remove.
+      </p>
+
+      <!-- Posts list with reorder -->
+      <div class="posts-list" ref="postsListRef">
+        <div
+          v-for="(p, idx) in approvedPosts"
+          :key="p.id"
+          class="post-manage-item"
+          draggable="true"
+          @dragstart="onDragStart(idx)"
+          @dragover.prevent="onDragOver(idx)"
+          @drop="onDrop"
+        >
+          <i class="pi pi-bars drag-handle"></i>
+          <span class="post-manage-title">{{ p.title }}</span>
+          <span class="post-manage-author">{{ p.author?.displayName || p.author?.username }}</span>
+          <button type="button" class="btn-remove-post" @click="removePost(p)">
+            <i class="pi pi-minus-circle"></i>
+          </button>
+        </div>
+        <div v-if="!approvedPosts.length" class="empty-posts">No approved posts yet.</div>
+      </div>
+
+      <div v-if="reorderDirty" class="reorder-save">
+        <button type="button" class="btn-primary" :disabled="saving" @click="saveOrder">
+          <i v-if="saving" class="pi pi-spin pi-spinner"></i>
+          Save Order
+        </button>
+      </div>
+    </section>
+
+    <!-- ── Danger Zone ───────────────────────────────────────── -->
+    <section v-if="activeTab === 'danger' && memberRole === 'OWNER'" class="tab-content">
+      <h2 class="section-title danger-title">Danger Zone</h2>
+      <div class="danger-card">
+        <div>
+          <strong>Delete this Series</strong>
+          <p class="field-hint">This will permanently delete the series and all its membership data. Posts will not be deleted.</p>
+        </div>
+        <button type="button" class="btn-danger" @click="confirmDelete">
+          Delete Series
+        </button>
+      </div>
+
+      <!-- Confirm modal -->
+      <Teleport to="body">
+        <div v-if="showDeleteConfirm" class="modal-backdrop" @click.self="showDeleteConfirm = false">
+          <div class="modal">
+            <h3 class="modal-title">Delete "{{ series.name }}"?</h3>
+            <p>This action cannot be undone. All series data (members, post associations) will be permanently deleted.</p>
+            <div class="modal-actions">
+              <button type="button" class="btn-secondary" @click="showDeleteConfirm = false">Cancel</button>
+              <button type="button" class="btn-danger" :disabled="deleting" @click="doDelete">
+                <i v-if="deleting" class="pi pi-spin pi-spinner"></i>
+                {{ deleting ? 'Deleting…' : 'Yes, Delete' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Teleport>
+    </section>
+    <!-- Remove member confirm modal -->
+    <Teleport to="body">
+      <ConfirmModal
+        :open="showRemoveConfirm"
+        title="Remove member?"
+        :message="memberToRemove ? `Remove ${memberToRemove.user.displayName || memberToRemove.user.username} (@${memberToRemove.user.username}) from this series? They will lose access immediately.` : ''"
+        confirm-label="Yes, Remove"
+        cancel-label="Cancel"
+        variant="danger"
+        @confirm="doRemoveMember"
+        @cancel="showRemoveConfirm = false; memberToRemove = null"
+      />
+    </Teleport>
+
+    <!-- Color editor modal -->
+    <Teleport to="body">
+      <div
+        v-if="editingColorKey !== null"
+        class="modal-backdrop color-editor-backdrop"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="color-editor-title"
+        @click.self="closeColorEditor"
+      >
+        <div class="modal color-editor-modal">
+          <h2 id="color-editor-title" class="modal-title">{{ editingColorLabel }}</h2>
+          <p class="modal-hint-text">Use sliders or enter a hex code.</p>
+          <div class="color-editor-preview" :style="{ backgroundColor: editingHex }"></div>
+          <div class="color-editor-hex-wrap">
+            <label for="color-editor-hex" class="sr-only">Hex code</label>
+            <input
+              id="color-editor-hex"
+              v-model="editingHex"
+              type="text"
+              class="color-editor-hex"
+              spellcheck="false"
+              autocapitalize="off"
+              inputmode="text"
+              maxlength="7"
+              placeholder="#000000"
+              @input="onEditorHexInput"
+            />
+          </div>
+          <div class="color-editor-sliders">
+            <div class="color-editor-slider-row">
+              <label for="color-editor-h" class="color-editor-slider-label">Hue</label>
+              <input id="color-editor-h" v-model.number="editingHsl.h" type="range" min="0" max="360" class="color-editor-range color-editor-range-hue" @input="syncHexFromHsl" />
+              <span class="color-editor-value">{{ Math.round(editingHsl.h) }}°</span>
+            </div>
+            <div class="color-editor-slider-row">
+              <label for="color-editor-s" class="color-editor-slider-label">Saturation</label>
+              <input id="color-editor-s" v-model.number="editingHsl.s" type="range" min="0" max="100" class="color-editor-range" @input="syncHexFromHsl" />
+              <span class="color-editor-value">{{ Math.round(editingHsl.s) }}%</span>
+            </div>
+            <div class="color-editor-slider-row">
+              <label for="color-editor-l" class="color-editor-slider-label">Lightness</label>
+              <input id="color-editor-l" v-model.number="editingHsl.l" type="range" min="0" max="100" class="color-editor-range" @input="syncHexFromHsl" />
+              <span class="color-editor-value">{{ Math.round(editingHsl.l) }}%</span>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-primary" @click="closeColorEditor">Done</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+  </div>
+
+  <!-- Loading -->
+  <div v-else-if="loadingPage" class="page-loading">
+    <i class="pi pi-spin pi-spinner"></i>
+  </div>
+
+  <!-- Error / Forbidden -->
+  <div v-else-if="loadError" class="page-error">
+    <p>{{ loadError }}</p>
+    <router-link to="/series" class="btn-back">Back to Series</router-link>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, reactive, computed, onMounted, onUnmounted, watch, defineComponent, h, nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { api, avatarSrc, apiBaseUrl } from '@/api/client'
+import { useSeriesStore } from '@/stores/series'
+import type { SeriesInfo } from '@/stores/series'
+import ConfirmModal from '@/components/ConfirmModal.vue'
+
+const route = useRoute()
+const router = useRouter()
+const seriesStore = useSeriesStore()
+
+// ─── SaveBar helper component ─────────────────────────────────────────────────
+const SaveBar = defineComponent({
+  props: { saving: Boolean, saved: Boolean, error: String },
+  emits: ['save'],
+  setup(props, { emit }) {
+    return () => h('div', { class: 'save-bar' }, [
+      props.error
+        ? h('span', { class: 'save-error' }, props.error)
+        : props.saved
+        ? h('span', { class: 'save-ok' }, [h('i', { class: 'pi pi-check' }), ' Saved!'])
+        : null,
+      h('button', {
+        type: 'button',
+        class: 'btn-primary',
+        disabled: props.saving,
+        onClick: () => emit('save'),
+      }, props.saving ? [h('i', { class: 'pi pi-spin pi-spinner' }), ' Saving…'] : 'Save Changes'),
+    ])
+  },
+})
+
+// ─── State ────────────────────────────────────────────────────────────────────
+const series = ref<SeriesInfo | null>(null)
+const members = ref<any[]>([])
+const allPosts = ref<any[]>([])
+const loadingPage = ref(true)
+const loadError = ref('')
+const memberRole = ref<'OWNER' | 'CONTRIBUTOR' | 'EDITOR' | 'VIEWER' | null>(null)
+const activeTab = ref('basics')
+const saving = ref(false)
+const saved = ref(false)
+const saveError = ref('')
+
+// Basics form
+const basics = reactive({ name: '', slug: '', tagline: '', description: '', visibility: 'PUBLIC' as string })
+
+// Theme form
+const theme = reactive({
+  accentColor: '#6366f1',
+  coverBgColor: '',
+  bgColor: '',
+  coverFocalY: 50,
+  socialFocalY: 50,
+  fontFamily: '',
+  layoutMode: 'feature',
+  postListMode: 'list',
+})
+
+// Cover focal-point drag
+const isDraggingCover = ref(false)
+let _coverDragStartY = 0
+let _coverDragStartFocal = 50
+function startCoverDrag(e: MouseEvent | TouchEvent) {
+  isDraggingCover.value = true
+  _coverDragStartY = 'touches' in e ? e.touches[0].clientY : e.clientY
+  _coverDragStartFocal = theme.coverFocalY
+}
+function onCoverDragMove(e: MouseEvent | TouchEvent) {
+  if (!isDraggingCover.value && !isDraggingSocial.value) return
+  const clientY = 'touches' in e ? (e as TouchEvent).touches[0].clientY : (e as MouseEvent).clientY
+  if (isDraggingCover.value) {
+    const delta = (_coverDragStartY - clientY) * 0.35
+    theme.coverFocalY = Math.max(0, Math.min(100, Math.round(_coverDragStartFocal + delta)))
+  }
+  if (isDraggingSocial.value) {
+    const delta = (_socialDragStartY - clientY) * 0.35
+    theme.socialFocalY = Math.max(0, Math.min(100, Math.round(_socialDragStartFocal + delta)))
+  }
+}
+function stopCoverDrag() { isDraggingCover.value = false; isDraggingSocial.value = false }
+
+// Social preview focal-point drag
+const isDraggingSocial = ref(false)
+let _socialDragStartY = 0
+let _socialDragStartFocal = 50
+function startSocialDrag(e: MouseEvent | TouchEvent) {
+  isDraggingSocial.value = true
+  _socialDragStartY = 'touches' in e ? e.touches[0].clientY : e.clientY
+  _socialDragStartFocal = theme.socialFocalY
+}
+
+// Image upload state
+type ImgType = 'logo' | 'wordmark' | 'cover' | 'social-preview' | 'bg-image'
+const imagePreviews = reactive<Record<ImgType, string | null>>({ logo: null, wordmark: null, cover: null, 'social-preview': null, 'bg-image': null })
+const imageChanged = reactive<Record<ImgType, boolean>>({ logo: false, wordmark: false, cover: false, 'social-preview': false, 'bg-image': false })
+const uploadProgress = reactive<Record<ImgType, number>>({ logo: 0, wordmark: 0, cover: 0, 'social-preview': 0, 'bg-image': 0 })
+const uploadError = ref('')
+const logoInput = ref<HTMLInputElement | null>(null)
+const wordmarkInput = ref<HTMLInputElement | null>(null)
+const coverInput = ref<HTMLInputElement | null>(null)
+const socialInput = ref<HTMLInputElement | null>(null)
+const bgImageInput = ref<HTMLInputElement | null>(null)
+
+// Members tab
+const inviteUsername = ref('')
+const inviteRole = ref('EDITOR')
+const inviting = ref(false)
+const inviteMsg = ref('')
+const inviteIsError = ref(false)
+const inviteLink = ref('')
+const inviteLinkRole = ref('EDITOR')
+const generatingLink = ref(false)
+const copiedLink = ref(false)
+
+// Role dropdown open states
+const inviteRoleDropdownOpen = ref(false)
+const inviteLinkRoleDropdownOpen = ref(false)
+const openMemberRoleDropdown = ref<string | null>(null) // stores member userId
+
+function closeAllRoleDropdowns() {
+  inviteRoleDropdownOpen.value = false
+  inviteLinkRoleDropdownOpen.value = false
+  openMemberRoleDropdown.value = null
+  openSecLayoutDropdown.value = null
+  openAddPostDropdown.value = null
+}
+
+function onRoleDropdownOutsideClick(e: MouseEvent) {
+  const target = e.target as HTMLElement
+  if (!target.closest('.s-dropdown-wrap')) closeAllRoleDropdowns()
+}
+
+// Pending deletions (owner only)
+const pendingDeletions = ref<any[]>([])
+
+// Computed: what roles can the current member invite as?
+const invitableRoles = computed(() => {
+  const isPrivate = basics.visibility === 'PRIVATE'
+  const roles: { value: string; label: string }[] = []
+  if (memberRole.value === 'OWNER' || memberRole.value === 'CONTRIBUTOR') {
+    roles.push({ value: 'EDITOR', label: 'Editor' })
+  }
+  if (memberRole.value === 'OWNER') {
+    roles.push({ value: 'CONTRIBUTOR', label: 'Contributor' })
+  }
+  if (isPrivate && (memberRole.value === 'OWNER' || memberRole.value === 'CONTRIBUTOR')) {
+    roles.push({ value: 'VIEWER', label: 'Viewer' })
+  }
+  return roles
+})
+
+// User search for invite
+const inviteSearchResults = ref<{ id: string; username: string; displayName: string; avatarUrl: string | null }[]>([])
+const inviteSearchLoading = ref(false)
+const showInviteDropdown = ref(false)
+let _inviteSearchTimer: ReturnType<typeof setTimeout> | null = null
+
+function onInviteSearchInput() {
+  const q = inviteUsername.value.replace(/^@/, '').trim()
+  showInviteDropdown.value = true
+  if (_inviteSearchTimer) clearTimeout(_inviteSearchTimer)
+  if (!q) { inviteSearchResults.value = []; return }
+  inviteSearchLoading.value = true
+  _inviteSearchTimer = setTimeout(async () => {
+    try {
+      const { data } = await api.get<any[]>('/users/search', { params: { q, limit: '8' }, cache: false })
+      inviteSearchResults.value = data
+    } catch {
+      inviteSearchResults.value = []
+    } finally {
+      inviteSearchLoading.value = false
+    }
+  }, 220)
+}
+
+function selectInviteUser(u: { id: string; username: string }) {
+  inviteUsername.value = u.username
+  showInviteDropdown.value = false
+  inviteSearchResults.value = []
+}
+
+function hideSearchDropdown() {
+  // Delay so mousedown on a dropdown item fires first
+  setTimeout(() => { showInviteDropdown.value = false }, 150)
+}
+
+function isAlreadyMember(userId: string) {
+  return members.value.some((m: any) => m.user?.id === userId)
+}
+
+// Posts tab
+const pendingPosts = computed(() => allPosts.value.filter((p: any) => p.seriesStatus === 'PENDING'))
+const approvedPosts = ref<any[]>([])
+let dragFromIdx = -1
+const reorderDirty = ref(false)
+
+// Sections
+const sections = ref<any[]>([])
+const newSectionForm = ref(false)
+const newSectionName = ref('')
+const newSectionLayout = ref('list')
+const creatingSec = ref(false)
+const newSectionInput = ref<HTMLInputElement | null>(null)
+const expandedSectionId = ref<string | null>(null)
+const editingSectionId = ref<string | null>(null)
+const editingSectionName = ref('')
+const openSecLayoutDropdown = ref<string | null>(null)
+const openAddPostDropdown = ref<string | null>(null)
+let secDragFromIdx = -1
+const secDragFromIdxReactive = ref(-1)
+const secPostDrag = reactive<{ fromSec: string | null; fromIdx: number }>({ fromSec: null, fromIdx: -1 })
+
+const sectionLayoutOptions = [
+  { value: 'list',      label: 'List',      icon: 'pi pi-list' },
+  { value: 'grid',      label: 'Grid',      icon: 'pi pi-th-large' },
+  { value: 'feature',   label: 'Feature',   icon: 'pi pi-star' },
+  { value: 'magazine',  label: 'Magazine',  icon: 'pi pi-images' },
+  { value: 'newspaper', label: 'Newspaper', icon: 'pi pi-align-justify' },
+]
+
+function startNewSection() {
+  newSectionForm.value = true
+  newSectionName.value = ''
+  newSectionLayout.value = 'list'
+  nextTick(() => newSectionInput.value?.focus())
+}
+
+function cancelNewSection() {
+  newSectionForm.value = false
+}
+
+async function createSection() {
+  if (!newSectionName.value.trim() || creatingSec.value) return
+  creatingSec.value = true
+  try {
+    const slug = route.params.slug as string
+    const { data } = await api.post(`/series/${slug}/sections`, {
+      name: newSectionName.value.trim(),
+      layoutMode: newSectionLayout.value,
+    }, { cache: false })
+    data._posts = []
+    sections.value.push(data)
+    newSectionForm.value = false
+    expandedSectionId.value = data.id
+  } catch (e: any) {
+    alert(e?.response?.data?.message || 'Failed to create section')
+  } finally {
+    creatingSec.value = false
+  }
+}
+
+async function doDeleteSection(sec: any) {
+  if (!confirm(`Delete section "${sec.name}"? Posts will not be removed from the series.`)) return
+  try {
+    const slug = route.params.slug as string
+    await api.delete(`/series/${slug}/sections/${sec.id}`, { cache: false })
+    sections.value = sections.value.filter((s: any) => s.id !== sec.id)
+    if (expandedSectionId.value === sec.id) expandedSectionId.value = null
+  } catch (e: any) {
+    alert(e?.response?.data?.message || 'Failed to delete section')
+  }
+}
+
+function startEditSectionName(sec: any) {
+  editingSectionId.value = sec.id
+  editingSectionName.value = sec.name
+}
+
+async function saveSectionName(sec: any) {
+  if (editingSectionId.value !== sec.id) return
+  const newName = editingSectionName.value.trim()
+  if (!newName || newName === sec.name) { editingSectionId.value = null; return }
+  try {
+    const slug = route.params.slug as string
+    const { data } = await api.patch(`/series/${slug}/sections/${sec.id}`, { name: newName }, { cache: false })
+    sec.name = data.name
+    sec.slug = data.slug
+  } catch (e: any) {
+    alert(e?.response?.data?.message || 'Failed to rename section')
+  } finally {
+    editingSectionId.value = null
+  }
+}
+
+async function updateSectionLayout(sec: any, layoutMode?: string) {
+  const mode = layoutMode ?? sec.layoutMode
+  try {
+    const slug = route.params.slug as string
+    await api.patch(`/series/${slug}/sections/${sec.id}`, { layoutMode: mode }, { cache: false })
+  } catch (e: any) {
+    alert(e?.response?.data?.message || 'Failed to update section layout')
+  }
+}
+
+function selectSectionLayout(sec: any, value: string) {
+  sec.layoutMode = value
+  openSecLayoutDropdown.value = null
+  updateSectionLayout(sec, value)
+}
+
+function toggleExpandSection(sectionId: string) {
+  if (expandedSectionId.value === sectionId) {
+    expandedSectionId.value = null
+  } else {
+    expandedSectionId.value = sectionId
+    const sec = sections.value.find((s: any) => s.id === sectionId)
+    if (sec && !sec._posts) loadSectionPosts(sec)
+  }
+}
+
+async function loadSectionPosts(sec: any) {
+  try {
+    const slug = route.params.slug as string
+    const { data } = await api.get(`/series/${slug}/sections/${sec.id}/posts`, { cache: false })
+    sec._posts = data.posts ?? []
+  } catch {
+    sec._posts = []
+  }
+}
+
+function getUnassignedPosts(sec: any) {
+  const assignedIds = new Set((sec._posts ?? []).map((p: any) => p.id))
+  return approvedPosts.value.filter((p: any) => !assignedIds.has(p.id))
+}
+
+async function addPostToSection(sec: any, postId: string) {
+  if (!postId) return
+  openAddPostDropdown.value = null
+  try {
+    const slug = route.params.slug as string
+    await api.post(`/series/${slug}/sections/${sec.id}/posts`, { postId }, { cache: false })
+    const post = approvedPosts.value.find((p: any) => p.id === postId)
+    if (post) {
+      if (!sec._posts) sec._posts = []
+      sec._posts.push({ id: post.id, title: post.title })
+    }
+  } catch (err: any) {
+    alert(err?.response?.data?.message || 'Failed to add post to section')
+  }
+}
+
+async function removePostFromSection(sec: any, postId: string) {
+  try {
+    const slug = route.params.slug as string
+    await api.delete(`/series/${slug}/sections/${sec.id}/posts/${postId}`, { cache: false })
+    sec._posts = (sec._posts ?? []).filter((p: any) => p.id !== postId)
+  } catch (e: any) {
+    alert(e?.response?.data?.message || 'Failed to remove post from section')
+  }
+}
+
+// Section drag reorder
+function onSecDragStart(idx: number) {
+  secDragFromIdx = idx
+  secDragFromIdxReactive.value = idx
+}
+
+function onSecDragOver(idx: number) {
+  if (secDragFromIdx === -1 || secDragFromIdx === idx) return
+  const arr = sections.value
+  const moved = arr.splice(secDragFromIdx, 1)[0]
+  arr.splice(idx, 0, moved)
+  secDragFromIdx = idx
+  secDragFromIdxReactive.value = idx
+}
+
+async function onSecDrop() {
+  secDragFromIdx = -1
+  secDragFromIdxReactive.value = -1
+  try {
+    const slug = route.params.slug as string
+    await api.patch(`/series/${slug}/sections/reorder`, { ids: sections.value.map((s: any) => s.id) }, { cache: false })
+  } catch { /* non-critical */ }
+}
+
+// Section post drag reorder
+function onSecPostDragStart(sectionId: string, idx: number) {
+  secPostDrag.fromSec = sectionId
+  secPostDrag.fromIdx = idx
+}
+
+function onSecPostDragOver(sectionId: string, idx: number) {
+  if (secPostDrag.fromSec !== sectionId || secPostDrag.fromIdx === idx) return
+  const sec = sections.value.find((s: any) => s.id === sectionId)
+  if (!sec?._posts) return
+  const moved = sec._posts.splice(secPostDrag.fromIdx, 1)[0]
+  sec._posts.splice(idx, 0, moved)
+  secPostDrag.fromIdx = idx
+}
+
+async function onSecPostDrop(sectionId: string) {
+  const sec = sections.value.find((s: any) => s.id === sectionId)
+  secPostDrag.fromSec = null
+  secPostDrag.fromIdx = -1
+  if (!sec?._posts) return
+  try {
+    const slug = route.params.slug as string
+    await api.patch(
+      `/series/${slug}/sections/${sectionId}/posts/reorder`,
+      { ids: sec._posts.map((p: any) => p.id) },
+      { cache: false },
+    )
+  } catch { /* non-critical */ }
+}
+
+// Danger
+const showDeleteConfirm = ref(false)
+const deleting = ref(false)
+
+// Remove-member confirm modal
+const showRemoveConfirm = ref(false)
+const memberToRemove = ref<any>(null)
+const removingMember = ref(false)
+
+// ─── Tabs ─────────────────────────────────────────────────────────────────────
+const availableTabs = computed(() => {
+  const tabs = [
+    { id: 'basics', label: 'Basics', icon: 'pi pi-info-circle' },
+    { id: 'branding', label: 'Branding', icon: 'pi pi-palette' },
+    { id: 'theme', label: 'Theme', icon: 'pi pi-sliders-h' },
+    { id: 'members', label: 'Members', icon: 'pi pi-users' },
+    ]
+  const totalPending = pendingPosts.value.length + (memberRole.value === 'OWNER' ? pendingDeletions.value.length : 0)
+  tabs.push({ id: 'posts', label: totalPending ? `Posts (${totalPending})` : 'Posts', icon: 'pi pi-book' })
+  if (memberRole.value === 'OWNER') {
+    tabs.push({ id: 'danger', label: 'Danger Zone', icon: 'pi pi-exclamation-triangle' })
+  }
+  return tabs
+})
+
+// CONTRIBUTOR+ can approve/reject posts
+const isOwnerOrContributor = computed(() => memberRole.value === 'OWNER' || memberRole.value === 'CONTRIBUTOR')
+// Alias for template compatibility
+const isOwnerOrEditor = computed(() => isOwnerOrContributor.value)
+
+// ─── Options ─────────────────────────────────────────────────────────────────
+const visibilityOptions = [
+  { value: 'PUBLIC', label: 'Public', desc: 'Anyone can discover and view this series', icon: 'pi pi-globe' },
+  { value: 'FOLLOWERS_ONLY', label: 'Followers only', desc: 'Only followers of the series owner can see this series', icon: 'pi pi-users' },
+  { value: 'PRIVATE', label: 'Private (Members only)', desc: 'Only invited members can access this series', icon: 'pi pi-lock' },
+]
+
+const fontOptions = [
+  { value: '', label: 'Default' },
+  { value: 'Georgia, serif', label: 'Georgia (Serif)' },
+  { value: 'Inter, sans-serif', label: 'Inter (Sans-serif)' },
+  { value: 'Lora, serif', label: 'Lora (Elegant Serif)' },
+  { value: 'Merriweather, serif', label: 'Merriweather (Reading)' },
+  { value: 'Playfair Display, serif', label: 'Playfair Display (Editorial)' },
+]
+
+const layoutOptions = [
+  { value: 'feature', label: 'Feature', desc: '1 hero post + list', icon: 'pi pi-star' },
+  { value: 'magazine', label: 'Magazine', desc: '5 visual grid hero', icon: 'pi pi-th-large' },
+  { value: 'newspaper', label: 'Newspaper', desc: '8+ dense grid', icon: 'pi pi-align-justify' },
+]
+
+// ─── Load data ────────────────────────────────────────────────────────────────
+async function loadAll() {
+  const slug = route.params.slug as string
+  loadingPage.value = true
+  loadError.value = ''
+  try {
+    const [seriesRes, membersRes, approvedRes, sectionsRes] = await Promise.all([
+      api.get(`/series/${slug}`, { cache: false }),
+      api.get(`/series/${slug}/members`, { cache: false }),
+      api.get(`/series/${slug}/posts`, { params: { limit: '200' }, cache: false }),
+      api.get(`/series/${slug}/sections`, { cache: false }).catch(() => ({ data: [] })),
+    ])
+
+    series.value = seriesRes.data
+    memberRole.value = seriesRes.data.memberRole
+
+    // Only OWNER and CONTRIBUTOR may access settings
+    if (!memberRole.value || memberRole.value === 'EDITOR' || memberRole.value === 'VIEWER') {
+      await router.replace(`/series/${slug}`)
+      return
+    }
+
+    members.value = membersRes.data
+    sections.value = (Array.isArray(sectionsRes.data) ? sectionsRes.data : []).map((s: any) => ({ ...s, _posts: null }))
+
+    // Approved posts come from the public endpoint
+    approvedPosts.value = approvedRes.data
+
+    // Pending posts (for owner / contributor to approve)
+    if (seriesRes.data.memberRole === 'OWNER' || seriesRes.data.memberRole === 'CONTRIBUTOR') {
+      try {
+        const pendingRes = await api.get(`/series/${slug}/posts/pending`, { cache: false })
+        allPosts.value = [...approvedRes.data, ...(Array.isArray(pendingRes.data) ? pendingRes.data : [])]
+      } catch {
+        allPosts.value = approvedRes.data
+      }
+    } else {
+      allPosts.value = approvedRes.data
+    }
+
+    // Pending deletion requests (owner only)
+    if (seriesRes.data.memberRole === 'OWNER') {
+      try {
+        const delRes = await api.get(`/series/${slug}/posts/pending-deletions`, { cache: false })
+        pendingDeletions.value = Array.isArray(delRes.data) ? delRes.data : []
+      } catch {
+        pendingDeletions.value = []
+      }
+    }
+
+    // Populate form state
+    const s = seriesRes.data as SeriesInfo
+    basics.name = s.name
+    basics.slug = s.slug
+    basics.tagline = s.tagline ?? ''
+    basics.description = s.description ?? ''
+    basics.visibility = s.visibility
+
+    theme.accentColor = s.accentColor ?? '#6366f1'
+    theme.coverBgColor = s.coverBgColor ?? ''
+    theme.bgColor = s.bgColor ?? ''
+    theme.coverFocalY = s.coverFocalY ?? 50
+    theme.socialFocalY = s.socialFocalY ?? 50
+    theme.fontFamily = s.fontFamily ?? ''
+    theme.layoutMode = s.layoutMode ?? 'feature'
+    theme.postListMode = s.postListMode ?? 'list'
+  } catch (e: any) {
+    loadError.value = e?.response?.data?.message || 'Unable to load series settings'
+  } finally {
+    loadingPage.value = false
+  }
+}
+
+onMounted(() => {
+  loadAll()
+  document.addEventListener('click', onRoleDropdownOutsideClick)
+  // Auto-switch to tab if ?tab= query param is present (e.g. from notification link)
+  if (route.query.tab) {
+    activeTab.value = route.query.tab as string
+  }
+  window.addEventListener('mousemove', onCoverDragMove)
+  window.addEventListener('mouseup', stopCoverDrag)
+  window.addEventListener('touchmove', onCoverDragMove as any, { passive: false })
+  window.addEventListener('touchend', stopCoverDrag)
+})
+onUnmounted(() => {
+  document.removeEventListener('click', onRoleDropdownOutsideClick)
+  window.removeEventListener('mousemove', onCoverDragMove)
+  window.removeEventListener('mouseup', stopCoverDrag)
+  window.removeEventListener('touchmove', onCoverDragMove as any)
+  window.removeEventListener('touchend', stopCoverDrag)
+})
+watch(() => route.params.slug, loadAll)
+
+// ─── Save helpers ─────────────────────────────────────────────────────────────
+function showSaved() {
+  saved.value = true
+  setTimeout(() => { saved.value = false }, 2500)
+}
+
+type ColorKey = 'accentColor' | 'coverBgColor' | 'bgColor'
+
+// ─── Color editor ─────────────────────────────────────────────────────────────
+const editingColorKey = ref<ColorKey | null>(null)
+const editingColorLabel = ref('')
+const editingHex = ref('#000000')
+const editingHsl = ref({ h: 0, s: 0, l: 0 })
+
+function hexToHsl(hex: string): { h: number; s: number; l: number } {
+  const n = parseInt(hex.slice(1), 16)
+  const r = (n >> 16) / 255
+  const g = ((n >> 8) & 0xff) / 255
+  const b = (n & 0xff) / 255
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  let h = 0, s = 0
+  const l = (max + min) / 2
+  if (max !== min) {
+    const d = max - min
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6
+    else if (max === g) h = ((b - r) / d + 2) / 6
+    else h = ((r - g) / d + 4) / 6
+  }
+  return { h: h * 360, s: s * 100, l: l * 100 }
+}
+
+function hslToHex(h: number, s: number, l: number): string {
+  s /= 100; l /= 100
+  const a = s * Math.min(l, 1 - l)
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12
+    return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))
+  }
+  return '#' + [f(0), f(8), f(4)].map((x) => Math.round(x * 255).toString(16).padStart(2, '0')).join('')
+}
+
+function openColorEditor(key: ColorKey, label: string) {
+  editingColorKey.value = key
+  editingColorLabel.value = label
+  const hex = theme[key] || '#6366f1'
+  editingHex.value = /^#[0-9a-fA-F]{6}$/.test(hex) ? hex : '#6366f1'
+  editingHsl.value = hexToHsl(editingHex.value)
+}
+
+function closeColorEditor() {
+  editingColorKey.value = null
+}
+
+function syncHexFromHsl() {
+  const { h, s, l } = editingHsl.value
+  const hex = hslToHex(h, s, l)
+  editingHex.value = hex
+  if (editingColorKey.value) theme[editingColorKey.value] = hex
+}
+
+function onEditorHexInput(e: Event) {
+  const raw = (e.target as HTMLInputElement).value.trim().replace(/^#/, '')
+  if (/^[0-9A-Fa-f]{6}$/.test(raw)) {
+    const hex = '#' + raw
+    editingHex.value = hex
+    editingHsl.value = hexToHsl(hex)
+    if (editingColorKey.value) theme[editingColorKey.value] = hex
+  }
+}
+
+function onNativeColor(key: ColorKey, e: Event) {
+  const val = (e.target as HTMLInputElement).value
+  if (val) theme[key] = val
+}
+
+function onColorHex(key: ColorKey, e: Event) {
+  const val = (e.target as HTMLInputElement).value.trim()
+  if (/^#[0-9a-fA-F]{6}$/.test(val)) theme[key] = val
+}
+
+async function saveBasics() {
+  saving.value = true; saveError.value = ''
+  try {
+    const slug = route.params.slug as string
+    const updated = await seriesStore.updateSeries(slug, {
+      name: basics.name,
+      slug: basics.slug,
+      tagline: basics.tagline || undefined,
+      description: basics.description || undefined,
+      visibility: basics.visibility as any,
+    })
+    series.value = { ...series.value!, ...updated }
+    if (updated.slug && updated.slug !== slug) {
+      await router.replace(`/series/${updated.slug}/settings`)
+    }
+    showSaved()
+  } catch (e: any) {
+    saveError.value = e?.response?.data?.message || 'Failed to save'
+  } finally {
+    saving.value = false
+  }
+}
+
+async function saveBranding() {
+  saving.value = true; saveError.value = ''
+  try {
+    const slug = route.params.slug as string
+    const updated = await seriesStore.updateSeries(slug, { coverFocalY: theme.coverFocalY, socialFocalY: theme.socialFocalY })
+    series.value = { ...series.value!, ...updated }
+    showSaved()
+  } catch (e: any) {
+    saveError.value = e?.response?.data?.message || 'Failed to save'
+  } finally {
+    saving.value = false
+  }
+}
+
+async function saveTheme() {
+  saving.value = true; saveError.value = ''
+  try {
+    const slug = route.params.slug as string
+    const updated = await seriesStore.updateSeries(slug, {
+      accentColor: theme.accentColor || null,
+      coverBgColor: theme.coverBgColor || null,
+      bgColor: theme.bgColor || null,
+      coverFocalY: theme.coverFocalY,
+      socialFocalY: theme.socialFocalY,
+      fontFamily: theme.fontFamily || null,
+      layoutMode: theme.layoutMode,
+      postListMode: theme.postListMode,
+    })
+    series.value = { ...series.value!, ...updated }
+    showSaved()
+  } catch (e: any) {
+    saveError.value = e?.response?.data?.message || 'Failed to save'
+  } finally {
+    saving.value = false
+  }
+}
+
+// ─── Images ───────────────────────────────────────────────────────────────────
+function imgUrl(type: ImgType) {
+  const slug = route.params.slug as string
+  return `${apiBaseUrl.replace(/\/$/, '')}/series/${encodeURIComponent(slug)}/images/${type}`
+}
+
+function triggerUpload(type: ImgType) {
+  const map: Record<ImgType, typeof logoInput> = {
+    logo: logoInput, wordmark: wordmarkInput, cover: coverInput, 'social-preview': socialInput, 'bg-image': bgImageInput,
+  }
+  map[type].value?.click()
+}
+
+async function onFileChange(e: Event, type: ImgType) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  uploadError.value = ''
+
+  const reader = new FileReader()
+  reader.onload = (ev) => { imagePreviews[type] = ev.target?.result as string }
+  reader.readAsDataURL(file)
+  imageChanged[type] = true
+
+  try {
+    await seriesStore.uploadImage(
+      route.params.slug as string,
+      type,
+      file,
+      (pct) => { uploadProgress[type] = pct },
+    )
+    uploadProgress[type] = 0
+    if (series.value) {
+      const keyMap: Record<ImgType, string> = {
+        logo: 'logoMimeType',
+        wordmark: 'wordmarkMimeType',
+        cover: 'coverMimeType',
+        'social-preview': 'socialPreviewMimeType',
+        'bg-image': 'bgImageMimeType',
+      }
+      ;(series.value as any)[keyMap[type]] = file.type
+    }
+  } catch (err: any) {
+    uploadError.value = err?.response?.data?.message || 'Upload failed'
+    uploadProgress[type] = 0
+  }
+}
+
+async function removeImage(type: ImgType) {
+  try {
+    await seriesStore.deleteImage(route.params.slug as string, type)
+    imagePreviews[type] = null
+    imageChanged[type] = false
+    if (series.value) {
+      const keyMap: Record<ImgType, string> = {
+        logo: 'logoMimeType',
+        wordmark: 'wordmarkMimeType',
+        cover: 'coverMimeType',
+        'social-preview': 'socialPreviewMimeType',
+        'bg-image': 'bgImageMimeType',
+      }
+      ;(series.value as any)[keyMap[type]] = null
+    }
+  } catch (err: any) {
+    uploadError.value = err?.response?.data?.message || 'Failed to remove image'
+  }
+}
+
+// ─── Members ──────────────────────────────────────────────────────────────────
+async function inviteUser() {
+  if (!inviteUsername.value.trim()) return
+  inviting.value = true; inviteMsg.value = ''; inviteIsError.value = false
+  try {
+    const slug = route.params.slug as string
+    const username = inviteUsername.value.trim().replace(/^@/, '')
+    await api.post(`/series/${slug}/members/invite`, { username, role: inviteRole.value }, { cache: false })
+    const roleLabel = inviteRole.value.charAt(0) + inviteRole.value.slice(1).toLowerCase()
+    inviteMsg.value = `Invite sent to @${username} as ${roleLabel}`
+    inviteUsername.value = ''
+    inviteSearchResults.value = []
+    showInviteDropdown.value = false
+  } catch (e: any) {
+    inviteMsg.value = e?.response?.data?.message || 'Failed to send invite'
+    inviteIsError.value = true
+  } finally {
+    inviting.value = false
+  }
+}
+
+async function generateInviteLink() {
+  generatingLink.value = true
+  inviteLink.value = ''
+  try {
+    const slug = route.params.slug as string
+    const { data } = await api.get(`/series/${slug}/invite-link?role=${inviteLinkRole.value}`, { cache: false })
+    const base = window.location.origin
+    inviteLink.value = `${base}/series/join/${data.token}`
+  } catch (e: any) {
+    inviteMsg.value = e?.response?.data?.message || 'Failed to generate link'
+    inviteIsError.value = true
+  } finally {
+    generatingLink.value = false
+  }
+}
+
+async function copyInviteLink() {
+  await navigator.clipboard.writeText(inviteLink.value).catch(() => {})
+  copiedLink.value = true
+  setTimeout(() => { copiedLink.value = false }, 2000)
+}
+
+function canManageMember(m: any): boolean {
+  if (memberRole.value === 'OWNER') return m.role !== 'OWNER'
+  // CONTRIBUTOR can manage EDITORs and VIEWERs
+  if (memberRole.value === 'CONTRIBUTOR') return m.role === 'EDITOR' || m.role === 'VIEWER'
+  return false
+}
+
+function selectInviteLink(e: Event) {
+  (e.target as HTMLInputElement).select()
+}
+
+function setMemberRoleFromDropdown(m: any, role: string) {
+  openMemberRoleDropdown.value = null
+  changeRole(m, role)
+}
+
+function roleLabel(role: string): string {
+  return role.charAt(0) + role.slice(1).toLowerCase()
+}
+
+async function changeRole(m: any, newRole: string) {
+  try {
+    const slug = route.params.slug as string
+    await api.patch(`/series/${slug}/members/${m.user.id}/role`, { role: newRole }, { cache: false })
+    m.role = newRole
+  } catch (e: any) {
+    alert(e?.response?.data?.message || 'Failed to update role')
+  }
+}
+
+function removeMember(m: any) {
+  memberToRemove.value = m
+  showRemoveConfirm.value = true
+}
+
+async function doRemoveMember() {
+  const m = memberToRemove.value
+  if (!m) return
+  removingMember.value = true
+  try {
+    const slug = route.params.slug as string
+    await api.delete(`/series/${slug}/members/${m.user.id}`, { cache: false })
+    members.value = members.value.filter((x: any) => x.user.id !== m.user.id)
+    showRemoveConfirm.value = false
+    memberToRemove.value = null
+  } catch (e: any) {
+    alert(e?.response?.data?.message || 'Failed to remove member')
+  } finally {
+    removingMember.value = false
+  }
+}
+
+// ─── Posts ────────────────────────────────────────────────────────────────────
+async function approvePost(p: any) {
+  if (p._saving) return
+  p._saving = true
+  try {
+    const slug = route.params.slug as string
+    await api.patch(`/series/${slug}/posts/${p.id}/approve`, {}, { cache: false })
+    p.seriesStatus = 'APPROVED'
+    approvedPosts.value.push(p)
+  } catch (e: any) {
+    alert(e?.response?.data?.message || 'Failed to approve post')
+    p._saving = false
+  }
+}
+
+async function rejectPost(p: any) {
+  if (p._saving) return
+  p._saving = true
+  try {
+    const slug = route.params.slug as string
+    await api.delete(`/series/${slug}/posts/${p.id}/reject`, { cache: false })
+    allPosts.value = allPosts.value.filter((x) => x.id !== p.id)
+  } catch (e: any) {
+    alert(e?.response?.data?.message || 'Failed to reject post')
+    p._saving = false
+  }
+}
+
+async function approveDeletion(p: any) {
+  if (p._saving) return
+  p._saving = true
+  try {
+    const slug = route.params.slug as string
+    await api.patch(`/series/${slug}/posts/${p.id}/approve-deletion`, {}, { cache: false })
+    pendingDeletions.value = pendingDeletions.value.filter((x) => x.id !== p.id)
+    approvedPosts.value = approvedPosts.value.filter((x) => x.id !== p.id)
+    allPosts.value = allPosts.value.filter((x) => x.id !== p.id)
+  } catch (e: any) {
+    alert(e?.response?.data?.message || 'Failed to approve deletion')
+    p._saving = false
+  }
+}
+
+async function rejectDeletion(p: any) {
+  if (p._saving) return
+  p._saving = true
+  try {
+    const slug = route.params.slug as string
+    await api.patch(`/series/${slug}/posts/${p.id}/reject-deletion`, {}, { cache: false })
+    // Restore post back to approved list
+    approvedPosts.value = [...approvedPosts.value, { ...p, _saving: false }]
+    allPosts.value = [...allPosts.value, { ...p, _saving: false }]
+    pendingDeletions.value = pendingDeletions.value.filter((x) => x.id !== p.id)
+  } catch (e: any) {
+    alert(e?.response?.data?.message || 'Failed to reject deletion')
+    p._saving = false
+  }
+}
+
+async function removePost(p: any) {
+  if (!confirm(`Remove "${p.title}" from this series?`)) return
+  try {
+    const slug = route.params.slug as string
+    await api.delete(`/series/${slug}/posts/${p.id}`, { cache: false })
+    approvedPosts.value = approvedPosts.value.filter((x) => x.id !== p.id)
+    allPosts.value = allPosts.value.filter((x) => x.id !== p.id)
+  } catch (e: any) {
+    alert(e?.response?.data?.message || 'Failed to remove post')
+  }
+}
+
+function onDragStart(idx: number) { dragFromIdx = idx }
+function onDragOver(idx: number) {
+  if (dragFromIdx === idx || dragFromIdx === -1) return
+  const arr = [...approvedPosts.value]
+  const [item] = arr.splice(dragFromIdx, 1)
+  arr.splice(idx, 0, item)
+  approvedPosts.value = arr
+  dragFromIdx = idx
+  reorderDirty.value = true
+}
+function onDrop() { dragFromIdx = -1 }
+
+async function saveOrder() {
+  saving.value = true
+  try {
+    const slug = route.params.slug as string
+    await api.patch(`/series/${slug}/posts/reorder`, { postIds: approvedPosts.value.map((p) => p.id) }, { cache: false })
+    reorderDirty.value = false
+    showSaved()
+  } catch (e: any) {
+    saveError.value = e?.response?.data?.message || 'Failed to save order'
+  } finally {
+    saving.value = false
+  }
+}
+
+// ─── Delete ───────────────────────────────────────────────────────────────────
+function confirmDelete() { showDeleteConfirm.value = true }
+
+async function doDelete() {
+  deleting.value = true
+  try {
+    await seriesStore.deleteSeries(route.params.slug as string)
+    await router.push('/series')
+  } catch (e: any) {
+    alert(e?.response?.data?.message || 'Failed to delete series')
+  } finally {
+    deleting.value = false
+    showDeleteConfirm.value = false
+  }
+}
+</script>
+
+<style scoped>
+.settings {
+  --s-accent: var(--accent-primary);
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.settings-header { margin-bottom: 1.5rem; }
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  margin-bottom: 0.875rem;
+  transition: color 0.15s;
+}
+
+.back-link:hover { color: var(--s-accent); }
+
+.settings-header-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.settings-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.role-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+}
+
+.role-badge.owner { background: color-mix(in srgb, var(--s-accent) 15%, var(--bg-secondary)); color: var(--s-accent); }
+.role-badge.editor { background: #d1fae5; color: #065f46; }
+.role-badge.contributor { background: #eff6ff; color: #1e40af; }
+
+/* ─── Tabs ─── */
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 2px solid var(--border-light);
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.tab-btn.active {
+  color: var(--s-accent);
+  border-bottom-color: var(--s-accent);
+}
+
+.tab-btn:hover:not(.active) {
+  color: var(--text-primary);
+}
+
+/* ─── Tab Content ─── */
+.tab-content { animation: fadeIn 0.15s ease; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+.section-title {
+  font-size: 1.125rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0 0 1.5rem;
+}
+
+.subsection-title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.fields { display: flex; flex-direction: column; gap: 1.25rem; margin-bottom: 1.5rem; }
+
+.field { display: flex; flex-direction: column; gap: 0.375rem; }
+
+.field-label {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.field-inline {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md, 8px);
+}
+
+.field-input, .field-textarea {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md, 8px);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.field-input:focus, .field-textarea:focus {
+  border-color: var(--s-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--s-accent) 15%, transparent);
+}
+
+select.field-input {
+  padding-right: 2.25rem;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  cursor: pointer;
+}
+.field-textarea { resize: vertical; min-height: 100px; }
+.field-hint { font-size: 0.8125rem; color: var(--text-tertiary); }
+.field-error { font-size: 0.8125rem; color: #ef4444; }
+
+/* ─── Slug ─── */
+.slug-wrap {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md, 8px);
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+.slug-wrap:focus-within { border-color: var(--s-accent); }
+.slug-prefix { padding: 0.75rem; font-size: 0.875rem; color: var(--text-tertiary); background: var(--bg-secondary); border-right: 1px solid var(--border-light); white-space: nowrap; }
+.slug-input { border: none; border-radius: 0; flex: 1; background: transparent; }
+
+/* ─── Visibility ─── */
+.vis-group { display: flex; flex-direction: column; gap: 0.5rem; }
+.vis-opt {
+  display: flex; align-items: flex-start; gap: 0.75rem;
+  padding: 0.75rem 1rem; border: 2px solid var(--border-light);
+  border-radius: var(--radius-md, 8px); cursor: pointer; transition: border-color 0.15s;
+}
+.vis-opt.selected { border-color: var(--s-accent); background: color-mix(in srgb, var(--s-accent) 6%, var(--bg-card)); }
+.vis-radio { display: none; }
+.vis-label { display: block; font-size: 0.9375rem; font-weight: 600; color: var(--text-primary); }
+.vis-desc { display: block; font-size: 0.8125rem; color: var(--text-secondary); }
+
+/* ─── Colors ─── */
+/* ─── Colors ─── */
+.color-input-wrap { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+
+.color-picker {
+  width: 2.5rem; height: 2.5rem; padding: 0;
+  border: 2px solid var(--border-medium);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--bg-card); cursor: pointer;
+}
+.color-picker::-webkit-color-swatch-wrapper { padding: 2px; }
+.color-picker::-webkit-color-swatch { border: none; border-radius: 4px; }
+
+/* Hidden on mobile, shown on desktop */
+.color-picker-desktop { display: none; }
+@media (min-width: 769px) { .color-picker-desktop { display: block; } }
+
+/* Colored adjust button — mobile-first large tap target, shrinks on desktop */
+.color-adjust-btn {
+  min-width: 2.75rem; min-height: 2.75rem;
+  padding: 0 0.5rem;
+  border: 2px solid var(--border-medium);
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer; font-size: 0.8125rem; font-weight: 600;
+  color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.2);
+  display: inline-flex; align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+.color-adjust-btn:focus-visible { outline: 2px solid var(--s-accent); outline-offset: 2px; }
+@media (min-width: 769px) {
+  .color-adjust-btn { min-width: 2.5rem; min-height: 2.5rem; padding: 0; }
+  .color-adjust-btn-label { display: none; }
+}
+.color-adjust-btn-label { display: inline; }
+
+/* Hex text input */
+.color-hex {
+  width: 6.5rem; min-height: 2.75rem;
+  padding: 0.5rem; font-size: 0.875rem;
+  font-family: ui-monospace, monospace;
+  border: 2px solid var(--border-medium);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--bg-card); color: var(--text-primary);
+  -webkit-tap-highlight-color: transparent;
+}
+@media (min-width: 769px) { .color-hex { min-height: auto; padding: 0.375rem 0.5rem; } }
+.color-hex:focus { outline: none; border-color: var(--s-accent); }
+
+.btn-clear-color {
+  font-size: 0.8125rem; color: var(--text-tertiary);
+  background: none; border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm, 6px); cursor: pointer;
+  font-family: inherit; padding: 0.375rem 0.625rem;
+  transition: border-color 0.15s, color 0.15s;
+}
+.btn-clear-color:hover { border-color: var(--border-medium); color: var(--text-primary); }
+
+/* ─── Color editor modal ─── */
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+.modal-hint-text { font-size: 0.875rem; color: var(--text-secondary); margin: 0 0 1rem; }
+
+.color-editor-backdrop { align-items: flex-end; padding: 0; }
+@media (min-width: 480px) { .color-editor-backdrop { align-items: center; padding: 1rem; } }
+
+.color-editor-modal {
+  width: 100%; max-width: 360px; max-height: 90vh; overflow-y: auto;
+  margin: 0; background: #ffffff; color: #1a1a1a;
+  border: 2px solid #e0e0e0; border-radius: var(--radius-lg, 12px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2); padding: 1.5rem;
+}
+.color-editor-modal .modal-title { color: #1a1a1a; font-size: 1.1rem; font-weight: 700; margin: 0 0 0.25rem; }
+.color-editor-modal .modal-hint-text { color: #555; }
+.color-editor-modal .modal-actions { justify-content: flex-end; }
+.color-editor-modal .btn-primary {
+  background: var(--s-accent, #6366f1); color: #fff;
+  border: none; border-radius: var(--radius-md, 8px);
+  padding: 0.5rem 1.25rem; font-size: 0.9375rem; font-weight: 600;
+  font-family: inherit; cursor: pointer;
+}
+.color-editor-modal .btn-primary:hover { filter: brightness(1.08); }
+
+.color-editor-preview {
+  height: 4rem; border-radius: var(--radius-md, 8px);
+  border: 2px solid #ccc; margin-bottom: 1rem;
+}
+.color-editor-hex-wrap { margin-bottom: 1rem; }
+.color-editor-hex {
+  width: 100%; min-height: 2.75rem;
+  padding: 0.5rem 0.75rem; font-size: 1rem;
+  font-family: ui-monospace, monospace;
+  border: 2px solid #ccc; border-radius: var(--radius-sm, 6px);
+  background: #f5f5f5; color: #1a1a1a;
+  -webkit-tap-highlight-color: transparent;
+}
+.color-editor-hex:focus { outline: none; border-color: var(--s-accent, #6366f1); }
+.color-editor-hex::placeholder { color: #888; }
+
+.color-editor-sliders { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.25rem; }
+.color-editor-slider-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.color-editor-slider-label { flex: 0 0 4.5rem; font-size: 0.9375rem; font-weight: 500; color: #1a1a1a; }
+.color-editor-range {
+  flex: 1; min-width: 120px; min-height: 44px; height: 2.75rem;
+  margin: 0; -webkit-appearance: none; appearance: none; background: transparent;
+}
+.color-editor-range:focus-visible { outline: 2px solid var(--s-accent, #6366f1); outline-offset: 2px; }
+.color-editor-range::-webkit-slider-runnable-track { height: 0.5rem; border-radius: 999px; background: #e0e0e0; }
+.color-editor-range::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 1.5rem; height: 1.5rem; border-radius: 50%;
+  background: var(--s-accent, #6366f1); border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2); margin-top: -0.5rem; cursor: pointer;
+}
+.color-editor-range::-moz-range-track { height: 0.5rem; border-radius: 999px; background: #e0e0e0; }
+.color-editor-range::-moz-range-thumb {
+  width: 1.5rem; height: 1.5rem; border-radius: 50%;
+  background: var(--s-accent, #6366f1); border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2); cursor: pointer;
+}
+.color-editor-range-hue {
+  background: linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);
+  border-radius: 999px; height: 0.5rem; align-self: center;
+}
+.color-editor-range-hue::-webkit-slider-runnable-track { background: linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00); }
+.color-editor-range-hue::-moz-range-track { background: linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00); }
+.color-editor-value { flex: 0 0 3rem; font-size: 0.875rem; font-variant-numeric: tabular-nums; color: #555; }
+
+/* ─── Fonts ─── */
+.font-options { display: flex; flex-direction: column; gap: 0.5rem; }
+.font-opt {
+  display: flex; align-items: center; gap: 0.875rem; padding: 0.75rem 1rem;
+  border: 2px solid var(--border-light); border-radius: var(--radius-md, 8px);
+  cursor: pointer; transition: border-color 0.15s;
+}
+.font-opt.selected { border-color: var(--s-accent); }
+.font-sample { font-size: 0.8125rem; color: var(--text-tertiary); margin-left: auto; }
+
+/* ─── Layout ─── */
+.layout-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+.layout-opt {
+  display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+  padding: 1rem; border: 2px solid var(--border-light); border-radius: var(--radius-md, 8px);
+  cursor: pointer; text-align: center; transition: border-color 0.15s;
+}
+.layout-opt.selected { border-color: var(--s-accent); background: color-mix(in srgb, var(--s-accent) 6%, var(--bg-card)); }
+.layout-icon { font-size: 1.5rem; color: var(--text-secondary); }
+.layout-opt.selected .layout-icon { color: var(--s-accent); }
+.layout-label { font-size: 0.9375rem; font-weight: 700; color: var(--text-primary); display: block; }
+.layout-desc { font-size: 0.75rem; color: var(--text-secondary); display: block; }
+
+/* ─── Toggle group ─── */
+.toggle-group { display: flex; gap: 0.5rem; }
+.toggle-opt {
+  display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.5rem 1rem;
+  border: 2px solid var(--border-light); border-radius: var(--radius-md, 8px);
+  cursor: pointer; font-size: 0.875rem; font-weight: 600; color: var(--text-secondary);
+  transition: border-color 0.15s, color 0.15s;
+}
+.toggle-opt.selected { border-color: var(--s-accent); color: var(--s-accent); }
+
+/* ─── Toggle switch ─── */
+.toggle-switch {
+  width: 44px; height: 24px; border-radius: 12px; position: relative;
+  background: var(--bg-secondary); border: none; cursor: pointer;
+  transition: background 0.2s; flex-shrink: 0;
+}
+.toggle-switch.on { background: var(--s-accent); }
+.toggle-thumb {
+  position: absolute; top: 2px; left: 2px; width: 20px; height: 20px;
+  border-radius: 50%; background: #fff; transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.toggle-switch.on .toggle-thumb { transform: translateX(20px); }
+
+/* ─── Save Bar ─── */
+:deep(.save-bar) {
+  display: flex; align-items: center; gap: 1rem; margin-top: 1.5rem;
+  padding-top: 1.5rem; border-top: 1px solid var(--border-light);
+  flex-wrap: wrap;
+}
+:deep(.save-ok) { display: flex; align-items: center; gap: 0.375rem; font-size: 0.9375rem; color: #16a34a; font-weight: 600; }
+:deep(.save-error) { font-size: 0.875rem; color: #ef4444; }
+
+/* The SaveBar renders a .btn-primary via h() so scoped styles don't reach it — use :deep() */
+:deep(.save-bar .btn-primary) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.5rem;
+  background: var(--s-accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md, 8px);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s, box-shadow 0.15s;
+}
+:deep(.save-bar .btn-primary:hover:not(:disabled)) {
+  opacity: 0.88;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--s-accent) 40%, transparent);
+}
+:deep(.save-bar .btn-primary:disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ─── Buttons ─── */
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.625rem 1.5rem; background: var(--s-accent); color: #fff;
+  border: none; border-radius: var(--radius-md, 8px); font-size: 0.9375rem;
+  font-weight: 600; font-family: inherit; cursor: pointer;
+  transition: opacity 0.15s, box-shadow 0.15s;
+  white-space: nowrap;
+}
+.btn-primary:hover:not(:disabled) {
+  opacity: 0.88;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--s-accent) 40%, transparent);
+}
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-secondary {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.625rem 1.25rem; background: transparent;
+  border: 1.5px solid var(--border-medium); border-radius: var(--radius-md, 8px);
+  color: var(--text-secondary); font-size: 0.9375rem; font-weight: 600;
+  font-family: inherit; cursor: pointer; transition: border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.btn-secondary:hover:not(:disabled) { border-color: var(--s-accent); color: var(--s-accent); }
+.btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ─── Branding ─── */
+.branding-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.branding-item { display: flex; flex-direction: column; gap: 0.5rem; }
+.branding-item--full { grid-column: 1 / -1; }
+
+.cover-drag-preview {
+  position: relative;
+  border-radius: var(--radius-md, 8px);
+  overflow: hidden;
+  height: 200px;
+  cursor: grab;
+  user-select: none;
+  line-height: 0;
+}
+.cover-drag-preview.dragging { cursor: grabbing; }
+.cover-drag-img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+.cover-drag-hint {
+  position: absolute;
+  bottom: 0.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+}
+.cover-drag-preview.dragging .cover-drag-hint { opacity: 0; }
+.cover-drag-remove {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  transition: background 0.15s;
+  z-index: 1;
+}
+.cover-drag-remove:hover { background: rgba(0,0,0,0.85); }
+.cover-drag-remove--delete { right: 2.5rem; }
+.cover-drag-preview--social { height: 160px; }
+
+.branding-item-header { display: flex; flex-direction: column; gap: 0.25rem; }
+.branding-label { font-size: 0.9375rem; font-weight: 600; color: var(--text-primary); }
+.branding-hint { font-size: 0.8125rem; color: var(--text-tertiary); }
+
+.image-upload-area {
+  position: relative; overflow: hidden; cursor: pointer;
+  border: 2px dashed var(--border-light); border-radius: var(--radius-md, 8px);
+  background: var(--bg-secondary); transition: border-color 0.15s;
+  height: 140px; display: flex; align-items: center; justify-content: center;
+}
+
+.image-upload-area:hover { border-color: var(--s-accent); }
+.image-upload-area--wide { height: 80px; }
+.image-upload-area--cover { height: 180px; }
+.image-upload-area--social { height: 160px; }
+.image-upload-area--bg-image { height: 160px; }
+
+.preview-img { width: 100%; height: 100%; object-fit: contain; }
+.preview-img--wide { object-fit: contain; }
+.preview-img--cover, .preview-img--social, .preview-img--bg-image { object-fit: cover; }
+
+.upload-placeholder {
+  display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+  color: var(--text-tertiary);
+}
+.upload-placeholder .pi { font-size: 1.75rem; }
+.upload-placeholder span { font-size: 0.875rem; font-weight: 600; }
+
+.upload-overlay {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.5); color: #fff; font-size: 1.5rem;
+  opacity: 0; transition: opacity 0.15s;
+}
+.image-upload-area:hover .upload-overlay { opacity: 1; }
+
+.progress-bar {
+  height: 4px; background: var(--bg-secondary); border-radius: 2px; overflow: hidden;
+}
+.progress-fill { height: 100%; background: var(--s-accent); transition: width 0.1s; }
+
+.btn-remove {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+  background: none;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm, 6px);
+  padding: 0.25rem 0.625rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.15s, border-color 0.15s;
+}
+.btn-remove:hover { color: #ef4444; border-color: #ef4444; }
+
+.hidden-input { display: none; }
+
+/* ─── Members ─── */
+.invite-section {
+  background: var(--bg-card); border: 1px solid var(--border-light);
+  border-radius: var(--radius-md, 8px); padding: 1.25rem; margin-bottom: 1.5rem;
+}
+
+.invite-row { display: flex; gap: 0.75rem; align-items: flex-start; }
+.invite-search-wrap { flex: 1; position: relative; }
+.invite-search-wrap .field-input { width: 100%; }
+.invite-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; right: 0;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  z-index: 100;
+  list-style: none;
+  margin: 0; padding: 0.375rem 0;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.invite-dropdown--loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  color: var(--text-tertiary);
+  font-size: 1rem;
+}
+.invite-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.875rem;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.invite-dropdown-item:hover { background: var(--bg-secondary); }
+.invite-dropdown-avatar {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.invite-dropdown-avatar--fallback {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: var(--s-accent, #6366f1);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.875rem; font-weight: 700;
+  flex-shrink: 0;
+}
+.invite-dropdown-info { display: flex; flex-direction: column; gap: 0.05rem; flex: 1; min-width: 0; }
+.invite-dropdown-name { font-size: 0.875rem; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.invite-dropdown-username { font-size: 0.75rem; color: var(--text-tertiary); }
+.invite-dropdown-badge {
+  font-size: 0.6875rem; font-weight: 700;
+  background: var(--bg-secondary);
+  color: var(--text-tertiary);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  padding: 0.1rem 0.375rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.invite-msg { font-size: 0.875rem; margin: 0.5rem 0 0; color: #16a34a; }
+.invite-msg.error { color: #ef4444; }
+
+.invite-link-section { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--border-light); }
+.invite-link-row { display: flex; gap: 0.75rem; }
+.invite-link-row .field-input { flex: 1; }
+
+.members-list { display: flex; flex-direction: column; gap: 0.625rem; }
+
+.member-item {
+  display: flex; align-items: center; gap: 0.875rem;
+  padding: 0.875rem 1rem; background: var(--bg-card);
+  border: 1px solid var(--border-light); border-radius: var(--radius-md, 8px);
+}
+
+.member-avatar {
+  width: 36px; height: 36px; border-radius: 50%; overflow: hidden;
+  background: var(--bg-secondary); flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+}
+.member-img { width: 100%; height: 100%; object-fit: cover; }
+.member-initial { font-size: 0.875rem; font-weight: 700; color: var(--text-secondary); }
+
+.member-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.member-name { font-size: 0.9375rem; font-weight: 600; color: var(--text-primary); }
+.member-username { font-size: 0.8125rem; color: var(--text-tertiary); }
+
+.member-role {
+  padding: 0.2rem 0.625rem; border-radius: 999px;
+  font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+  background: var(--bg-secondary); color: var(--text-secondary);
+}
+.member-role.owner { background: color-mix(in srgb, var(--s-accent) 15%, transparent); color: var(--s-accent); }
+.member-role.editor { background: #d1fae5; color: #065f46; }
+.member-role.contributor { background: #eff6ff; color: #1e40af; }
+
+.member-actions { display: flex; align-items: center; gap: 0.5rem; }
+
+.role-select {
+  padding: 0.375rem 2rem 0.375rem 0.625rem;
+  border: 1.5px solid var(--border-light);
+  border-radius: var(--radius-sm, 6px);
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+  background: var(--bg-card);
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%236b635b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5 L6 7.5 L9 4.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.role-select:hover { border-color: var(--border-medium); }
+.role-select:focus {
+  border-color: var(--s-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--s-accent) 15%, transparent);
+}
+
+.s-dropdown-wrap { position: relative; display: inline-block; }
+
+.s-dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 2px solid var(--border-light);
+  border-radius: var(--radius-md, 8px);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  white-space: nowrap;
+}
+.s-dropdown-trigger:hover { border-color: var(--border-medium); }
+.s-dropdown-trigger:focus {
+  outline: none;
+  border-color: var(--s-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--s-accent) 15%, transparent);
+}
+.s-dropdown-trigger--sm {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.8125rem;
+}
+
+.s-dropdown-chevron { font-size: 0.7rem; color: var(--text-tertiary); margin-left: 0.15rem; }
+
+.s-dropdown-panel {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  min-width: 100%;
+  padding: 0.25rem 0;
+  background: var(--bg-card);
+  border: 2px solid var(--border-light);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: var(--shadow-lg);
+  z-index: 200;
+}
+.s-dropdown-panel--right { left: auto; right: 0; }
+
+.s-dropdown-option {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 1rem;
+  border: none;
+  background: none;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.s-dropdown-option:hover { background: var(--bg-primary); }
+.s-dropdown-option.active {
+  background: color-mix(in srgb, var(--s-accent) 8%, transparent);
+  color: var(--s-accent);
+  font-weight: 600;
+}
+
+.s-dropdown-enter-active,
+.s-dropdown-leave-active { transition: opacity 0.15s ease, transform 0.15s ease; }
+.s-dropdown-enter-from,
+.s-dropdown-leave-to { opacity: 0; transform: translateY(-4px); }
+
+.btn-remove-member {
+  width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; background: none; border: none; cursor: pointer;
+  color: var(--text-tertiary); transition: color 0.15s, background 0.15s;
+}
+.btn-remove-member:hover { color: #ef4444; background: #fef2f2; }
+
+.empty-members { padding: 1.5rem; text-align: center; color: var(--text-tertiary); font-size: 0.9375rem; }
+
+/* ─── Sections Manager ─── */
+.sections-manager {
+  background: var(--bg-card); border: 1px solid var(--border-light);
+  border-radius: var(--radius-md, 8px); padding: 1.25rem; margin-bottom: 1.75rem;
+}
+
+.sections-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 0.25rem;
+}
+
+.new-section-form {
+  display: flex; flex-direction: column; gap: 0.75rem;
+  padding: 1rem; background: var(--bg-secondary);
+  border-radius: var(--radius-sm, 6px); margin-bottom: 1rem;
+}
+
+.section-layout-row {
+  display: flex; flex-wrap: wrap; gap: 0.5rem;
+}
+
+.section-layout-btn {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.3rem 0.7rem; border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--border-light); background: var(--bg-card);
+  color: var(--text-secondary); font-size: 0.8125rem; font-family: inherit;
+  cursor: pointer; transition: all 0.15s;
+}
+.section-layout-btn.active,
+.section-layout-btn:hover {
+  border-color: var(--s-accent); color: var(--s-accent);
+  background: color-mix(in srgb, var(--s-accent) 8%, transparent);
+}
+
+.new-section-actions { display: flex; gap: 0.5rem; }
+
+.sections-list { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.section-card {
+  border: 1px solid var(--border-light); border-radius: var(--radius-sm, 6px);
+  background: var(--bg-secondary); position: relative;
+  transition: box-shadow 0.15s;
+}
+.section-card.dragging { opacity: 0.5; }
+.section-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+
+.section-card-header {
+  display: flex; align-items: center; gap: 0.5rem;
+  flex-wrap: wrap; padding: 0.75rem 1rem; cursor: pointer; user-select: none;
+}
+
+.section-card-actions {
+  display: flex; align-items: center; gap: 0.375rem; flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+  .section-card-actions {
+    width: 100%; justify-content: flex-end;
+    border-top: 1px solid var(--border-light);
+    padding-top: 0.4rem; margin-top: 0.125rem;
+  }
+  .sec-layout-label { display: none; }
+}
+
+.section-drag-icon {
+  color: var(--text-tertiary); cursor: grab; font-size: 0.875rem; flex-shrink: 0;
+}
+
+.section-name-text {
+  flex: 1; font-size: 0.9375rem; font-weight: 600; color: var(--text-primary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.section-name-edit {
+  flex: 1; font-size: 0.9375rem; font-weight: 600; font-family: inherit;
+  padding: 0.2rem 0.4rem; border-radius: 4px;
+  border: 1px solid var(--s-accent); background: var(--bg-card);
+  color: var(--text-primary); outline: none;
+}
+
+.section-icon-btn {
+  width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; background: none; border: none; cursor: pointer;
+  color: var(--text-tertiary); font-size: 0.75rem; flex-shrink: 0;
+  transition: color 0.15s, background 0.15s;
+}
+.section-icon-btn:hover { color: var(--s-accent); background: color-mix(in srgb, var(--s-accent) 10%, transparent); }
+
+.add-post-dropdown-wrap { display: block; width: 100%; }
+.add-post-trigger { width: 100%; justify-content: flex-start; font-size: 0.875rem; padding: 0.4rem 0.75rem; }
+.add-post-trigger .s-dropdown-chevron { margin-left: auto; }
+.add-post-panel { max-height: 220px; overflow-y: auto; }
+.add-post-empty { padding: 0.5rem 1rem; font-size: 0.875rem; color: var(--text-secondary); margin: 0; }
+
+.section-chevron {
+  color: var(--text-tertiary); font-size: 0.75rem; flex-shrink: 0; margin-right: auto;
+}
+
+.section-card-body {
+  border-top: 1px solid var(--border-light);
+  padding: 0.75rem 1rem; background: var(--bg-card);
+}
+
+.section-posts-list { display: flex; flex-direction: column; gap: 0.375rem; margin-bottom: 0.75rem; }
+
+.section-post-item {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.5rem 0.75rem; border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--border-light); background: var(--bg-secondary);
+  cursor: grab; transition: box-shadow 0.15s;
+}
+.section-post-item.dragging { opacity: 0.5; }
+.section-post-item:hover { box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+
+.section-post-title {
+  flex: 1; font-size: 0.875rem; color: var(--text-primary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.add-post-row { margin-top: 0.5rem; }
+
+/* ─── Posts ─── */
+.pending-section {
+  background: #fffbeb; border: 1px solid #fde68a;
+  border-radius: var(--radius-md, 8px); padding: 1.25rem; margin-bottom: 1.5rem;
+}
+
+.pending-title { color: #92400e; }
+
+.pending-list { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.pending-item {
+  display: flex; align-items: center; gap: 1rem;
+  padding: 0.75rem 1rem; background: var(--bg-card, #fff);
+  border: 1px solid #fde68a; border-radius: var(--radius-sm, 6px);
+}
+
+.pending-thumb-wrap {
+  width: 80px; height: 52px; flex-shrink: 0;
+  border-radius: 6px; overflow: hidden;
+  background: var(--bg-secondary);
+  display: flex; align-items: center; justify-content: center;
+}
+.pending-thumb { width: 100%; height: 100%; object-fit: cover; }
+.pending-thumb-placeholder { color: var(--text-tertiary); font-size: 1.25rem; }
+
+.pending-info { flex: 1; min-width: 0; }
+.pending-post-title { display: block; font-size: 0.9375rem; font-weight: 600; color: var(--text-primary); text-decoration: none; }
+.pending-post-title:hover { text-decoration: underline; }
+.pending-author { font-size: 0.8125rem; color: var(--text-tertiary); }
+
+.pending-actions { display: flex; gap: 0.5rem; }
+
+.btn-approve {
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  padding: 0.375rem 0.75rem; background: #16a34a; color: #fff;
+  border: none; border-radius: var(--radius-sm, 6px); font-size: 0.8125rem; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+  transition: background 0.15s, box-shadow 0.15s;
+  white-space: nowrap;
+}
+.btn-approve:hover:not(:disabled) { background: #15803d; box-shadow: 0 2px 6px rgba(22, 163, 74, 0.35); }
+.btn-approve:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-reject {
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  padding: 0.375rem 0.75rem; background: #ef4444; color: #fff;
+  border: none; border-radius: var(--radius-sm, 6px); font-size: 0.8125rem; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+  transition: background 0.15s, box-shadow 0.15s;
+  white-space: nowrap;
+}
+.btn-reject:hover:not(:disabled) { background: #dc2626; box-shadow: 0 2px 6px rgba(239, 68, 68, 0.35); }
+.btn-reject:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.posts-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem; }
+
+.post-manage-item {
+  display: flex; align-items: center; gap: 0.875rem;
+  padding: 0.875rem 1rem; background: var(--bg-card);
+  border: 1px solid var(--border-light); border-radius: var(--radius-md, 8px);
+  cursor: grab; transition: box-shadow 0.15s;
+}
+
+.post-manage-item:active { cursor: grabbing; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+
+.drag-handle { color: var(--text-tertiary); font-size: 1rem; }
+
+.post-manage-title { flex: 1; font-size: 0.9375rem; font-weight: 600; color: var(--text-primary); }
+
+.post-manage-author { font-size: 0.8125rem; color: var(--text-tertiary); }
+
+.btn-remove-post {
+  color: var(--text-tertiary); background: none; border: none;
+  cursor: pointer; font-size: 1.125rem; transition: color 0.15s;
+}
+.btn-remove-post:hover { color: #ef4444; }
+
+.empty-posts { padding: 2rem; text-align: center; color: var(--text-tertiary); }
+
+.reorder-save { margin-top: 1rem; }
+
+/* ─── Danger Zone ─── */
+.danger-title { color: #dc2626; }
+
+.danger-card {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 1.5rem;
+  padding: 1.25rem; background: #fef2f2; border: 1px solid #fecaca;
+  border-radius: var(--radius-md, 8px);
+}
+
+.btn-danger {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.625rem 1.25rem; background: #dc2626; color: #fff;
+  border: none; border-radius: var(--radius-md, 8px); font-size: 0.9375rem;
+  font-weight: 600; font-family: inherit; cursor: pointer; white-space: nowrap;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+.btn-danger:hover:not(:disabled) { background: #b91c1c; box-shadow: 0 2px 8px rgba(220, 38, 38, 0.35); }
+.btn-danger:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ─── Modal ─── */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center; z-index: 1000;
+}
+.modal {
+  background: var(--bg-card); border-radius: var(--radius-lg, 12px);
+  padding: 2rem; max-width: 440px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.modal-title { font-size: 1.25rem; font-weight: 800; color: var(--text-primary); margin: 0 0 0.75rem; }
+.modal p { color: var(--text-secondary); font-size: 0.9375rem; margin: 0 0 1.5rem; }
+.modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; }
+
+/* ─── Loading / Error ─── */
+.page-loading { text-align: center; padding: 4rem; font-size: 2rem; color: var(--text-tertiary); }
+.page-error { text-align: center; padding: 4rem; }
+.page-error p { color: var(--text-secondary); margin-bottom: 1rem; }
+.btn-back { padding: 0.625rem 1.5rem; background: var(--accent-primary); color: #fff; border-radius: 8px; text-decoration: none; font-weight: 600; }
+
+@media (max-width: 640px) {
+  .settings { padding: 1rem; }
+  .branding-grid { grid-template-columns: 1fr; }
+  .layout-options { grid-template-columns: 1fr; }
+  .danger-card { flex-direction: column; }
+  .invite-row, .invite-link-row { flex-direction: column; }
+}
+</style>

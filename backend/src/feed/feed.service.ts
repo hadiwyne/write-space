@@ -5,6 +5,7 @@ import { mapPost } from '../utils/response.utils';
 function postInclude(userId: string | null) {
   return {
     author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
+    lastEditedBy: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
     _count: { select: { likes: true, comments: true, reposts: true } },
     poll: {
       include: {
@@ -15,6 +16,21 @@ function postInclude(userId: string | null) {
         ...(userId ? { votes: { where: { userId }, take: 1, select: { pollOptionId: true } } } : {}),
       },
     },
+    seriesPosts: {
+      take: 1,
+      orderBy: { addedAt: 'desc' as const },
+      select: {
+        series: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            logoMimeType: true,
+            accentColor: true,
+          },
+        },
+      },
+    },
     ...(userId ? {
       likes: { where: { userId }, take: 1, select: { id: true } },
       bookmarks: { where: { userId }, take: 1, select: { id: true } },
@@ -23,7 +39,140 @@ function postInclude(userId: string | null) {
   };
 }
 
-const baseWhere = { isPublished: true, archivedAt: null };
+const baseWhere = {
+  isPublished: true,
+  archivedAt: null,
+  NOT: { seriesPosts: { some: { status: { in: ['PENDING', 'DELETION_PENDING'] } } } },
+};
+
+/**
+ * Returns a Prisma `AND` clause array that adds to a `findMany` `where` to
+ * hide posts whose series is inaccessible to the viewer.
+ * Returns `any[]` to avoid fighting Prisma's strict generated enum types.
+ *
+ * - PUBLIC series  → always visible
+ * - FOLLOWERS_ONLY → visible to members + followers of the series owner
+ * - PRIVATE        → visible to members only
+ */
+function seriesVisibilityAnd(userId: string | null): any[] {
+  if (!userId) {
+    // Unauthenticated: only PUBLIC series + PUBLIC post visibility
+    return [
+      {
+        NOT: {
+          seriesPosts: {
+            some: {
+              status: 'APPROVED',
+              series: { visibility: { in: ['PRIVATE', 'FOLLOWERS_ONLY'] } },
+            },
+          },
+        },
+      },
+      // Block FOLLOWERS_ONLY post visibility (unauthenticated can't follow series)
+      {
+        NOT: {
+          seriesPosts: {
+            some: {
+              status: 'APPROVED',
+              postVisibility: 'FOLLOWERS_ONLY',
+            } as any,
+          },
+        },
+      },
+    ];
+  }
+  return [
+    // Block PRIVATE series the viewer is not a member of
+    {
+      NOT: {
+        seriesPosts: {
+          some: {
+            status: 'APPROVED',
+            series: {
+              visibility: 'PRIVATE',
+              members: { none: { userId } },
+            },
+          },
+        },
+      },
+    },
+    // Block FOLLOWERS_ONLY series the viewer can't access
+    {
+      NOT: {
+        seriesPosts: {
+          some: {
+            status: 'APPROVED',
+            series: {
+              AND: [
+                { visibility: 'FOLLOWERS_ONLY' },
+                { NOT: { ownerId: userId } },
+                { members: { none: { userId } } },
+                { owner: { followers: { none: { followerId: userId } } } },
+              ],
+            },
+          },
+        },
+      },
+    },
+    // Block FOLLOWERS_ONLY post visibility when viewer doesn't follow the series and isn't a member
+    {
+      NOT: {
+        seriesPosts: {
+          some: {
+            status: 'APPROVED',
+            postVisibility: 'FOLLOWERS_ONLY',
+            series: {
+              visibility: { not: 'PRIVATE' }, // PRIVATE series access is handled above
+              follows: { none: { userId } },
+              members: { none: { userId } },
+            },
+          } as any,
+        },
+      },
+    },
+  ];
+}
+
+/**
+ * Raw SQL snippet that enforces series visibility for posts that belong to
+ * an approved series. Posts not in any series are unaffected.
+ */
+function seriesVisibilitySql(userId: string | null): string {
+  const memberCheck = userId
+    ? `EXISTS (SELECT 1 FROM series_members sm WHERE sm.series_id = ser.id AND sm.user_id = '${userId}')`
+    : 'false';
+  const followCheck = userId
+    ? `EXISTS (SELECT 1 FROM follows f WHERE f.following_id = ser.owner_id AND f.follower_id = '${userId}')`
+    : 'false';
+  const isOwner = userId ? `ser.owner_id = '${userId}'` : 'false';
+  // Whether the viewer follows the series itself (for post-level FOLLOWERS_ONLY)
+  const seriesFollowCheck = userId
+    ? `EXISTS (SELECT 1 FROM series_follows sf WHERE sf.series_id = ser.id AND sf.user_id = '${userId}')`
+    : 'false';
+
+  // post_visibility gate: PUBLIC always passes; FOLLOWERS_ONLY requires series follow or membership
+  const postVisGate = `(sp_v.post_visibility = 'PUBLIC' OR (sp_v.post_visibility = 'FOLLOWERS_ONLY' AND (${seriesFollowCheck} OR ${memberCheck})))`;
+
+  // Cast visibility to text to avoid PostgreSQL enum comparison errors
+  return `
+    AND (
+      NOT EXISTS (
+        SELECT 1 FROM series_posts sp_v
+        JOIN series ser ON sp_v.series_id = ser.id
+        WHERE sp_v.post_id = p.id AND sp_v.status = 'APPROVED'
+      )
+      OR EXISTS (
+        SELECT 1 FROM series_posts sp_v
+        JOIN series ser ON sp_v.series_id = ser.id
+        WHERE sp_v.post_id = p.id AND sp_v.status = 'APPROVED'
+        AND (
+          (ser.visibility::text = 'PUBLIC' AND ${postVisGate})
+          OR (ser.visibility::text = 'FOLLOWERS_ONLY' AND (${isOwner} OR ${followCheck} OR ${memberCheck}) AND ${postVisGate})
+          OR (ser.visibility::text = 'PRIVATE' AND ${memberCheck})
+        )
+      )
+    )`;
+}
 
 @Injectable()
 export class FeedService {
@@ -41,6 +190,8 @@ export class FeedService {
     const authorIdsStr = authorIds.map(id => `'${id}'`).join(',');
     const tagPart = tag ? `AND '${tag}' = ANY(p.tags)` : '';
 
+    const pendingFilter = `AND NOT EXISTS (SELECT 1 FROM series_posts sp WHERE sp.post_id = p.id AND sp.status IN ('PENDING', 'DELETION_PENDING'))`;
+    const seriesFilter = seriesVisibilitySql(userId);
     const sql = `
       WITH timeline AS (
         -- Original posts from people I follow
@@ -52,7 +203,7 @@ export class FeedService {
         FROM posts p
         WHERE p.is_published = true AND p.archived_at IS NULL 
         AND p.author_id IN (${authorIdsStr})
-        ${tagPart}
+        ${tagPart} ${pendingFilter} ${seriesFilter}
 
         UNION ALL
 
@@ -66,7 +217,7 @@ export class FeedService {
         JOIN posts p ON r.post_id = p.id
         WHERE p.is_published = true AND p.archived_at IS NULL 
         AND r.user_id IN (${authorIdsStr})
-        ${tagPart}
+        ${tagPart} ${pendingFilter} ${seriesFilter}
       )
       SELECT * FROM timeline
       ORDER BY event_at DESC
@@ -95,6 +246,8 @@ export class FeedService {
     }
 
     const tagPart = tag ? `AND '${tag}' = ANY(p.tags)` : '';
+    const pendingFilter = `AND NOT EXISTS (SELECT 1 FROM series_posts sp WHERE sp.post_id = p.id AND sp.status IN ('PENDING', 'DELETION_PENDING'))`;
+    const seriesFilter = seriesVisibilitySql(userId);
 
     // Unified query: original posts (as events) + reposts (as events)
     const sql = `
@@ -106,7 +259,7 @@ export class FeedService {
           NULL::text as "repost_id",
           NULL::text as "reposter_id"
         FROM posts p
-        WHERE p.is_published = true AND p.archived_at IS NULL ${visibilityPart} ${tagPart}
+        WHERE p.is_published = true AND p.archived_at IS NULL ${visibilityPart} ${tagPart} ${pendingFilter} ${seriesFilter}
 
         UNION ALL
 
@@ -118,7 +271,7 @@ export class FeedService {
           r.user_id as "reposter_id"
         FROM reposts r
         JOIN posts p ON r.post_id = p.id
-        WHERE p.is_published = true AND p.archived_at IS NULL ${visibilityPart} ${tagPart}
+        WHERE p.is_published = true AND p.archived_at IS NULL ${visibilityPart} ${tagPart} ${pendingFilter} ${seriesFilter}
       )
       SELECT * FROM timeline
       ORDER BY event_at DESC
@@ -165,6 +318,11 @@ export class FeedService {
           user: userMap.get(event.reposter_id),
         };
       }
+
+      // Attach first series this post belongs to (if any)
+      const seriesPost = (post as any).seriesPosts?.[0];
+      (mapped as any).series = seriesPost?.series ?? null;
+
       return mapped;
     }).filter(Boolean);
   }
@@ -180,10 +338,11 @@ export class FeedService {
             { visibility: 'FOLLOWERS_ONLY' as const, authorId: userId },
           ],
         };
-    const where = {
+    const where: any = {
       ...baseWhere,
       ...visibilityFilter,
       ...(tag ? { tags: { has: tag } } : {}),
+      AND: seriesVisibilityAnd(userId ?? null),
     };
     const posts = await this.prisma.post.findMany({
       where,
@@ -193,12 +352,17 @@ export class FeedService {
     });
     const sorted = posts
       .sort((a, b) => {
-        const scoreA = (a._count?.likes ?? 0) * 2 + (a._count?.comments ?? 0);
-        const scoreB = (b._count?.likes ?? 0) * 2 + (b._count?.comments ?? 0);
+        const scoreA = ((a as any)._count?.likes ?? 0) * 2 + ((a as any)._count?.comments ?? 0);
+        const scoreB = ((b as any)._count?.likes ?? 0) * 2 + ((b as any)._count?.comments ?? 0);
         return scoreB - scoreA;
       })
       .slice(0, limit);
-    return sorted.map(p => mapPost(p, userId));
+    return sorted.map(p => {
+      const mapped = mapPost(p, userId) as any;
+      const seriesPost = (p as any).seriesPosts?.[0];
+      mapped.series = seriesPost?.series ?? null;
+      return mapped;
+    });
   }
 
   async getTrendingTags(limit = 10, userId?: string | null) {
@@ -230,15 +394,20 @@ export class FeedService {
         ],
       }
       : { visibility: 'PUBLIC' as const };
+    const trendingWhere: any = {
+      ...baseWhere,
+      ...visibilityFilter,
+      AND: seriesVisibilityAnd(userId ?? null),
+    };
     const posts = await this.prisma.post.findMany({
-      where: { ...baseWhere, ...visibilityFilter },
+      where: trendingWhere,
       take: 50,
       include: postInclude(userId ?? null),
     });
     return posts
       .sort((a, b) => {
-        const scoreA = (a._count.likes ?? 0) * 2 + (a._count.comments ?? 0);
-        const scoreB = (b._count.likes ?? 0) * 2 + (b._count.comments ?? 0);
+        const scoreA = ((a as any)._count?.likes ?? 0) * 2 + ((a as any)._count?.comments ?? 0);
+        const scoreB = ((b as any)._count?.likes ?? 0) * 2 + ((b as any)._count?.comments ?? 0);
         return scoreB - scoreA;
       })
       .slice(0, limit);

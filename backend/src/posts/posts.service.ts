@@ -123,8 +123,18 @@ export class PostsService {
   private postInclude(userId?: string | null) {
     return {
       author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
+      lastEditedBy: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
       _count: { select: { likes: true, comments: true, reposts: true } },
       poll: this.pollInclude(userId ?? null),
+      seriesPosts: {
+        take: 1,
+        orderBy: { addedAt: 'desc' as const },
+        select: {
+          series: {
+            select: { id: true, name: true, slug: true, logoMimeType: true, accentColor: true },
+          },
+        },
+      },
       ...(userId ? {
         likes: { where: { userId }, take: 1, select: { id: true } },
         bookmarks: { where: { userId }, take: 1, select: { id: true } },
@@ -242,7 +252,9 @@ export class PostsService {
       include: this.postInclude(userId),
     });
     if (!post) throw new NotFoundException('Post not found');
-    return mapPost(post, userId);
+    const mapped = mapPost(post, userId) as any;
+    mapped.series = (post as any).seriesPosts?.[0]?.series ?? null;
+    return mapped;
   }
 
   async findOnePublic(id: string, userId?: string, isSuperadmin = false) {
@@ -250,7 +262,9 @@ export class PostsService {
     const isAuthor = userId && post.authorId === userId;
     if (!post.isPublished) throw new NotFoundException('Post not found');
     if (post.archivedAt && !isAuthor) throw new NotFoundException('Post not found');
-    if ((post as { visibility?: string }).visibility === 'FOLLOWERS_ONLY' && !isAuthor) {
+
+    // Enforce post-level visibility
+    if ((post as any).visibility === 'FOLLOWERS_ONLY' && !isAuthor && !isSuperadmin) {
       const follows = userId
         ? await this.prisma.follow.findUnique({
           where: { followerId_followingId: { followerId: userId, followingId: post.authorId } },
@@ -258,6 +272,26 @@ export class PostsService {
         : null;
       if (!follows) throw new NotFoundException('Post not found');
     }
+
+    // Enforce series-level visibility (series visibility overrides post visibility)
+    const seriesInfo = (post as any).series;
+    if (seriesInfo && !isSuperadmin) {
+      const series = await this.prisma.series.findUnique({ where: { id: seriesInfo.id }, select: { visibility: true, ownerId: true } });
+      if (series?.visibility === 'PRIVATE') {
+        const isMember = userId
+          ? await this.prisma.seriesMember.findUnique({ where: { seriesId_userId: { seriesId: seriesInfo.id, userId } } })
+          : null;
+        if (!isMember) throw new NotFoundException('Post not found');
+      } else if (series?.visibility === 'FOLLOWERS_ONLY') {
+        if (!isAuthor) {
+          const follows = userId
+            ? await this.prisma.follow.findUnique({ where: { followerId_followingId: { followerId: userId!, followingId: series.ownerId } } })
+            : null;
+          if (!follows) throw new NotFoundException('Post not found');
+        }
+      }
+    }
+
     this.prisma.post.update({ where: { id }, data: { viewCount: { increment: 1 } } }).catch(() => { });
     return post;
   }
@@ -301,7 +335,28 @@ export class PostsService {
   async update(id: string, userId: string, dto: UpdatePostDto) {
     const post = await this.prisma.post.findUnique({ where: { id } });
     if (!post) throw new NotFoundException('Post not found');
-    if (post.authorId !== userId) throw new ForbiddenException('Not your post');
+
+    const isAuthor = post.authorId === userId;
+    let isSeriesContributor = false;
+
+    if (!isAuthor) {
+      // Allow OWNER or CONTRIBUTOR of the series containing this post to edit it
+      const seriesPost = await this.prisma.seriesPost.findFirst({
+        where: { postId: id },
+        select: { seriesId: true },
+      });
+      if (seriesPost) {
+        const membership = await this.prisma.seriesMember.findUnique({
+          where: { seriesId_userId: { seriesId: seriesPost.seriesId, userId } },
+        });
+        const RANK: Record<string, number> = { VIEWER: 1, EDITOR: 2, CONTRIBUTOR: 3, OWNER: 4 };
+        if (membership && (RANK[membership.role] ?? 0) >= RANK['CONTRIBUTOR']) {
+          isSeriesContributor = true;
+        }
+      }
+      if (!isSeriesContributor) throw new ForbiddenException('Not your post');
+    }
+
     if (dto.content != null) {
       const contentType = dto.contentType ?? post.contentType;
       const count = countImagesInContent(dto.content, contentType);
@@ -325,8 +380,16 @@ export class PostsService {
         ...(dto.visibility != null && { visibility: dto.visibility }),
         ...(dto.cardStyle !== undefined && { cardStyle: dto.cardStyle as Prisma.InputJsonValue }),
         ...(dto.contentFontFamily !== undefined && { contentFontFamily: sanitizeContentFontFamily(dto.contentFontFamily) }),
+        // Record who last edited the post (only for contributor edits of others' posts)
+        ...(isSeriesContributor && !isAuthor && {
+          lastEditedById: userId,
+          lastEditedAt: new Date(),
+        }),
       },
-      include: { author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } } },
+      include: {
+        author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
+        lastEditedBy: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
+      },
     });
     if (dto.content != null) this.refreshLinkPreview(updated.id, dto.content).catch(() => { });
     return updated;
@@ -400,21 +463,25 @@ export class PostsService {
           ? { isAnonymous: true as const }
           : { isAnonymous: false as const }
         : { isAnonymous: false as const };
-    return this.prisma.post.findMany({
-      where: { authorId: user.id, isPublished: true, archivedAt: null, ...visibilityFilter, ...anonymousFilter },
+    const posts = await this.prisma.post.findMany({
+      where: {
+        authorId: user.id,
+        isPublished: true,
+        archivedAt: null,
+        // Hide posts that are pending series review — they're not public yet
+        NOT: { seriesPosts: { some: { status: { in: ['PENDING', 'DELETION_PENDING'] } } } },
+        ...visibilityFilter,
+        ...anonymousFilter,
+      },
       orderBy: { publishedAt: 'desc' },
       take: limit,
       skip: offset,
-      include: {
-        author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
-        _count: { select: { likes: true, comments: true, reposts: true } },
-        poll: this.pollInclude(viewerUserId ?? null),
-        ...(viewerUserId ? {
-          likes: { where: { userId: viewerUserId }, take: 1, select: { id: true } },
-          bookmarks: { where: { userId: viewerUserId }, take: 1, select: { id: true } },
-          reposts: { where: { userId: viewerUserId }, take: 1, select: { id: true } },
-        } : {}),
-      },
+      include: this.postInclude(viewerUserId),
+    });
+    return posts.map((p) => {
+      const mapped: any = { ...p };
+      mapped.series = (p as any).seriesPosts?.[0]?.series ?? null;
+      return mapped;
     });
   }
 

@@ -3,7 +3,20 @@ import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsGateway } from './notifications.gateway';
 import { mapUser } from '../utils/response.utils';
 
-export type NotificationType = 'LIKE' | 'COMMENT' | 'COMMENT_REPLY' | 'FOLLOW' | 'FOLLOW_REQUEST' | 'MENTION';
+export type NotificationType =
+  | 'LIKE'
+  | 'COMMENT'
+  | 'COMMENT_REPLY'
+  | 'FOLLOW'
+  | 'FOLLOW_REQUEST'
+  | 'MENTION'
+  | 'SERIES_INVITE'
+  | 'SERIES_INVITE_ACCEPTED'
+  | 'SERIES_INVITE_REJECTED'
+  | 'SERIES_POST_SUBMITTED'
+  | 'SERIES_POST_APPROVED'
+  | 'SERIES_POST_REJECTED'
+  | 'SERIES_FOLLOW';
 
 @Injectable()
 export class NotificationsService {
@@ -19,6 +32,8 @@ export class NotificationsService {
     actorAnonymousAlias?: string | null;
     postId?: string;
     commentId?: string;
+    seriesId?: string;
+    inviteToken?: string;
   }) {
     if (data.actorId && data.actorId === data.userId) return null;
     const notification = await this.prisma.notification.create({
@@ -29,10 +44,13 @@ export class NotificationsService {
         actorAnonymousAlias: data.actorAnonymousAlias ?? undefined,
         postId: data.postId,
         commentId: data.commentId,
+        seriesId: data.seriesId,
+        inviteToken: data.inviteToken,
       },
       include: {
         actor: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true, profileHTML: true, bio: true, whoCanSeeLikes: true, whoCanSeeFollowing: true, whoCanSeeFollowers: true, whoCanFollowMe: true, _count: { select: { followers: true, following: true } } } },
         post: { select: { id: true, title: true } },
+        series: { select: { id: true, name: true, slug: true } },
       },
     });
     const out = this.maskNotificationActor(notification as any, data.userId);
@@ -66,6 +84,7 @@ export class NotificationsService {
       include: {
         actor: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true, profileHTML: true, bio: true, whoCanSeeLikes: true, whoCanSeeFollowing: true, whoCanSeeFollowers: true, whoCanFollowMe: true, _count: { select: { followers: true, following: true } } } },
         post: { select: { id: true, title: true } },
+        series: { select: { id: true, name: true, slug: true } },
       },
     });
     return list.map((n) => {

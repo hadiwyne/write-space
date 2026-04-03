@@ -89,20 +89,28 @@
       </template>
     </div>
       <div v-else class="post-list" :class="{ 'post-list--grid': viewMode === 'grid' }">
-      <PostCard
-        v-for="(p, i) in posts"
-        :key="(p.repostData as any)?.id ? `repost-${(p.repostData as any).id}` : p.id"
-        :post="p"
-        :show-actions="canShowActions(p)"
-        :show-repost="!!auth.token"
-        :reposted="repostedIds.has(p.id)"
-        :style="{ animationDelay: `${0.1 * i}s` }"
-        @repost="handleRepost"
-        @like="handleLike"
-        @archive="handleArchive"
-        @delete="handleDelete"
-        @poll-update="handlePollUpdate"
-      />
+        <template v-for="(p, i) in posts">
+          <SeriesPostCard
+            v-if="p.series"
+            :key="'series-' + feedPostKey(p)"
+            :post="p"
+            :style="{ animationDelay: `${0.1 * i}s` }"
+          />
+          <PostCard
+            v-else
+            :key="'post-' + feedPostKey(p)"
+            :post="p"
+            :show-actions="canShowActions(p)"
+            :show-repost="!!auth.token"
+            :reposted="repostedIds.has(p.id)"
+            :style="{ animationDelay: `${0.1 * i}s` }"
+            @repost="handleRepost"
+            @like="handleLike"
+            @archive="handleArchive"
+            @delete="handleDelete"
+            @poll-update="handlePollUpdate"
+          />
+        </template>
       </div>
     </div>
     <!-- Background Refreshing indicator -->
@@ -119,6 +127,7 @@ import { api } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import { getCachedFeed, setCachedFeed, setCachedPosts, setCachedProfiles } from '@/utils/indexedDBCache'
 import PostCard from '@/components/PostCard.vue'
+import SeriesPostCard from '@/components/SeriesPostCard.vue'
 import PostCardSkeleton from '@/components/skeletons/PostCardSkeleton.vue'
 
 type FeedPost = { 
@@ -177,6 +186,11 @@ function handleLike(postId: string, isLiked: boolean) {
   if (p) {
     p.isLiked = isLiked
   }
+}
+
+function feedPostKey(p: FeedPost): string {
+  const repostId = (p as any).repostData?.id
+  return repostId ? `repost-${repostId}` : p.id
 }
 
 function canShowActions(p: FeedPost): boolean {
