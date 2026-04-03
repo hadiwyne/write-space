@@ -3,7 +3,16 @@ import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsGateway } from './notifications.gateway';
 import { mapUser } from '../utils/response.utils';
 
-export type NotificationType = 'LIKE' | 'COMMENT' | 'COMMENT_REPLY' | 'FOLLOW' | 'FOLLOW_REQUEST' | 'MENTION';
+export type NotificationType =
+  | 'LIKE'
+  | 'COMMENT'
+  | 'COMMENT_REPLY'
+  | 'FOLLOW'
+  | 'FOLLOW_REQUEST'
+  | 'MENTION'
+  | 'SERIES_INVITE'
+  | 'SERIES_POST_APPROVED'
+  | 'SERIES_FOLLOW';
 
 @Injectable()
 export class NotificationsService {

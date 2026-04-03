@@ -15,6 +15,22 @@ function postInclude(userId: string | null) {
         ...(userId ? { votes: { where: { userId }, take: 1, select: { pollOptionId: true } } } : {}),
       },
     },
+    seriesPosts: {
+      where: { status: 'APPROVED' },
+      take: 1,
+      orderBy: { addedAt: 'desc' as const },
+      select: {
+        series: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            logoMimeType: true,
+            accentColor: true,
+          },
+        },
+      },
+    },
     ...(userId ? {
       likes: { where: { userId }, take: 1, select: { id: true } },
       bookmarks: { where: { userId }, take: 1, select: { id: true } },
@@ -165,6 +181,11 @@ export class FeedService {
           user: userMap.get(event.reposter_id),
         };
       }
+
+      // Attach first series this post belongs to (if any)
+      const seriesPost = (post as any).seriesPosts?.[0];
+      (mapped as any).series = seriesPost?.series ?? null;
+
       return mapped;
     }).filter(Boolean);
   }
@@ -198,7 +219,12 @@ export class FeedService {
         return scoreB - scoreA;
       })
       .slice(0, limit);
-    return sorted.map(p => mapPost(p, userId));
+    return sorted.map(p => {
+      const mapped = mapPost(p, userId) as any;
+      const seriesPost = (p as any).seriesPosts?.[0];
+      mapped.series = seriesPost?.series ?? null;
+      return mapped;
+    });
   }
 
   async getTrendingTags(limit = 10, userId?: string | null) {

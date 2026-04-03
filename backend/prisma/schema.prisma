@@ -58,6 +58,11 @@ model User {
   commentReactions CommentReaction[]
 
   isSuperadmin  Boolean   @default(false) @map("is_superadmin")
+  
+  ownedSeries        Series[]       @relation("OwnedSeries")
+  seriesMemberships  SeriesMember[]
+  seriesFollows      SeriesFollow[]
+  seriesInviteTokens SeriesInviteToken[] @relation("SeriesInviteTokens")
 
   whoCanSeeLikes     String   @default("PUBLIC") @map("who_can_see_likes")
   whoCanSeeFollowing String   @default("PUBLIC") @map("who_can_see_following")
@@ -101,6 +106,8 @@ model Post {
   poll          Poll?
   cardStyle     Json?     @map("card_style")
   contentFontFamily String? @map("content_font_family")
+
+  seriesPosts   SeriesPost[]
 
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -369,4 +376,118 @@ model UserTheme {
 
   @@index([userId])
   @@map("user_themes")
+}
+
+enum SeriesVisibility {
+  PUBLIC
+  FOLLOWERS_ONLY
+  PRIVATE
+}
+
+enum SeriesRole {
+  OWNER
+  EDITOR
+  CONTRIBUTOR
+}
+
+model Series {
+  id            String           @id @default(uuid())
+  ownerId       String           @map("owner_id")
+  owner         User             @relation("OwnedSeries", fields: [ownerId], references: [id], onDelete: Cascade)
+  name          String
+  slug          String           @unique
+  tagline       String?
+  description   String?          @db.Text
+  
+  logoData      Bytes?           @map("logo_data")
+  logoMimeType  String?          @map("logo_mime_type")
+  wordmarkData  Bytes?           @map("wordmark_data")
+  wordmarkMimeType String?       @map("wordmark_mime_type")
+  coverData     Bytes?           @map("cover_data")
+  coverMimeType String?          @map("cover_mime_type")
+  socialPreviewData Bytes?       @map("social_preview_data")
+  socialPreviewMimeType String?  @map("social_preview_mime_type")
+
+  coverBgColor  String?          @map("cover_bg_color")
+  accentColor   String?          @map("accent_color")
+  bgColor       String?          @map("bg_color")
+  fontFamily    String?          @map("font_family")
+  layoutMode    String           @default("feature") @map("layout_mode")
+  postListMode  String           @default("list") @map("post_list_mode")
+  showTopPosts  Boolean          @default(true) @map("show_top_posts")
+  navLinks      Json?            @map("nav_links")
+  pinnedPostIds String[]         @map("pinned_post_ids")
+  showTagline   Boolean          @default(true) @map("show_tagline")
+
+  visibility    SeriesVisibility @default(PUBLIC)
+  
+  members       SeriesMember[]
+  posts         SeriesPost[]
+  follows       SeriesFollow[]
+  inviteTokens  SeriesInviteToken[]
+
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  @@index([ownerId])
+  @@map("series")
+}
+
+model SeriesMember {
+  id        String     @id @default(uuid())
+  seriesId  String     @map("series_id")
+  series    Series     @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  userId    String     @map("user_id")
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      SeriesRole @default(CONTRIBUTOR)
+  joinedAt  DateTime   @default(now()) @map("joined_at")
+
+  @@unique([seriesId, userId])
+  @@index([seriesId])
+  @@index([userId])
+  @@map("series_members")
+}
+
+model SeriesPost {
+  id        String   @id @default(uuid())
+  seriesId  String   @map("series_id")
+  series    Series   @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  postId    String   @map("post_id")
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  order     Int      @default(0)
+  status    String   @default("APPROVED") // PENDING | APPROVED | REJECTED
+  addedAt   DateTime @default(now()) @map("added_at")
+
+  @@unique([seriesId, postId])
+  @@index([seriesId])
+  @@index([postId])
+  @@map("series_posts")
+}
+
+model SeriesFollow {
+  id        String   @id @default(uuid())
+  seriesId  String   @map("series_id")
+  series    Series   @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([seriesId, userId])
+  @@index([seriesId])
+  @@index([userId])
+  @@map("series_follows")
+}
+
+model SeriesInviteToken {
+  id          String   @id @default(uuid())
+  seriesId    String   @map("series_id")
+  series      Series   @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  token       String   @unique
+  createdById String   @map("created_by_id")
+  createdBy   User     @relation("SeriesInviteTokens", fields: [createdById], references: [id], onDelete: Cascade)
+  expiresAt   DateTime? @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([seriesId])
+  @@map("series_invite_tokens")
 }

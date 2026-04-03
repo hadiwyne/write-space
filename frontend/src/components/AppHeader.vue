@@ -21,6 +21,9 @@
         <router-link to="/feed" class="nav-btn" v-tooltip.bottom="'Feed'" aria-label="Feed">
           <i class="pi pi-home"></i>
         </router-link>
+        <router-link to="/series" class="nav-btn" v-tooltip.bottom="'Series'" aria-label="Series">
+          <i class="pi pi-book"></i>
+        </router-link>
         <div class="notif-wrap" ref="notifWrapRef">
           <button type="button" class="nav-btn notif-btn" aria-label="Notifications" :aria-expanded="notifOpen" @click="notifOpen = !notifOpen">
             <i class="pi pi-bell"></i>
@@ -115,6 +118,9 @@
       <template v-else>
         <router-link to="/feed" class="nav-btn" v-tooltip.bottom="'Feed'" aria-label="Feed">
           <i class="pi pi-home"></i>
+        </router-link>
+        <router-link to="/series" class="nav-btn" v-tooltip.bottom="'Series'" aria-label="Series">
+          <i class="pi pi-book"></i>
         </router-link>
         <router-link to="/login" class="nav-btn" v-tooltip.bottom="'Log in'" aria-label="Log in">
           <i class="pi pi-sign-in"></i>

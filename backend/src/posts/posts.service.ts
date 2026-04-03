@@ -125,6 +125,16 @@ export class PostsService {
       author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
       _count: { select: { likes: true, comments: true, reposts: true } },
       poll: this.pollInclude(userId ?? null),
+      seriesPosts: {
+        where: { status: 'APPROVED' },
+        take: 1,
+        orderBy: { addedAt: 'desc' as const },
+        select: {
+          series: {
+            select: { id: true, name: true, slug: true, logoMimeType: true, accentColor: true },
+          },
+        },
+      },
       ...(userId ? {
         likes: { where: { userId }, take: 1, select: { id: true } },
         bookmarks: { where: { userId }, take: 1, select: { id: true } },
@@ -242,7 +252,9 @@ export class PostsService {
       include: this.postInclude(userId),
     });
     if (!post) throw new NotFoundException('Post not found');
-    return mapPost(post, userId);
+    const mapped = mapPost(post, userId) as any;
+    mapped.series = (post as any).seriesPosts?.[0]?.series ?? null;
+    return mapped;
   }
 
   async findOnePublic(id: string, userId?: string, isSuperadmin = false) {
@@ -250,7 +262,9 @@ export class PostsService {
     const isAuthor = userId && post.authorId === userId;
     if (!post.isPublished) throw new NotFoundException('Post not found');
     if (post.archivedAt && !isAuthor) throw new NotFoundException('Post not found');
-    if ((post as { visibility?: string }).visibility === 'FOLLOWERS_ONLY' && !isAuthor) {
+
+    // Enforce post-level visibility
+    if ((post as any).visibility === 'FOLLOWERS_ONLY' && !isAuthor && !isSuperadmin) {
       const follows = userId
         ? await this.prisma.follow.findUnique({
           where: { followerId_followingId: { followerId: userId, followingId: post.authorId } },
@@ -258,6 +272,26 @@ export class PostsService {
         : null;
       if (!follows) throw new NotFoundException('Post not found');
     }
+
+    // Enforce series-level visibility (series visibility overrides post visibility)
+    const seriesInfo = (post as any).series;
+    if (seriesInfo && !isSuperadmin) {
+      const series = await this.prisma.series.findUnique({ where: { id: seriesInfo.id }, select: { visibility: true, ownerId: true } });
+      if (series?.visibility === 'PRIVATE') {
+        const isMember = userId
+          ? await this.prisma.seriesMember.findUnique({ where: { seriesId_userId: { seriesId: seriesInfo.id, userId } } })
+          : null;
+        if (!isMember) throw new NotFoundException('Post not found');
+      } else if (series?.visibility === 'FOLLOWERS_ONLY') {
+        if (!isAuthor) {
+          const follows = userId
+            ? await this.prisma.follow.findUnique({ where: { followerId_followingId: { followerId: userId!, followingId: series.ownerId } } })
+            : null;
+          if (!follows) throw new NotFoundException('Post not found');
+        }
+      }
+    }
+
     this.prisma.post.update({ where: { id }, data: { viewCount: { increment: 1 } } }).catch(() => { });
     return post;
   }
