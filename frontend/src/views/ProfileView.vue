@@ -190,7 +190,7 @@
           </template>
         </div>
 
-        <div v-else-if="profileTab !== 'series'">
+        <div v-else>
           <div v-if="likedLoading" class="post-list">
             <PostCardSkeleton v-for="i in 2" :key="i" />
           </div>
