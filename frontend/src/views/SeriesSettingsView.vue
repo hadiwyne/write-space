@@ -328,13 +328,46 @@
       <div v-if="isOwnerOrEditor" class="invite-section">
         <h3 class="subsection-title">Invite by Username</h3>
         <div class="invite-row">
-          <input
-            v-model="inviteUsername"
-            type="text"
-            class="field-input"
-            placeholder="@username"
-            @keyup.enter="inviteUser"
-          />
+          <div class="invite-search-wrap">
+            <input
+              v-model="inviteUsername"
+              type="text"
+              class="field-input"
+              placeholder="Search by username…"
+              autocomplete="off"
+              @input="onInviteSearchInput"
+              @keyup.enter="inviteUser"
+              @focus="onInviteSearchInput"
+              @blur="hideSearchDropdown"
+            />
+            <!-- Live search dropdown -->
+            <ul v-if="showInviteDropdown && inviteSearchResults.length" class="invite-dropdown">
+              <li
+                v-for="u in inviteSearchResults"
+                :key="u.id"
+                class="invite-dropdown-item"
+                @mousedown.prevent="selectInviteUser(u)"
+              >
+                <img
+                  v-if="u.avatarUrl"
+                  :src="avatarSrc(u.avatarUrl)"
+                  :alt="u.username"
+                  class="invite-dropdown-avatar"
+                />
+                <span v-else class="invite-dropdown-avatar invite-dropdown-avatar--fallback">
+                  {{ (u.displayName || u.username)[0].toUpperCase() }}
+                </span>
+                <div class="invite-dropdown-info">
+                  <span class="invite-dropdown-name">{{ u.displayName || u.username }}</span>
+                  <span class="invite-dropdown-username">@{{ u.username }}</span>
+                </div>
+                <span v-if="isAlreadyMember(u.id)" class="invite-dropdown-badge">Member</span>
+              </li>
+            </ul>
+            <div v-else-if="showInviteDropdown && inviteSearchLoading" class="invite-dropdown invite-dropdown--loading">
+              <i class="pi pi-spin pi-spinner"></i>
+            </div>
+          </div>
           <button type="button" class="btn-primary" :disabled="inviting || !inviteUsername.trim()" @click="inviteUser">
             <i v-if="inviting" class="pi pi-spin pi-spinner"></i>
             <span>{{ inviting ? 'Inviting…' : 'Send Invite' }}</span>
@@ -605,6 +638,45 @@ const inviteLink = ref('')
 const generatingLink = ref(false)
 const copiedLink = ref(false)
 
+// User search for invite
+const inviteSearchResults = ref<{ id: string; username: string; displayName: string; avatarUrl: string | null }[]>([])
+const inviteSearchLoading = ref(false)
+const showInviteDropdown = ref(false)
+let _inviteSearchTimer: ReturnType<typeof setTimeout> | null = null
+
+function onInviteSearchInput() {
+  const q = inviteUsername.value.replace(/^@/, '').trim()
+  showInviteDropdown.value = true
+  if (_inviteSearchTimer) clearTimeout(_inviteSearchTimer)
+  if (!q) { inviteSearchResults.value = []; return }
+  inviteSearchLoading.value = true
+  _inviteSearchTimer = setTimeout(async () => {
+    try {
+      const { data } = await api.get<any[]>('/users/search', { params: { q, limit: '8' }, cache: false })
+      inviteSearchResults.value = data
+    } catch {
+      inviteSearchResults.value = []
+    } finally {
+      inviteSearchLoading.value = false
+    }
+  }, 220)
+}
+
+function selectInviteUser(u: { id: string; username: string }) {
+  inviteUsername.value = u.username
+  showInviteDropdown.value = false
+  inviteSearchResults.value = []
+}
+
+function hideSearchDropdown() {
+  // Delay so mousedown on a dropdown item fires first
+  setTimeout(() => { showInviteDropdown.value = false }, 150)
+}
+
+function isAlreadyMember(userId: string) {
+  return members.value.some((m: any) => m.user?.id === userId)
+}
+
 // Posts tab
 const pendingPosts = computed(() => allPosts.value.filter((p: any) => p.seriesStatus === 'PENDING'))
 const approvedPosts = ref<any[]>([])
@@ -856,6 +928,8 @@ async function inviteUser() {
     await api.post(`/series/${slug}/members/invite`, { username }, { cache: false })
     inviteMsg.value = `Invite sent to @${username}`
     inviteUsername.value = ''
+    inviteSearchResults.value = []
+    showInviteDropdown.value = false
   } catch (e: any) {
     inviteMsg.value = e?.response?.data?.message || 'Failed to send invite'
     inviteIsError.value = true
@@ -1364,8 +1438,68 @@ async function doDelete() {
   border-radius: var(--radius-md, 8px); padding: 1.25rem; margin-bottom: 1.5rem;
 }
 
-.invite-row { display: flex; gap: 0.75rem; }
-.invite-row .field-input { flex: 1; }
+.invite-row { display: flex; gap: 0.75rem; align-items: flex-start; }
+.invite-search-wrap { flex: 1; position: relative; }
+.invite-search-wrap .field-input { width: 100%; }
+.invite-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; right: 0;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  z-index: 100;
+  list-style: none;
+  margin: 0; padding: 0.375rem 0;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.invite-dropdown--loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  color: var(--text-tertiary);
+  font-size: 1rem;
+}
+.invite-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.875rem;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.invite-dropdown-item:hover { background: var(--bg-secondary); }
+.invite-dropdown-avatar {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.invite-dropdown-avatar--fallback {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: var(--s-accent, #6366f1);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.875rem; font-weight: 700;
+  flex-shrink: 0;
+}
+.invite-dropdown-info { display: flex; flex-direction: column; gap: 0.05rem; flex: 1; min-width: 0; }
+.invite-dropdown-name { font-size: 0.875rem; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.invite-dropdown-username { font-size: 0.75rem; color: var(--text-tertiary); }
+.invite-dropdown-badge {
+  font-size: 0.6875rem; font-weight: 700;
+  background: var(--bg-secondary);
+  color: var(--text-tertiary);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  padding: 0.1rem 0.375rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 
 .invite-msg { font-size: 0.875rem; margin: 0.5rem 0 0; color: #16a34a; }
 .invite-msg.error { color: #ef4444; }
