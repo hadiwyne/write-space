@@ -1,5 +1,13 @@
 <template>
   <article class="spc" :style="accentStyle">
+    <!-- Repost banner -->
+    <div v-if="post.repostData" class="spc-repost-header">
+      <i class="pi pi-refresh"></i>
+      <router-link :to="'/u/' + post.repostData.user?.username" class="spc-reposter-link" @click.stop>
+        {{ post.repostData.user?.displayName || post.repostData.user?.username }} reposted
+      </router-link>
+    </div>
+
     <!-- Thumbnail / Cover Image -->
     <router-link :to="'/posts/' + post.id" class="spc-image-link" tabindex="-1" aria-hidden="true">
       <div class="spc-image-wrap" :class="{ 'spc-image-wrap--placeholder': !thumbnail }">
@@ -94,9 +102,20 @@
         {{ post._count?.comments || 0 }}
       </router-link>
 
-      <span class="spc-action">
+      <button
+        v-if="auth.isLoggedIn"
+        type="button"
+        class="spc-action spc-repost"
+        :class="{ reposted: isReposted }"
+        :title="isReposted ? 'Undo repost' : 'Repost'"
+        @click.stop="toggleRepost"
+      >
         <i class="pi pi-refresh"></i>
-        {{ post._count?.reposts || 0 }}
+        {{ repostCount }}
+      </button>
+      <span v-else class="spc-action">
+        <i class="pi pi-refresh"></i>
+        {{ repostCount }}
       </span>
 
       <button
@@ -195,15 +214,34 @@ async function toggleLike() {
   likeCount.value += wasLiked ? -1 : 1
   likedStore.setLiked(props.post.id, !wasLiked)
   try {
-    if (wasLiked) {
-      await api.delete(`/likes/${props.post.id}`, { cache: false })
-    } else {
-      await api.post(`/likes/${props.post.id}`, {}, { cache: false })
-    }
+    const { data } = await api.post(`/posts/${props.post.id}/likes`, {}, { cache: false })
+    liked.value = !!data.liked
+    likeCount.value = data.count ?? likeCount.value
+    likedStore.setLiked(props.post.id, !!data.liked)
   } catch {
     liked.value = wasLiked
     likeCount.value += wasLiked ? 1 : -1
     likedStore.setLiked(props.post.id, wasLiked)
+  }
+}
+
+// ─── Repost ───────────────────────────────────────────────────────────────────
+
+const repostCount = ref<number>(props.post._count?.reposts ?? 0)
+const isReposted = ref<boolean>(!!props.post.isReposted)
+
+async function toggleRepost() {
+  if (!auth.isLoggedIn) return
+  const was = isReposted.value
+  isReposted.value = !was
+  repostCount.value += was ? -1 : 1
+  try {
+    const { data } = await api.post(`/posts/${props.post.id}/reposts`, {}, { cache: false })
+    isReposted.value = !!data.reposted
+    repostCount.value = props.post._count?.reposts ?? repostCount.value
+  } catch {
+    isReposted.value = was
+    repostCount.value += was ? 1 : -1
   }
 }
 
@@ -242,6 +280,29 @@ async function toggleBookmark() {
 .spc:hover {
   box-shadow: 0 4px 20px rgba(0,0,0,0.1);
   transform: translateY(-1px);
+}
+
+/* ─── Repost header ─── */
+.spc-repost-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #17bf63;
+  border-bottom: 1px solid var(--border-light);
+  background: color-mix(in srgb, #17bf63 6%, var(--bg-card));
+}
+
+.spc-reposter-link {
+  color: inherit;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.spc-reposter-link:hover {
+  text-decoration: underline;
 }
 
 /* ─── Image ─── */
@@ -480,6 +541,11 @@ a.spc-author:hover .spc-author-name {
 .spc-like.liked,
 .spc-like.liked .pi {
   color: #e0245e;
+}
+
+.spc-repost.reposted,
+.spc-repost.reposted .pi {
+  color: #17bf63;
 }
 
 .spc-bookmark.bookmarked,

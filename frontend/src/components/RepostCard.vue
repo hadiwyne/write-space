@@ -4,7 +4,12 @@
       <i class="pi pi-refresh" aria-hidden="true"></i>
       <span class="repost-text">{{ reposterName }} reposted {{ repostedAgo }}</span>
     </div>
+    <SeriesPostCard
+      v-if="post.series"
+      :post="postWithRepostData"
+    />
     <PostCard
+      v-else
       :post="post"
       :show-actions="showActions"
       :archived-mode="archivedMode"
@@ -23,6 +28,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import PostCard from './PostCard.vue'
+import SeriesPostCard from './SeriesPostCard.vue'
 
 const props = defineProps({
   post: { type: Object, required: true },
@@ -55,6 +61,12 @@ function formatAgo(date: string | Date): string {
 }
 
 const repostedAgo = computed(() => formatAgo(props.repostedAt))
+
+// Strip repostData so the SeriesPostCard banner doesn't double up with this card's header
+const postWithRepostData = computed(() => {
+  const { repostData: _, ...rest } = props.post as any
+  return rest
+})
 </script>
 
 <style scoped>

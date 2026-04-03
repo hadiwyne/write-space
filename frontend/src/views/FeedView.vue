@@ -91,7 +91,7 @@
       <div v-else class="post-list" :class="{ 'post-list--grid': viewMode === 'grid' }">
         <template v-for="(p, i) in posts">
           <SeriesPostCard
-            v-if="p.series && !p.repostData"
+            v-if="p.series"
             :key="'series-' + feedPostKey(p)"
             :post="p"
             :style="{ animationDelay: `${0.1 * i}s` }"
