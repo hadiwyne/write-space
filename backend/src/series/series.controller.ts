@@ -57,6 +57,16 @@ export class SeriesController {
   }
 
   @Public()
+  @Get('user/:username')
+  @UseGuards(OptionalJwtAuthGuard)
+  findByUser(
+    @Param('username') username: string,
+    @CurrentUser() viewer?: { id: string } | null,
+  ) {
+    return this.seriesService.findByUser(username, viewer?.id ?? null);
+  }
+
+  @Public()
   @Get(':slug')
   @UseGuards(OptionalJwtAuthGuard)
   findOne(@Param('slug') slug: string, @CurrentUser() user?: { id: string } | null) {
@@ -159,10 +169,22 @@ export class SeriesController {
     return this.seriesService.getOrCreateInviteLink(slug, user.id);
   }
 
+  @Get('join/:token')
+  @Public()
+  previewInviteLink(@Param('token') token: string) {
+    return this.seriesService.previewInviteLink(token);
+  }
+
   @Post('join/:token')
   @UseGuards(JwtAuthGuard)
   joinViaToken(@Param('token') token: string, @CurrentUser() user: { id: string }) {
     return this.seriesService.joinViaToken(token, user.id);
+  }
+
+  @Post('join/:token/decline')
+  @UseGuards(JwtAuthGuard)
+  declineInviteLink(@Param('token') token: string) {
+    return this.seriesService.declineInviteLink(token);
   }
 
   @Post('invites/:token/accept')

@@ -588,14 +588,11 @@ async function switchToSeries() {
   try {
     const username = profile.value?.username
     if (!username) return
-    const { data } = await api.get(`/series/my`, { cache: false })
-    // For other profiles, fetch their public series via the explore endpoint
-    if (!auth.user || auth.user.username !== username) {
-      const res = await api.get(`/series`, { params: { ownerId: username, limit: '50' }, cache: false })
-      profileSeries.value = Array.isArray(res.data?.series) ? res.data.series : []
-    } else {
-      profileSeries.value = Array.isArray(data) ? data : []
-    }
+    // Use the dedicated per-user endpoint for both own and other profiles.
+    // It returns only series where the user is an owner/editor/contributor,
+    // filtering to PUBLIC-only when the viewer is not the profile owner.
+    const { data } = await api.get(`/series/user/${encodeURIComponent(username)}`, { cache: false })
+    profileSeries.value = Array.isArray(data) ? data : []
   } catch {
     profileSeries.value = []
   } finally {

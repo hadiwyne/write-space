@@ -25,6 +25,7 @@ const router = createRouter({
     { path: '/customization', name: 'Customization', component: () => import('@/views/CustomizationView.vue'), meta: { auth: true } },
     { path: '/series', name: 'SeriesExplore', component: () => import('@/views/SeriesExploreView.vue') },
     { path: '/series/new', name: 'SeriesCreate', component: () => import('@/views/SeriesCreateView.vue'), meta: { auth: true } },
+    { path: '/series/join/:token', name: 'SeriesJoin', component: () => import('@/views/SeriesJoinView.vue') },
     { path: '/series/:slug', name: 'SeriesHomepage', component: () => import('@/views/SeriesHomepageView.vue'), meta: { fullWidth: true } },
     { path: '/series/:slug/settings', name: 'SeriesSettings', component: () => import('@/views/SeriesSettingsView.vue'), meta: { auth: true } },
   ],

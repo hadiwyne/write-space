@@ -45,6 +45,99 @@ const baseWhere = {
   NOT: { seriesPosts: { some: { status: 'PENDING' } } },
 };
 
+/**
+ * Returns a Prisma `AND` clause array that adds to a `findMany` `where` to
+ * hide posts whose series is inaccessible to the viewer.
+ * Returns `any[]` to avoid fighting Prisma's strict generated enum types.
+ *
+ * - PUBLIC series  → always visible
+ * - FOLLOWERS_ONLY → visible to members + followers of the series owner
+ * - PRIVATE        → visible to members only
+ */
+function seriesVisibilityAnd(userId: string | null): any[] {
+  if (!userId) {
+    // Unauthenticated: exclude posts in any non-PUBLIC approved series
+    return [
+      {
+        NOT: {
+          seriesPosts: {
+            some: {
+              status: 'APPROVED',
+              series: { visibility: { in: ['PRIVATE', 'FOLLOWERS_ONLY'] } },
+            },
+          },
+        },
+      },
+    ];
+  }
+  return [
+    {
+      NOT: {
+        seriesPosts: {
+          some: {
+            status: 'APPROVED',
+            series: {
+              visibility: 'PRIVATE',
+              members: { none: { userId } },
+            },
+          },
+        },
+      },
+    },
+    {
+      NOT: {
+        seriesPosts: {
+          some: {
+            status: 'APPROVED',
+            series: {
+              AND: [
+                { visibility: 'FOLLOWERS_ONLY' },
+                { NOT: { ownerId: userId } },
+                { members: { none: { userId } } },
+                { owner: { followers: { none: { followerId: userId } } } },
+              ],
+            },
+          },
+        },
+      },
+    },
+  ];
+}
+
+/**
+ * Raw SQL snippet that enforces series visibility for posts that belong to
+ * an approved series. Posts not in any series are unaffected.
+ */
+function seriesVisibilitySql(userId: string | null): string {
+  const memberCheck = userId
+    ? `EXISTS (SELECT 1 FROM series_members sm WHERE sm.series_id = ser.id AND sm.user_id = '${userId}')`
+    : 'false';
+  const followCheck = userId
+    ? `EXISTS (SELECT 1 FROM follows f WHERE f.following_id = ser.owner_id AND f.follower_id = '${userId}')`
+    : 'false';
+  const isOwner = userId ? `ser.owner_id = '${userId}'` : 'false';
+
+  // Cast visibility to text to avoid PostgreSQL enum comparison errors
+  return `
+    AND (
+      NOT EXISTS (
+        SELECT 1 FROM series_posts sp_v
+        JOIN series ser ON sp_v.series_id = ser.id
+        WHERE sp_v.post_id = p.id AND sp_v.status = 'APPROVED'
+      )
+      OR EXISTS (
+        SELECT 1 FROM series_posts sp_v
+        JOIN series ser ON sp_v.series_id = ser.id
+        WHERE sp_v.post_id = p.id AND sp_v.status = 'APPROVED'
+        AND (
+          ser.visibility::text = 'PUBLIC'
+          OR (ser.visibility::text = 'FOLLOWERS_ONLY' AND (${isOwner} OR ${followCheck} OR ${memberCheck}))
+          OR (ser.visibility::text = 'PRIVATE' AND ${memberCheck})
+        )
+      )
+    )`;
+}
+
 @Injectable()
 export class FeedService {
   constructor(private prisma: PrismaService) { }
@@ -62,6 +155,7 @@ export class FeedService {
     const tagPart = tag ? `AND '${tag}' = ANY(p.tags)` : '';
 
     const pendingFilter = `AND NOT EXISTS (SELECT 1 FROM series_posts sp WHERE sp.post_id = p.id AND sp.status = 'PENDING')`;
+    const seriesFilter = seriesVisibilitySql(userId);
     const sql = `
       WITH timeline AS (
         -- Original posts from people I follow
@@ -73,7 +167,7 @@ export class FeedService {
         FROM posts p
         WHERE p.is_published = true AND p.archived_at IS NULL 
         AND p.author_id IN (${authorIdsStr})
-        ${tagPart} ${pendingFilter}
+        ${tagPart} ${pendingFilter} ${seriesFilter}
 
         UNION ALL
 
@@ -87,7 +181,7 @@ export class FeedService {
         JOIN posts p ON r.post_id = p.id
         WHERE p.is_published = true AND p.archived_at IS NULL 
         AND r.user_id IN (${authorIdsStr})
-        ${tagPart} ${pendingFilter}
+        ${tagPart} ${pendingFilter} ${seriesFilter}
       )
       SELECT * FROM timeline
       ORDER BY event_at DESC
@@ -117,6 +211,7 @@ export class FeedService {
 
     const tagPart = tag ? `AND '${tag}' = ANY(p.tags)` : '';
     const pendingFilter = `AND NOT EXISTS (SELECT 1 FROM series_posts sp WHERE sp.post_id = p.id AND sp.status = 'PENDING')`;
+    const seriesFilter = seriesVisibilitySql(userId);
 
     // Unified query: original posts (as events) + reposts (as events)
     const sql = `
@@ -128,7 +223,7 @@ export class FeedService {
           NULL::text as "repost_id",
           NULL::text as "reposter_id"
         FROM posts p
-        WHERE p.is_published = true AND p.archived_at IS NULL ${visibilityPart} ${tagPart} ${pendingFilter}
+        WHERE p.is_published = true AND p.archived_at IS NULL ${visibilityPart} ${tagPart} ${pendingFilter} ${seriesFilter}
 
         UNION ALL
 
@@ -140,7 +235,7 @@ export class FeedService {
           r.user_id as "reposter_id"
         FROM reposts r
         JOIN posts p ON r.post_id = p.id
-        WHERE p.is_published = true AND p.archived_at IS NULL ${visibilityPart} ${tagPart} ${pendingFilter}
+        WHERE p.is_published = true AND p.archived_at IS NULL ${visibilityPart} ${tagPart} ${pendingFilter} ${seriesFilter}
       )
       SELECT * FROM timeline
       ORDER BY event_at DESC
@@ -207,10 +302,11 @@ export class FeedService {
             { visibility: 'FOLLOWERS_ONLY' as const, authorId: userId },
           ],
         };
-    const where = {
+    const where: any = {
       ...baseWhere,
       ...visibilityFilter,
       ...(tag ? { tags: { has: tag } } : {}),
+      AND: seriesVisibilityAnd(userId ?? null),
     };
     const posts = await this.prisma.post.findMany({
       where,
@@ -220,8 +316,8 @@ export class FeedService {
     });
     const sorted = posts
       .sort((a, b) => {
-        const scoreA = (a._count?.likes ?? 0) * 2 + (a._count?.comments ?? 0);
-        const scoreB = (b._count?.likes ?? 0) * 2 + (b._count?.comments ?? 0);
+        const scoreA = ((a as any)._count?.likes ?? 0) * 2 + ((a as any)._count?.comments ?? 0);
+        const scoreB = ((b as any)._count?.likes ?? 0) * 2 + ((b as any)._count?.comments ?? 0);
         return scoreB - scoreA;
       })
       .slice(0, limit);
@@ -262,15 +358,20 @@ export class FeedService {
         ],
       }
       : { visibility: 'PUBLIC' as const };
+    const trendingWhere: any = {
+      ...baseWhere,
+      ...visibilityFilter,
+      AND: seriesVisibilityAnd(userId ?? null),
+    };
     const posts = await this.prisma.post.findMany({
-      where: { ...baseWhere, ...visibilityFilter },
+      where: trendingWhere,
       take: 50,
       include: postInclude(userId ?? null),
     });
     return posts
       .sort((a, b) => {
-        const scoreA = (a._count.likes ?? 0) * 2 + (a._count.comments ?? 0);
-        const scoreB = (b._count.likes ?? 0) * 2 + (b._count.comments ?? 0);
+        const scoreA = ((a as any)._count?.likes ?? 0) * 2 + ((a as any)._count?.comments ?? 0);
+        const scoreB = ((b as any)._count?.likes ?? 0) * 2 + ((b as any)._count?.comments ?? 0);
         return scoreB - scoreA;
       })
       .slice(0, limit);

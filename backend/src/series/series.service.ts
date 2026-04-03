@@ -193,6 +193,35 @@ export class SeriesService {
     }));
   }
 
+  async findByUser(username: string, viewerUserId: string | null) {
+    const user = await this.prisma.user.findUnique({ where: { username } });
+    if (!user) throw new NotFoundException('User not found');
+
+    const memberships = await this.prisma.seriesMember.findMany({
+      where: {
+        userId: user.id,
+        // Only expose public series to outside viewers
+        ...(viewerUserId === user.id
+          ? {}
+          : { series: { visibility: 'PUBLIC' } }),
+      },
+      include: {
+        series: {
+          select: {
+            ...SERIES_PUBLIC_SELECT,
+            _count: { select: { follows: true, posts: true } },
+          },
+        },
+      },
+      orderBy: { joinedAt: 'desc' },
+    });
+
+    return memberships.map((m) => ({
+      ...this.mapSeriesPublic(m.series, viewerUserId),
+      memberRole: m.role,
+    }));
+  }
+
   async findOne(slug: string, viewerUserId: string | null) {
     const s = await this.prisma.series.findUnique({
       where: { slug },
@@ -501,11 +530,30 @@ export class SeriesService {
     return { token };
   }
 
+  async previewInviteLink(token: string) {
+    const invite = await this.prisma.seriesInviteToken.findUnique({
+      where: { token },
+      include: {
+        series: { select: { id: true, name: true, slug: true, logoMimeType: true } },
+        createdBy: { select: { id: true, username: true, displayName: true } },
+      },
+    });
+    if (!invite) throw new NotFoundException('Invalid or expired invite link');
+    if (invite.expiresAt && invite.expiresAt < new Date()) {
+      throw new BadRequestException('This invite link has expired');
+    }
+    return {
+      series: invite.series,
+      inviter: invite.createdBy,
+      role: 'CONTRIBUTOR' as const,
+    };
+  }
+
   async joinViaToken(token: string, userId: string) {
     const invite = await this.prisma.seriesInviteToken.findUnique({ where: { token } });
-    if (!invite) throw new NotFoundException('Invalid invite token');
+    if (!invite) throw new NotFoundException('Invalid or expired invite link');
     if (invite.expiresAt && invite.expiresAt < new Date()) {
-      throw new BadRequestException('Invite token has expired');
+      throw new BadRequestException('This invite link has expired');
     }
 
     const existing = await this.prisma.seriesMember.findUnique({
@@ -517,11 +565,22 @@ export class SeriesService {
       data: { seriesId: invite.seriesId, userId, role: 'CONTRIBUTOR' },
     });
 
+    // Single-use: delete the token after acceptance
+    await this.prisma.seriesInviteToken.delete({ where: { token } });
+
     const series = await this.prisma.series.findUnique({
       where: { id: invite.seriesId },
       select: { id: true, slug: true, name: true },
     });
     return { joined: true, series };
+  }
+
+  async declineInviteLink(token: string) {
+    const invite = await this.prisma.seriesInviteToken.findUnique({ where: { token } });
+    if (!invite) throw new NotFoundException('Invalid or expired invite link');
+    // Delete the token so the same link cannot be used again
+    await this.prisma.seriesInviteToken.delete({ where: { token } });
+    return { declined: true };
   }
 
   async updateMemberRole(slug: string, ownerId: string, targetUserId: string, role: 'EDITOR' | 'CONTRIBUTOR') {
