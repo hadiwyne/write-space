@@ -330,9 +330,24 @@
         <!-- Role selector for username invite -->
         <div v-if="invitableRoles.length > 1" class="field" style="margin-bottom:.5rem">
           <label class="field-label">Invite as</label>
-          <select v-model="inviteRole" class="role-select">
-            <option v-for="r in invitableRoles" :key="r.value" :value="r.value">{{ r.label }}</option>
-          </select>
+          <div class="s-dropdown-wrap">
+            <button type="button" class="s-dropdown-trigger" @click.stop="inviteRoleDropdownOpen = !inviteRoleDropdownOpen; inviteLinkRoleDropdownOpen = false; openMemberRoleDropdown = null">
+              <span>{{ invitableRoles.find(r => r.value === inviteRole)?.label || roleLabel(inviteRole) }}</span>
+              <i class="pi pi-chevron-down s-dropdown-chevron"></i>
+            </button>
+            <Transition name="s-dropdown">
+              <div v-if="inviteRoleDropdownOpen" class="s-dropdown-panel">
+                <button
+                  v-for="r in invitableRoles"
+                  :key="r.value"
+                  type="button"
+                  class="s-dropdown-option"
+                  :class="{ active: inviteRole === r.value }"
+                  @click.stop="inviteRole = r.value; inviteRoleDropdownOpen = false"
+                >{{ r.label }}</button>
+              </div>
+            </Transition>
+          </div>
         </div>
 
         <div class="invite-row">
@@ -390,9 +405,24 @@
           <!-- Role selector for invite link -->
           <div v-if="invitableRoles.length > 1" class="field" style="margin-bottom:.5rem">
             <label class="field-label">Link role</label>
-            <select v-model="inviteLinkRole" class="role-select" @change="inviteLink = ''">
-              <option v-for="r in invitableRoles" :key="r.value" :value="r.value">{{ r.label }}</option>
-            </select>
+            <div class="s-dropdown-wrap">
+              <button type="button" class="s-dropdown-trigger" @click.stop="inviteLinkRoleDropdownOpen = !inviteLinkRoleDropdownOpen; inviteRoleDropdownOpen = false; openMemberRoleDropdown = null">
+                <span>{{ invitableRoles.find(r => r.value === inviteLinkRole)?.label || roleLabel(inviteLinkRole) }}</span>
+                <i class="pi pi-chevron-down s-dropdown-chevron"></i>
+              </button>
+              <Transition name="s-dropdown">
+                <div v-if="inviteLinkRoleDropdownOpen" class="s-dropdown-panel">
+                  <button
+                    v-for="r in invitableRoles"
+                    :key="r.value"
+                    type="button"
+                    class="s-dropdown-option"
+                    :class="{ active: inviteLinkRole === r.value }"
+                    @click.stop="inviteLinkRole = r.value; inviteLinkRoleDropdownOpen = false; inviteLink = ''"
+                  >{{ r.label }}</button>
+                </div>
+              </Transition>
+            </div>
           </div>
           <div v-if="inviteLink" class="invite-link-row">
             <input type="text" :value="inviteLink" class="field-input" readonly @click="selectInviteLink($event)" />
@@ -425,16 +455,19 @@
           </div>
           <span class="member-role" :class="m.role.toLowerCase()">{{ m.role }}</span>
           <div v-if="canManageMember(m)" class="member-actions">
-            <select
-              v-if="m.role !== 'OWNER' && memberRole === 'OWNER'"
-              class="role-select"
-              :value="m.role"
-              @change="changeRoleFromEvent(m, $event)"
-            >
-              <option value="CONTRIBUTOR">Contributor</option>
-              <option value="EDITOR">Editor</option>
-              <option v-if="basics.visibility === 'PRIVATE'" value="VIEWER">Viewer</option>
-            </select>
+            <div v-if="m.role !== 'OWNER' && memberRole === 'OWNER'" class="s-dropdown-wrap">
+              <button type="button" class="s-dropdown-trigger s-dropdown-trigger--sm" @click.stop="openMemberRoleDropdown = openMemberRoleDropdown === m.user.id ? null : m.user.id; inviteRoleDropdownOpen = false; inviteLinkRoleDropdownOpen = false">
+                <span>{{ roleLabel(m.role) }}</span>
+                <i class="pi pi-chevron-down s-dropdown-chevron"></i>
+              </button>
+              <Transition name="s-dropdown">
+                <div v-if="openMemberRoleDropdown === m.user.id" class="s-dropdown-panel s-dropdown-panel--right">
+                  <button type="button" class="s-dropdown-option" :class="{ active: m.role === 'CONTRIBUTOR' }" @click.stop="setMemberRoleFromDropdown(m, 'CONTRIBUTOR')">Contributor</button>
+                  <button type="button" class="s-dropdown-option" :class="{ active: m.role === 'EDITOR' }" @click.stop="setMemberRoleFromDropdown(m, 'EDITOR')">Editor</button>
+                  <button v-if="basics.visibility === 'PRIVATE'" type="button" class="s-dropdown-option" :class="{ active: m.role === 'VIEWER' }" @click.stop="setMemberRoleFromDropdown(m, 'VIEWER')">Viewer</button>
+                </div>
+              </Transition>
+            </div>
             <button
               v-if="m.role !== 'OWNER'"
               type="button"
@@ -701,6 +734,22 @@ const inviteLinkRole = ref('EDITOR')
 const generatingLink = ref(false)
 const copiedLink = ref(false)
 
+// Role dropdown open states
+const inviteRoleDropdownOpen = ref(false)
+const inviteLinkRoleDropdownOpen = ref(false)
+const openMemberRoleDropdown = ref<string | null>(null) // stores member userId
+
+function closeAllRoleDropdowns() {
+  inviteRoleDropdownOpen.value = false
+  inviteLinkRoleDropdownOpen.value = false
+  openMemberRoleDropdown.value = null
+}
+
+function onRoleDropdownOutsideClick(e: MouseEvent) {
+  const target = e.target as HTMLElement
+  if (!target.closest('.s-dropdown-wrap')) closeAllRoleDropdowns()
+}
+
 // Pending deletions (owner only)
 const pendingDeletions = ref<any[]>([])
 
@@ -879,6 +928,7 @@ async function loadAll() {
 
 onMounted(() => {
   loadAll()
+  document.addEventListener('click', onRoleDropdownOutsideClick)
   // Auto-switch to tab if ?tab= query param is present (e.g. from notification link)
   if (route.query.tab) {
     activeTab.value = route.query.tab as string
@@ -889,6 +939,7 @@ onMounted(() => {
   window.addEventListener('touchend', stopCoverDrag)
 })
 onUnmounted(() => {
+  document.removeEventListener('click', onRoleDropdownOutsideClick)
   window.removeEventListener('mousemove', onCoverDragMove)
   window.removeEventListener('mouseup', stopCoverDrag)
   window.removeEventListener('touchmove', onCoverDragMove as any)
@@ -1084,8 +1135,13 @@ function selectInviteLink(e: Event) {
   (e.target as HTMLInputElement).select()
 }
 
-function changeRoleFromEvent(m: any, e: Event) {
-  changeRole(m, (e.target as HTMLSelectElement).value)
+function setMemberRoleFromDropdown(m: any, role: string) {
+  openMemberRoleDropdown.value = null
+  changeRole(m, role)
+}
+
+function roleLabel(role: string): string {
+  return role.charAt(0) + role.slice(1).toLowerCase()
 }
 
 async function changeRole(m: any, newRole: string) {
@@ -1791,6 +1847,76 @@ async function doDelete() {
   border-color: var(--s-accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--s-accent) 15%, transparent);
 }
+
+.s-dropdown-wrap { position: relative; display: inline-block; }
+
+.s-dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 2px solid var(--border-light);
+  border-radius: var(--radius-md, 8px);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  white-space: nowrap;
+}
+.s-dropdown-trigger:hover { border-color: var(--border-medium); }
+.s-dropdown-trigger:focus {
+  outline: none;
+  border-color: var(--s-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--s-accent) 15%, transparent);
+}
+.s-dropdown-trigger--sm {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.8125rem;
+}
+
+.s-dropdown-chevron { font-size: 0.7rem; color: var(--text-tertiary); margin-left: 0.15rem; }
+
+.s-dropdown-panel {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  min-width: 100%;
+  padding: 0.25rem 0;
+  background: var(--bg-card);
+  border: 2px solid var(--border-light);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: var(--shadow-lg);
+  z-index: 200;
+}
+.s-dropdown-panel--right { left: auto; right: 0; }
+
+.s-dropdown-option {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 1rem;
+  border: none;
+  background: none;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.s-dropdown-option:hover { background: var(--bg-primary); }
+.s-dropdown-option.active {
+  background: color-mix(in srgb, var(--s-accent) 8%, transparent);
+  color: var(--s-accent);
+  font-weight: 600;
+}
+
+.s-dropdown-enter-active,
+.s-dropdown-leave-active { transition: opacity 0.15s ease, transform 0.15s ease; }
+.s-dropdown-enter-from,
+.s-dropdown-leave-to { opacity: 0; transform: translateY(-4px); }
 
 .btn-remove-member {
   width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
