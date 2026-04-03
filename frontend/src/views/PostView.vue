@@ -11,6 +11,13 @@
           </span>
           <span v-else class="author author-anonymous">{{ post.anonymousAlias || 'Anonymous' }}</span>
           <span class="date">{{ formatDate(post.publishedAt) }}</span>
+          <span v-if="post.lastEditedBy" class="post-edited-by">
+            <i class="pi pi-pencil"></i>
+            Edited by
+            <router-link :to="`/u/${post.lastEditedBy.username}`" class="post-edited-by-link">
+              {{ post.lastEditedBy.displayName || post.lastEditedBy.username }}
+            </router-link>
+          </span>
         </div>
         <div class="post-content" :style="postContentStyle" v-html="resolvedPostHtml"></div>
         <div v-if="(post.tags?.length || 0) > 0" class="post-tags">
@@ -78,7 +85,7 @@
               </button>
             </div>
           </div>
-          <template v-if="isOwnPost">
+          <template v-if="canEditPost">
             <router-link :to="`/posts/${post.id}/edit`" class="action action-edit" v-tooltip.bottom="'Edit'">
               <i class="pi pi-pencil"></i> Edit
             </router-link>
@@ -152,6 +159,7 @@ import { getAllowedContentFontFamily, fontFamilyCss } from '@/utils/allowed-cont
 import { ensureFontLoaded, ensureFontsInHtmlLoaded } from '@/utils/load-fonts'
 import { useAuthStore } from '@/stores/auth'
 import { useLikedPostsStore } from '@/stores/likedPosts'
+import { useSeriesStore } from '@/stores/series'
 import { getCachedPost, setCachedPost } from '@/utils/indexedDBCache'
 import { getAnonAvatarUrl } from '@/utils/anonAvatar'
 import ConfirmModal from '@/components/ConfirmModal.vue'
@@ -170,6 +178,7 @@ const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 const likedStore = useLikedPostsStore()
+const seriesStore = useSeriesStore()
 const post = ref<{
   id: string
   title: string
@@ -192,6 +201,8 @@ const post = ref<{
   isBookmarked?: boolean
   isReposted?: boolean
   contentFontFamily?: string | null
+  lastEditedBy?: { id: string; username: string; displayName?: string | null; avatarUrl?: string | null } | null
+  series?: { id: string; slug: string; name: string } | null
 } | null>(null)
 
 const postContentStyle = computed(() => {
@@ -225,6 +236,16 @@ const isOwnPost = computed(() => {
   const a = post.value?.author
   return !!(u?.id && a?.id && u.id === a.id)
 })
+
+const isSeriesContributor = computed(() => {
+  const seriesSlug = post.value?.series?.slug
+  if (!seriesSlug || !auth.isLoggedIn) return false
+  const membership = seriesStore.mySeries.find(s => s.slug === seriesSlug)
+  const role = membership?.memberRole
+  return role === 'CONTRIBUTOR' || role === 'OWNER'
+})
+
+const canEditPost = computed(() => isOwnPost.value || isSeriesContributor.value)
 const showPostActions = computed(() => isOwnPost.value || !!auth.user?.isSuperadmin)
 const comments = ref<CommentNode[]>([])
 
@@ -617,7 +638,12 @@ async function onConfirmConfirm() {
   }
 }
 
-onMounted(load)
+onMounted(() => {
+  load()
+  if (auth.isLoggedIn && !seriesStore.mySeriesLoaded) {
+    seriesStore.fetchMySeries()
+  }
+})
 watch(() => route.params.id, load)
 </script>
 
@@ -655,6 +681,24 @@ watch(() => route.params.id, load)
   font-size: 0.8125rem;
   color: var(--text-tertiary);
   font-weight: 500;
+}
+.post-edited-by {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+}
+.post-edited-by .pi {
+  font-size: 0.7rem;
+}
+.post-edited-by-link {
+  color: var(--accent-primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+.post-edited-by-link:hover {
+  text-decoration: underline;
 }
 .post-content { line-height: 1.75; color: var(--text-secondary); }
 .post-content :deep(img) { max-width: 100%; height: auto; display: block; }

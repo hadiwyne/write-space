@@ -13,6 +13,7 @@ export class LikesService {
   private postInclude(userId?: string | null) {
     return {
       author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
+      lastEditedBy: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
       _count: { select: { likes: true, comments: true, reposts: true } },
       seriesPosts: {
         take: 1,

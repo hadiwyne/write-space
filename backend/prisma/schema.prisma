@@ -39,6 +39,7 @@ model User {
   badgeMimeType String?   @map("badge_mime_type")
 
   posts         Post[]
+  editedPosts   Post[]    @relation("PostLastEditedBy")
   drafts        Draft[]
   comments      Comment[]
   likes         Like[]
@@ -109,6 +110,10 @@ model Post {
   contentFontFamily String? @map("content_font_family")
 
   seriesPosts   SeriesPost[]
+
+  lastEditedById String?  @map("last_edited_by_id")
+  lastEditedBy  User?     @relation("PostLastEditedBy", fields: [lastEditedById], references: [id], onDelete: SetNull)
+  lastEditedAt  DateTime? @map("last_edited_at")
 
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")

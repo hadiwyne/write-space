@@ -123,6 +123,7 @@ export class PostsService {
   private postInclude(userId?: string | null) {
     return {
       author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
+      lastEditedBy: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
       _count: { select: { likes: true, comments: true, reposts: true } },
       poll: this.pollInclude(userId ?? null),
       seriesPosts: {
@@ -334,7 +335,28 @@ export class PostsService {
   async update(id: string, userId: string, dto: UpdatePostDto) {
     const post = await this.prisma.post.findUnique({ where: { id } });
     if (!post) throw new NotFoundException('Post not found');
-    if (post.authorId !== userId) throw new ForbiddenException('Not your post');
+
+    const isAuthor = post.authorId === userId;
+    let isSeriesContributor = false;
+
+    if (!isAuthor) {
+      // Allow OWNER or CONTRIBUTOR of the series containing this post to edit it
+      const seriesPost = await this.prisma.seriesPost.findFirst({
+        where: { postId: id },
+        select: { seriesId: true },
+      });
+      if (seriesPost) {
+        const membership = await this.prisma.seriesMember.findUnique({
+          where: { seriesId_userId: { seriesId: seriesPost.seriesId, userId } },
+        });
+        const RANK: Record<string, number> = { VIEWER: 1, EDITOR: 2, CONTRIBUTOR: 3, OWNER: 4 };
+        if (membership && (RANK[membership.role] ?? 0) >= RANK['CONTRIBUTOR']) {
+          isSeriesContributor = true;
+        }
+      }
+      if (!isSeriesContributor) throw new ForbiddenException('Not your post');
+    }
+
     if (dto.content != null) {
       const contentType = dto.contentType ?? post.contentType;
       const count = countImagesInContent(dto.content, contentType);
@@ -358,8 +380,16 @@ export class PostsService {
         ...(dto.visibility != null && { visibility: dto.visibility }),
         ...(dto.cardStyle !== undefined && { cardStyle: dto.cardStyle as Prisma.InputJsonValue }),
         ...(dto.contentFontFamily !== undefined && { contentFontFamily: sanitizeContentFontFamily(dto.contentFontFamily) }),
+        // Record who last edited the post (only for contributor edits of others' posts)
+        ...(isSeriesContributor && !isAuthor && {
+          lastEditedById: userId,
+          lastEditedAt: new Date(),
+        }),
       },
-      include: { author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } } },
+      include: {
+        author: { select: { id: true, username: true, displayName: true, avatarUrl: true, avatarShape: true, avatarFrame: true, badgeUrl: true } },
+        lastEditedBy: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
+      },
     });
     if (dto.content != null) this.refreshLinkPreview(updated.id, dto.content).catch(() => { });
     return updated;

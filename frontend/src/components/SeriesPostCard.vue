@@ -78,6 +78,15 @@
         <span class="spc-meta-dot">·</span>
         <span class="spc-date">{{ formatDate(post.publishedAt || post.createdAt) }}</span>
       </div>
+
+      <!-- Contributor edit attribution -->
+      <div v-if="post.lastEditedBy" class="spc-edited-by">
+        <i class="pi pi-pencil"></i>
+        Edited by
+        <router-link :to="'/u/' + post.lastEditedBy.username" class="spc-edited-by-link" @click.stop>
+          {{ post.lastEditedBy.displayName || post.lastEditedBy.username }}
+        </router-link>
+      </div>
     </div>
 
     <!-- Footer Actions -->
@@ -505,6 +514,26 @@ a.spc-author:hover .spc-author-name {
   font-size: 0.8125rem;
   color: var(--text-tertiary);
   white-space: nowrap;
+}
+
+.spc-edited-by {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-top: 0.25rem;
+}
+.spc-edited-by .pi {
+  font-size: 0.7rem;
+}
+.spc-edited-by-link {
+  color: var(--accent-primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+.spc-edited-by-link:hover {
+  text-decoration: underline;
 }
 
 /* ─── Footer ─── */
