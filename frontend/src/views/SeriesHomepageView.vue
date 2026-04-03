@@ -76,6 +76,7 @@
         :src="imageUrl('cover')"
         alt=""
         class="series-hero-bg"
+        :style="{ objectPosition: `center ${series.coverFocalY ?? 50}%` }"
         aria-hidden="true"
       />
     </header>
@@ -462,6 +463,8 @@ watch(() => route.params.slug, loadSeries)
   min-height: 220px;
   display: flex;
   align-items: flex-end;
+  margin: 1.25rem 1.5rem 0;
+  border-radius: 1.25rem;
 }
 
 .series-hero-inner {
@@ -479,7 +482,6 @@ watch(() => route.params.slug, loadSeries)
   height: 100%;
   object-fit: cover;
   z-index: 0;
-  opacity: 0.35;
 }
 
 .series-identity { margin-bottom: 0.75rem; }
@@ -1047,7 +1049,7 @@ watch(() => route.params.slug, loadSeries)
 }
 
 @media (max-width: 640px) {
-  .series-hero { padding: 2rem 1rem 1.5rem; }
+  .series-hero { padding: 2rem 1rem 1.5rem; margin: 0.75rem 0.75rem 0; border-radius: 1rem; }
   .series-content { padding: 1.5rem 1rem; }
   .series-name { font-size: 1.75rem; }
   .layout-newspaper { grid-template-columns: repeat(2, 1fr); }

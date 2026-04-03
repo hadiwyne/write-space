@@ -413,6 +413,7 @@ model Series {
   bgColor       String?          @map("bg_color")
   bgImageData   Bytes?           @map("bg_image_data")
   bgImageMimeType String?        @map("bg_image_mime_type")
+  coverFocalY   Float?           @map("cover_focal_y")
   fontFamily    String?          @map("font_family")
   layoutMode    String           @default("feature") @map("layout_mode")
   postListMode  String           @default("list") @map("post_list_mode")

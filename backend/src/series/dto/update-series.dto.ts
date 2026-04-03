@@ -5,6 +5,9 @@ import {
   IsBoolean,
   IsArray,
   IsHexColor,
+  IsNumber,
+  Min,
+  Max,
   MaxLength,
 } from 'class-validator';
 
@@ -63,6 +66,12 @@ export class UpdateSeriesDto {
   @IsOptional()
   @IsBoolean()
   showTagline?: boolean;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  coverFocalY?: number | null;
 
   @IsOptional()
   @IsArray()

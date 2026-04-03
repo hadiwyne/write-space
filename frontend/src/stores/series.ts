@@ -17,6 +17,7 @@ export interface SeriesInfo {
   accentColor?: string | null
   bgColor?: string | null
   bgImageMimeType?: string | null
+  coverFocalY?: number | null
   fontFamily?: string | null
   layoutMode: string
   postListMode: string

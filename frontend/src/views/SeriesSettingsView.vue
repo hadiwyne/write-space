@@ -116,17 +116,44 @@
             <span class="branding-label">Cover Photo</span>
             <span class="branding-hint">Minimum 600×600px. Displayed as hero background.</span>
           </div>
-          <div class="image-upload-area image-upload-area--cover" @click="triggerUpload('cover')">
-            <img v-if="series.coverMimeType && !imageChanged.cover" :src="imgUrl('cover')" alt="Cover" class="preview-img preview-img--cover" />
-            <img v-else-if="imagePreviews.cover" :src="imagePreviews.cover" alt="Cover" class="preview-img preview-img--cover" />
-            <div v-else class="upload-placeholder">
+
+          <!-- Upload placeholder – shown when no cover is set -->
+          <div
+            v-if="!series.coverMimeType && !imagePreviews.cover"
+            class="image-upload-area image-upload-area--cover"
+            @click="triggerUpload('cover')"
+          >
+            <div class="upload-placeholder">
               <i class="pi pi-image"></i>
               <span>Upload Cover Photo</span>
             </div>
             <div class="upload-overlay"><i class="pi pi-upload"></i></div>
           </div>
+
+          <!-- Draggable preview – shown when cover is set -->
+          <div
+            v-else
+            class="cover-drag-preview"
+            :class="{ dragging: isDraggingCover }"
+            @mousedown="startCoverDrag"
+            @touchstart.passive="startCoverDrag"
+          >
+            <img
+              :src="imagePreviews.cover || imgUrl('cover')"
+              alt="Cover preview"
+              class="cover-drag-img"
+              :style="{ objectPosition: `center ${theme.coverFocalY}%` }"
+              draggable="false"
+            />
+            <div class="cover-drag-hint">
+              <i class="pi pi-arrows-v"></i> Drag to reposition
+            </div>
+            <button type="button" class="cover-drag-remove" @click.stop="removeImage('cover')" title="Remove cover">
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
+
           <div v-if="uploadProgress.cover" class="progress-bar"><div class="progress-fill" :style="{ width: uploadProgress.cover + '%' }"></div></div>
-          <button v-if="series.coverMimeType" type="button" class="btn-remove" @click.stop="removeImage('cover')">Remove cover</button>
           <input ref="coverInput" type="file" accept="image/*" class="hidden-input" @change="onFileChange($event, 'cover')" />
         </div>
 
@@ -152,6 +179,7 @@
       </div>
 
       <p v-if="uploadError" class="field-error">{{ uploadError }}</p>
+      <SaveBar :saving="saving" :saved="saved" :error="saveError" @save="saveBranding" />
     </section>
 
     <!-- ── Theme ─────────────────────────────────────────────── -->
@@ -479,7 +507,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, watch, defineComponent, h } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, watch, defineComponent, h } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api, avatarSrc, apiBaseUrl } from '@/api/client'
 import { useSeriesStore } from '@/stores/series'
@@ -530,12 +558,31 @@ const theme = reactive({
   accentColor: '#6366f1',
   coverBgColor: '',
   bgColor: '',
+  coverFocalY: 50,
   fontFamily: '',
   layoutMode: 'feature',
   postListMode: 'list',
   showTopPosts: true,
   showTagline: true,
 })
+
+// Cover focal-point drag
+const isDraggingCover = ref(false)
+let _coverDragStartY = 0
+let _coverDragStartFocal = 50
+function startCoverDrag(e: MouseEvent | TouchEvent) {
+  isDraggingCover.value = true
+  _coverDragStartY = 'touches' in e ? e.touches[0].clientY : e.clientY
+  _coverDragStartFocal = theme.coverFocalY
+}
+function onCoverDragMove(e: MouseEvent | TouchEvent) {
+  if (!isDraggingCover.value) return
+  const clientY = 'touches' in e ? (e as TouchEvent).touches[0].clientY : (e as MouseEvent).clientY
+  // Drag up → reveal more of bottom (increase %), drag down → reveal more of top (decrease %)
+  const delta = (_coverDragStartY - clientY) * 0.35
+  theme.coverFocalY = Math.max(0, Math.min(100, Math.round(_coverDragStartFocal + delta)))
+}
+function stopCoverDrag() { isDraggingCover.value = false }
 
 // Image upload state
 type ImgType = 'logo' | 'wordmark' | 'cover' | 'social-preview' | 'bg-image'
@@ -637,6 +684,7 @@ async function loadAll() {
     theme.accentColor = s.accentColor ?? '#6366f1'
     theme.coverBgColor = s.coverBgColor ?? ''
     theme.bgColor = s.bgColor ?? ''
+    theme.coverFocalY = s.coverFocalY ?? 50
     theme.fontFamily = s.fontFamily ?? ''
     theme.layoutMode = s.layoutMode ?? 'feature'
     theme.postListMode = s.postListMode ?? 'list'
@@ -649,7 +697,19 @@ async function loadAll() {
   }
 }
 
-onMounted(loadAll)
+onMounted(() => {
+  loadAll()
+  window.addEventListener('mousemove', onCoverDragMove)
+  window.addEventListener('mouseup', stopCoverDrag)
+  window.addEventListener('touchmove', onCoverDragMove as any, { passive: false })
+  window.addEventListener('touchend', stopCoverDrag)
+})
+onUnmounted(() => {
+  window.removeEventListener('mousemove', onCoverDragMove)
+  window.removeEventListener('mouseup', stopCoverDrag)
+  window.removeEventListener('touchmove', onCoverDragMove as any)
+  window.removeEventListener('touchend', stopCoverDrag)
+})
 watch(() => route.params.slug, loadAll)
 
 // ─── Save helpers ─────────────────────────────────────────────────────────────
@@ -681,6 +741,20 @@ async function saveBasics() {
   }
 }
 
+async function saveBranding() {
+  saving.value = true; saveError.value = ''
+  try {
+    const slug = route.params.slug as string
+    const updated = await seriesStore.updateSeries(slug, { coverFocalY: theme.coverFocalY })
+    series.value = { ...series.value!, ...updated }
+    showSaved()
+  } catch (e: any) {
+    saveError.value = e?.response?.data?.message || 'Failed to save'
+  } finally {
+    saving.value = false
+  }
+}
+
 async function saveTheme() {
   saving.value = true; saveError.value = ''
   try {
@@ -689,6 +763,7 @@ async function saveTheme() {
       accentColor: theme.accentColor || null,
       coverBgColor: theme.coverBgColor || null,
       bgColor: theme.bgColor || null,
+      coverFocalY: theme.coverFocalY,
       fontFamily: theme.fontFamily || null,
       layoutMode: theme.layoutMode,
       postListMode: theme.postListMode,
@@ -1186,6 +1261,56 @@ async function doDelete() {
 
 .branding-item { display: flex; flex-direction: column; gap: 0.5rem; }
 .branding-item--full { grid-column: 1 / -1; }
+
+.cover-drag-preview {
+  position: relative;
+  border-radius: var(--radius-md, 8px);
+  overflow: hidden;
+  height: 200px;
+  cursor: grab;
+  user-select: none;
+  line-height: 0;
+}
+.cover-drag-preview.dragging { cursor: grabbing; }
+.cover-drag-img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+.cover-drag-hint {
+  position: absolute;
+  bottom: 0.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+}
+.cover-drag-preview.dragging .cover-drag-hint { opacity: 0; }
+.cover-drag-remove {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  transition: background 0.15s;
+  z-index: 1;
+}
+.cover-drag-remove:hover { background: rgba(0,0,0,0.85); }
 
 .branding-item-header { display: flex; flex-direction: column; gap: 0.125rem; }
 .branding-label { font-size: 0.9375rem; font-weight: 600; color: var(--text-primary); }
