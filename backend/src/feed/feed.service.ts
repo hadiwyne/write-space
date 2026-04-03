@@ -39,7 +39,11 @@ function postInclude(userId: string | null) {
   };
 }
 
-const baseWhere = { isPublished: true, archivedAt: null };
+const baseWhere = {
+  isPublished: true,
+  archivedAt: null,
+  NOT: { seriesPosts: { some: { status: 'PENDING' } } },
+};
 
 @Injectable()
 export class FeedService {
@@ -57,6 +61,7 @@ export class FeedService {
     const authorIdsStr = authorIds.map(id => `'${id}'`).join(',');
     const tagPart = tag ? `AND '${tag}' = ANY(p.tags)` : '';
 
+    const pendingFilter = `AND NOT EXISTS (SELECT 1 FROM series_posts sp WHERE sp.post_id = p.id AND sp.status = 'PENDING')`;
     const sql = `
       WITH timeline AS (
         -- Original posts from people I follow
@@ -68,7 +73,7 @@ export class FeedService {
         FROM posts p
         WHERE p.is_published = true AND p.archived_at IS NULL 
         AND p.author_id IN (${authorIdsStr})
-        ${tagPart}
+        ${tagPart} ${pendingFilter}
 
         UNION ALL
 
@@ -82,7 +87,7 @@ export class FeedService {
         JOIN posts p ON r.post_id = p.id
         WHERE p.is_published = true AND p.archived_at IS NULL 
         AND r.user_id IN (${authorIdsStr})
-        ${tagPart}
+        ${tagPart} ${pendingFilter}
       )
       SELECT * FROM timeline
       ORDER BY event_at DESC
@@ -111,6 +116,7 @@ export class FeedService {
     }
 
     const tagPart = tag ? `AND '${tag}' = ANY(p.tags)` : '';
+    const pendingFilter = `AND NOT EXISTS (SELECT 1 FROM series_posts sp WHERE sp.post_id = p.id AND sp.status = 'PENDING')`;
 
     // Unified query: original posts (as events) + reposts (as events)
     const sql = `
@@ -122,7 +128,7 @@ export class FeedService {
           NULL::text as "repost_id",
           NULL::text as "reposter_id"
         FROM posts p
-        WHERE p.is_published = true AND p.archived_at IS NULL ${visibilityPart} ${tagPart}
+        WHERE p.is_published = true AND p.archived_at IS NULL ${visibilityPart} ${tagPart} ${pendingFilter}
 
         UNION ALL
 
@@ -134,7 +140,7 @@ export class FeedService {
           r.user_id as "reposter_id"
         FROM reposts r
         JOIN posts p ON r.post_id = p.id
-        WHERE p.is_published = true AND p.archived_at IS NULL ${visibilityPart} ${tagPart}
+        WHERE p.is_published = true AND p.archived_at IS NULL ${visibilityPart} ${tagPart} ${pendingFilter}
       )
       SELECT * FROM timeline
       ORDER BY event_at DESC

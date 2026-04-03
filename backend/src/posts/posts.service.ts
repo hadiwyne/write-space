@@ -435,7 +435,15 @@ export class PostsService {
           : { isAnonymous: false as const }
         : { isAnonymous: false as const };
     const posts = await this.prisma.post.findMany({
-      where: { authorId: user.id, isPublished: true, archivedAt: null, ...visibilityFilter, ...anonymousFilter },
+      where: {
+        authorId: user.id,
+        isPublished: true,
+        archivedAt: null,
+        // Hide posts that are pending series review — they're not public yet
+        NOT: { seriesPosts: { some: { status: 'PENDING' } } },
+        ...visibilityFilter,
+        ...anonymousFilter,
+      },
       orderBy: { publishedAt: 'desc' },
       take: limit,
       skip: offset,

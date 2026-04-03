@@ -63,6 +63,7 @@ model User {
   seriesMemberships  SeriesMember[]
   seriesFollows      SeriesFollow[]
   seriesInviteTokens SeriesInviteToken[] @relation("SeriesInviteTokens")
+  seriesInviteTargets SeriesInviteToken[] @relation("SeriesInviteTargets")
 
   whoCanSeeLikes     String   @default("PUBLIC") @map("who_can_see_likes")
   whoCanSeeFollowing String   @default("PUBLIC") @map("who_can_see_following")
@@ -232,14 +233,17 @@ model Notification {
   userId                String    @map("user_id")
   user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  type                  String    // LIKE | COMMENT | COMMENT_REPLY | FOLLOW | MENTION
+  type                  String    // LIKE | COMMENT | COMMENT_REPLY | FOLLOW | MENTION | SERIES_INVITE | SERIES_INVITE_ACCEPTED | SERIES_INVITE_REJECTED
   actorId               String?   @map("actor_id")
   actor                 User?     @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
-  actorAnonymousAlias   String?   @map("actor_anonymous_alias") // when actor replied anonymously on their post
+  actorAnonymousAlias   String?   @map("actor_anonymous_alias")
   postId                String?   @map("post_id")
   post                  Post?     @relation(fields: [postId], references: [id], onDelete: Cascade)
   commentId             String?   @map("comment_id")
   comment               Comment?  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  seriesId              String?   @map("series_id")
+  series                Series?   @relation(fields: [seriesId], references: [id], onDelete: SetNull)
+  inviteToken           String?   @map("invite_token")
 
   readAt                DateTime? @map("read_at")
   createdAt             DateTime  @default(now()) @map("created_at")
@@ -428,6 +432,7 @@ model Series {
   posts         SeriesPost[]
   follows       SeriesFollow[]
   inviteTokens  SeriesInviteToken[]
+  notifications Notification[]
 
   createdAt     DateTime         @default(now()) @map("created_at")
   updatedAt     DateTime         @updatedAt @map("updated_at")
@@ -482,14 +487,16 @@ model SeriesFollow {
 }
 
 model SeriesInviteToken {
-  id          String   @id @default(uuid())
-  seriesId    String   @map("series_id")
-  series      Series   @relation(fields: [seriesId], references: [id], onDelete: Cascade)
-  token       String   @unique
-  createdById String   @map("created_by_id")
-  createdBy   User     @relation("SeriesInviteTokens", fields: [createdById], references: [id], onDelete: Cascade)
-  expiresAt   DateTime? @map("expires_at")
-  createdAt   DateTime @default(now()) @map("created_at")
+  id            String   @id @default(uuid())
+  seriesId      String   @map("series_id")
+  series        Series   @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  token         String   @unique
+  createdById   String   @map("created_by_id")
+  createdBy     User     @relation("SeriesInviteTokens", fields: [createdById], references: [id], onDelete: Cascade)
+  targetUserId  String?  @map("target_user_id")
+  targetUser    User?    @relation("SeriesInviteTargets", fields: [targetUserId], references: [id], onDelete: Cascade)
+  expiresAt     DateTime? @map("expires_at")
+  createdAt     DateTime @default(now()) @map("created_at")
 
   @@index([seriesId])
   @@map("series_invite_tokens")

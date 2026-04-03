@@ -2570,4 +2570,83 @@ html.ui-theme-dark-void .fab.fab--dark-void .fab-icon {
   width: 1.375rem;
   height: 1.375rem;
 }
+
+/* ── Dark Void: Series Post Card (.spc) ─────────────────────────────────── */
+html.ui-theme-dark-void .spc {
+  background: var(--dark-void-card);
+  border-color: var(--dark-void-border);
+  color: var(--dark-void-text);
+  font-family: 'Space Grotesk', sans-serif;
+}
+html.ui-theme-dark-void .spc:hover {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+}
+html.ui-theme-dark-void .spc-repost-header {
+  background: color-mix(in srgb, #17bf63 8%, var(--dark-void-card));
+  border-bottom-color: var(--dark-void-border);
+}
+html.ui-theme-dark-void .spc-image-wrap {
+  background: var(--dark-void-bg);
+}
+html.ui-theme-dark-void .spc-image-placeholder {
+  background: linear-gradient(135deg, var(--dark-void-bg) 0%, color-mix(in srgb, var(--spc-accent, #888) 10%, var(--dark-void-bg)) 100%);
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .spc-series-bar {
+  background: color-mix(in srgb, var(--spc-accent, #888) 8%, var(--dark-void-card));
+  border-bottom-color: var(--dark-void-border);
+}
+html.ui-theme-dark-void .spc-series-bar:hover {
+  background: color-mix(in srgb, var(--spc-accent, #888) 16%, var(--dark-void-card));
+}
+html.ui-theme-dark-void .spc-title {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .spc-title-link:hover .spc-title {
+  color: var(--spc-accent, var(--dark-void-text));
+}
+html.ui-theme-dark-void .spc-excerpt {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .spc-author {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void a.spc-author:hover .spc-author-name {
+  color: var(--dark-void-text);
+}
+html.ui-theme-dark-void .spc-author-avatar {
+  background: var(--dark-void-bg);
+}
+html.ui-theme-dark-void .spc-author-initial {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .spc-author-name {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .spc-meta-dot,
+html.ui-theme-dark-void .spc-date {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .spc-footer {
+  border-top-color: var(--dark-void-border);
+}
+html.ui-theme-dark-void .spc-action {
+  color: var(--dark-void-text-muted);
+}
+html.ui-theme-dark-void .spc-action:hover {
+  color: var(--dark-void-text);
+  background: rgba(255, 255, 255, 0.05);
+}
+html.ui-theme-dark-void .spc-like.liked,
+html.ui-theme-dark-void .spc-like.liked .pi {
+  color: #e0245e;
+}
+html.ui-theme-dark-void .spc-repost.reposted,
+html.ui-theme-dark-void .spc-repost.reposted .pi {
+  color: #17bf63;
+}
+html.ui-theme-dark-void .spc-bookmark.bookmarked,
+html.ui-theme-dark-void .spc-bookmark.bookmarked .pi {
+  color: var(--spc-accent, var(--dark-void-text));
+}
 </style>

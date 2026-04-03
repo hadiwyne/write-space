@@ -1271,7 +1271,15 @@ async function doPublish(anonymous: boolean) {
     // Add to series if selected
     if (selectedSeriesSlug.value) {
       try {
-        await api.post(`/series/${selectedSeriesSlug.value}/posts/${data.id}`, {}, { cache: false })
+        const addResult = await api.post(`/series/${selectedSeriesSlug.value}/posts/${data.id}`, {}, { cache: false })
+        // Contributors' posts go to PENDING review — redirect to the series page
+        if (addResult.data?.status === 'PENDING') {
+          router.push({
+            path: `/series/${selectedSeriesSlug.value}`,
+            query: { submitted: '1' },
+          })
+          return
+        }
       } catch {
         // Don't fail the whole publish if series add fails
       }

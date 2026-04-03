@@ -445,15 +445,26 @@
         </h3>
         <div class="pending-list">
           <div v-for="p in pendingPosts" :key="p.id" class="pending-item">
+            <!-- Thumbnail preview -->
+            <div class="pending-thumb-wrap">
+              <img
+                v-if="p.imageUrls?.[0]"
+                :src="avatarSrc(p.imageUrls[0])"
+                alt=""
+                class="pending-thumb"
+                :style="{ objectPosition: `center ${p.cardStyle?.thumbnailPosition ?? 50}%` }"
+              />
+              <div v-else class="pending-thumb-placeholder"><i class="pi pi-book"></i></div>
+            </div>
             <div class="pending-info">
-              <span class="pending-post-title">{{ p.title }}</span>
+              <a :href="`/posts/${p.id}`" target="_blank" class="pending-post-title">{{ p.title }}</a>
               <span class="pending-author">by {{ p.author?.displayName || p.author?.username }}</span>
             </div>
             <div class="pending-actions">
-              <button type="button" class="btn-approve" @click="approvePost(p)">
+              <button type="button" class="btn-approve" :disabled="p._saving" @click="approvePost(p)">
                 <i class="pi pi-check"></i> Approve
               </button>
-              <button type="button" class="btn-reject" @click="rejectPost(p)">
+              <button type="button" class="btn-reject" :disabled="p._saving" @click="rejectPost(p)">
                 <i class="pi pi-times"></i> Reject
               </button>
             </div>
@@ -694,7 +705,7 @@ const availableTabs = computed(() => {
     { id: 'branding', label: 'Branding', icon: 'pi pi-palette' },
     { id: 'theme', label: 'Theme', icon: 'pi pi-sliders-h' },
     { id: 'members', label: 'Members', icon: 'pi pi-users' },
-    { id: 'posts', label: 'Posts', icon: 'pi pi-book' },
+    { id: 'posts', label: pendingPosts.value.length ? `Posts (${pendingPosts.value.length})` : 'Posts', icon: 'pi pi-book' },
   ]
   if (memberRole.value === 'OWNER') {
     tabs.push({ id: 'danger', label: 'Danger Zone', icon: 'pi pi-exclamation-triangle' })
@@ -732,7 +743,7 @@ async function loadAll() {
   loadingPage.value = true
   loadError.value = ''
   try {
-    const [seriesRes, membersRes, postsRes] = await Promise.all([
+    const [seriesRes, membersRes, approvedRes] = await Promise.all([
       api.get(`/series/${slug}`, { cache: false }),
       api.get(`/series/${slug}/members`, { cache: false }),
       api.get(`/series/${slug}/posts`, { params: { limit: '200' }, cache: false }),
@@ -741,9 +752,21 @@ async function loadAll() {
     series.value = seriesRes.data
     memberRole.value = seriesRes.data.memberRole
     members.value = membersRes.data
-    allPosts.value = postsRes.data
 
-    approvedPosts.value = postsRes.data.filter((p: any) => p.seriesStatus !== 'PENDING')
+    // Approved posts come from the public endpoint
+    approvedPosts.value = approvedRes.data
+
+    // Pending posts come from the dedicated review endpoint (owners/editors only)
+    if (seriesRes.data.memberRole === 'OWNER' || seriesRes.data.memberRole === 'EDITOR') {
+      try {
+        const pendingRes = await api.get(`/series/${slug}/posts/pending`, { cache: false })
+        allPosts.value = [...approvedRes.data, ...(Array.isArray(pendingRes.data) ? pendingRes.data : [])]
+      } catch {
+        allPosts.value = approvedRes.data
+      }
+    } else {
+      allPosts.value = approvedRes.data
+    }
 
     // Populate form state
     const s = seriesRes.data as SeriesInfo
@@ -771,6 +794,10 @@ async function loadAll() {
 
 onMounted(() => {
   loadAll()
+  // Auto-switch to tab if ?tab= query param is present (e.g. from notification link)
+  if (route.query.tab) {
+    activeTab.value = route.query.tab as string
+  }
   window.addEventListener('mousemove', onCoverDragMove)
   window.addEventListener('mouseup', stopCoverDrag)
   window.addEventListener('touchmove', onCoverDragMove as any, { passive: false })
@@ -996,6 +1023,8 @@ async function removeMember(m: any) {
 
 // ─── Posts ────────────────────────────────────────────────────────────────────
 async function approvePost(p: any) {
+  if (p._saving) return
+  p._saving = true
   try {
     const slug = route.params.slug as string
     await api.patch(`/series/${slug}/posts/${p.id}/approve`, {}, { cache: false })
@@ -1003,16 +1032,20 @@ async function approvePost(p: any) {
     approvedPosts.value.push(p)
   } catch (e: any) {
     alert(e?.response?.data?.message || 'Failed to approve post')
+    p._saving = false
   }
 }
 
 async function rejectPost(p: any) {
+  if (p._saving) return
+  p._saving = true
   try {
     const slug = route.params.slug as string
     await api.delete(`/series/${slug}/posts/${p.id}/reject`, { cache: false })
     allPosts.value = allPosts.value.filter((x) => x.id !== p.id)
   } catch (e: any) {
     alert(e?.response?.data?.message || 'Failed to reject post')
+    p._saving = false
   }
 }
 
@@ -1210,10 +1243,13 @@ async function doDelete() {
   font-size: 0.9375rem;
   font-family: inherit;
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-.field-input:focus, .field-textarea:focus { border-color: var(--s-accent); }
+.field-input:focus, .field-textarea:focus {
+  border-color: var(--s-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--s-accent) 15%, transparent);
+}
 .field-textarea { resize: vertical; min-height: 100px; }
 .field-hint { font-size: 0.8125rem; color: var(--text-tertiary); }
 .field-error { font-size: 0.8125rem; color: #ef4444; }
@@ -1244,10 +1280,43 @@ async function doDelete() {
 .vis-desc { display: block; font-size: 0.8125rem; color: var(--text-secondary); }
 
 /* ─── Colors ─── */
-.color-row { display: flex; align-items: center; gap: 0.75rem; }
-.color-picker { width: 44px; height: 34px; padding: 2px; border: 1px solid var(--border-light); border-radius: 6px; cursor: pointer; }
-.color-val { font-size: 0.875rem; font-family: monospace; color: var(--text-secondary); }
-.btn-clear-color { font-size: 0.8125rem; color: var(--text-tertiary); background: none; border: none; cursor: pointer; text-decoration: underline; font-family: inherit; }
+.color-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.color-picker {
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: 2px solid var(--border-medium);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--bg-card);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.15s;
+}
+.color-picker:hover { border-color: var(--s-accent); }
+.color-picker::-webkit-color-swatch-wrapper { padding: 3px; }
+.color-picker::-webkit-color-swatch { border: none; border-radius: 3px; }
+.color-val {
+  font-size: 0.875rem;
+  font-family: ui-monospace, monospace;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm, 6px);
+  padding: 0.375rem 0.625rem;
+  letter-spacing: 0.03em;
+}
+.btn-clear-color {
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+  background: none;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0.375rem 0.625rem;
+  transition: border-color 0.15s, color 0.15s;
+}
+.btn-clear-color:hover { border-color: var(--border-medium); color: var(--text-primary); }
 
 /* ─── Fonts ─── */
 .font-options { display: flex; flex-direction: column; gap: 0.5rem; }
@@ -1305,22 +1374,54 @@ async function doDelete() {
 :deep(.save-ok) { display: flex; align-items: center; gap: 0.375rem; font-size: 0.9375rem; color: #16a34a; font-weight: 600; }
 :deep(.save-error) { font-size: 0.875rem; color: #ef4444; }
 
+/* The SaveBar renders a .btn-primary via h() so scoped styles don't reach it — use :deep() */
+:deep(.save-bar .btn-primary) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.5rem;
+  background: var(--s-accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md, 8px);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s, box-shadow 0.15s;
+}
+:deep(.save-bar .btn-primary:hover:not(:disabled)) {
+  opacity: 0.88;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--s-accent) 40%, transparent);
+}
+:deep(.save-bar .btn-primary:disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* ─── Buttons ─── */
 .btn-primary {
   display: inline-flex; align-items: center; gap: 0.5rem;
   padding: 0.625rem 1.5rem; background: var(--s-accent); color: #fff;
   border: none; border-radius: var(--radius-md, 8px); font-size: 0.9375rem;
-  font-weight: 600; font-family: inherit; cursor: pointer; transition: opacity 0.15s;
+  font-weight: 600; font-family: inherit; cursor: pointer;
+  transition: opacity 0.15s, box-shadow 0.15s;
+  white-space: nowrap;
 }
-.btn-primary:hover:not(:disabled) { opacity: 0.9; }
+.btn-primary:hover:not(:disabled) {
+  opacity: 0.88;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--s-accent) 40%, transparent);
+}
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .btn-secondary {
   display: inline-flex; align-items: center; gap: 0.5rem;
-  padding: 0.625rem 1.25rem; background: var(--bg-card);
-  border: 1px solid var(--border-light); border-radius: var(--radius-md, 8px);
+  padding: 0.625rem 1.25rem; background: transparent;
+  border: 1.5px solid var(--border-medium); border-radius: var(--radius-md, 8px);
   color: var(--text-secondary); font-size: 0.9375rem; font-weight: 600;
-  font-family: inherit; cursor: pointer; transition: border-color 0.15s;
+  font-family: inherit; cursor: pointer; transition: border-color 0.15s, color 0.15s;
+  white-space: nowrap;
 }
 .btn-secondary:hover:not(:disabled) { border-color: var(--s-accent); color: var(--s-accent); }
 .btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -1386,8 +1487,9 @@ async function doDelete() {
 }
 .cover-drag-remove:hover { background: rgba(0,0,0,0.85); }
 
-.branding-item-header { display: flex; flex-direction: column; gap: 0.125rem; }
+.branding-item-header { display: flex; flex-direction: column; gap: 0.25rem; }
 .branding-label { font-size: 0.9375rem; font-weight: 600; color: var(--text-primary); }
+.branding-hint { font-size: 0.8125rem; color: var(--text-tertiary); }
 
 .image-upload-area {
   position: relative; overflow: hidden; cursor: pointer;
@@ -1426,9 +1528,20 @@ async function doDelete() {
 .progress-fill { height: 100%; background: var(--s-accent); transition: width 0.1s; }
 
 .btn-remove {
-  font-size: 0.8125rem; color: #ef4444; background: none; border: none;
-  cursor: pointer; text-align: left; font-family: inherit; text-decoration: underline;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+  background: none;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm, 6px);
+  padding: 0.25rem 0.625rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.15s, border-color 0.15s;
 }
+.btn-remove:hover { color: #ef4444; border-color: #ef4444; }
 
 .hidden-input { display: none; }
 
@@ -1539,9 +1652,25 @@ async function doDelete() {
 .member-actions { display: flex; align-items: center; gap: 0.5rem; }
 
 .role-select {
-  padding: 0.25rem 0.5rem; border: 1px solid var(--border-light);
-  border-radius: 6px; font-size: 0.8125rem; color: var(--text-primary);
-  background: var(--bg-card); font-family: inherit; outline: none;
+  padding: 0.375rem 2rem 0.375rem 0.625rem;
+  border: 1.5px solid var(--border-light);
+  border-radius: var(--radius-sm, 6px);
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+  background: var(--bg-card);
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%236b635b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5 L6 7.5 L9 4.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.role-select:hover { border-color: var(--border-medium); }
+.role-select:focus {
+  border-color: var(--s-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--s-accent) 15%, transparent);
 }
 
 .btn-remove-member {
@@ -1565,12 +1694,22 @@ async function doDelete() {
 
 .pending-item {
   display: flex; align-items: center; gap: 1rem;
-  padding: 0.75rem 1rem; background: #fff;
+  padding: 0.75rem 1rem; background: var(--bg-card, #fff);
   border: 1px solid #fde68a; border-radius: var(--radius-sm, 6px);
 }
 
+.pending-thumb-wrap {
+  width: 80px; height: 52px; flex-shrink: 0;
+  border-radius: 6px; overflow: hidden;
+  background: var(--bg-secondary);
+  display: flex; align-items: center; justify-content: center;
+}
+.pending-thumb { width: 100%; height: 100%; object-fit: cover; }
+.pending-thumb-placeholder { color: var(--text-tertiary); font-size: 1.25rem; }
+
 .pending-info { flex: 1; min-width: 0; }
-.pending-post-title { display: block; font-size: 0.9375rem; font-weight: 600; color: var(--text-primary); }
+.pending-post-title { display: block; font-size: 0.9375rem; font-weight: 600; color: var(--text-primary); text-decoration: none; }
+.pending-post-title:hover { text-decoration: underline; }
 .pending-author { font-size: 0.8125rem; color: var(--text-tertiary); }
 
 .pending-actions { display: flex; gap: 0.5rem; }
@@ -1578,16 +1717,24 @@ async function doDelete() {
 .btn-approve {
   display: inline-flex; align-items: center; gap: 0.25rem;
   padding: 0.375rem 0.75rem; background: #16a34a; color: #fff;
-  border: none; border-radius: 6px; font-size: 0.8125rem; font-weight: 600;
+  border: none; border-radius: var(--radius-sm, 6px); font-size: 0.8125rem; font-weight: 600;
   cursor: pointer; font-family: inherit;
+  transition: background 0.15s, box-shadow 0.15s;
+  white-space: nowrap;
 }
+.btn-approve:hover:not(:disabled) { background: #15803d; box-shadow: 0 2px 6px rgba(22, 163, 74, 0.35); }
+.btn-approve:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .btn-reject {
   display: inline-flex; align-items: center; gap: 0.25rem;
   padding: 0.375rem 0.75rem; background: #ef4444; color: #fff;
-  border: none; border-radius: 6px; font-size: 0.8125rem; font-weight: 600;
+  border: none; border-radius: var(--radius-sm, 6px); font-size: 0.8125rem; font-weight: 600;
   cursor: pointer; font-family: inherit;
+  transition: background 0.15s, box-shadow 0.15s;
+  white-space: nowrap;
 }
+.btn-reject:hover:not(:disabled) { background: #dc2626; box-shadow: 0 2px 6px rgba(239, 68, 68, 0.35); }
+.btn-reject:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .posts-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem; }
 
@@ -1630,7 +1777,9 @@ async function doDelete() {
   padding: 0.625rem 1.25rem; background: #dc2626; color: #fff;
   border: none; border-radius: var(--radius-md, 8px); font-size: 0.9375rem;
   font-weight: 600; font-family: inherit; cursor: pointer; white-space: nowrap;
+  transition: background 0.15s, box-shadow 0.15s;
 }
+.btn-danger:hover:not(:disabled) { background: #b91c1c; box-shadow: 0 2px 8px rgba(220, 38, 38, 0.35); }
 .btn-danger:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* ─── Modal ─── */

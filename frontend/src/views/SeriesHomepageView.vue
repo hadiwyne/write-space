@@ -4,6 +4,15 @@
     :style="pageStyle"
     v-if="series"
   >
+    <!-- Post submitted for review banner -->
+    <Transition name="fade">
+      <div v-if="showSubmittedBanner" class="submitted-banner">
+        <i class="pi pi-check-circle"></i>
+        Your post has been submitted for review. The series owner will be notified.
+        <button type="button" class="submitted-banner-close" @click="showSubmittedBanner = false">×</button>
+      </div>
+    </Transition>
+
     <!-- Hero / Cover Header -->
     <header class="series-hero" :style="heroStyle">
       <div class="series-hero-inner">
@@ -351,6 +360,11 @@ import type { SeriesInfo } from '@/stores/series'
 const route = useRoute()
 const auth = useAuthStore()
 
+const showSubmittedBanner = ref(route.query.submitted === '1')
+if (showSubmittedBanner.value) {
+  setTimeout(() => { showSubmittedBanner.value = false }, 6000)
+}
+
 const series = ref<(SeriesInfo & { owner?: any; members?: any[] }) | null>(null)
 const posts = ref<any[]>([])
 const loadingPage = ref(true)
@@ -586,6 +600,32 @@ watch(() => route.params.slug, loadSeries)
   --series-bg: var(--bg-primary);
   min-height: 100vh;
   background: transparent;
+}
+
+/* ─── Submitted banner ─── */
+.submitted-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1.25rem;
+  background: #17bf63;
+  color: #fff;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.submitted-banner .pi { font-size: 1.1rem; flex-shrink: 0; }
+.submitted-banner-close {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 1.25rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 0.25rem;
 }
 
 /* ─── Hero ─── */

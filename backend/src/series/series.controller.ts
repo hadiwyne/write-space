@@ -165,6 +165,18 @@ export class SeriesController {
     return this.seriesService.joinViaToken(token, user.id);
   }
 
+  @Post('invites/:token/accept')
+  @UseGuards(JwtAuthGuard)
+  acceptInvite(@Param('token') token: string, @CurrentUser() user: { id: string }) {
+    return this.seriesService.acceptInvite(token, user.id);
+  }
+
+  @Post('invites/:token/reject')
+  @UseGuards(JwtAuthGuard)
+  rejectInvite(@Param('token') token: string, @CurrentUser() user: { id: string }) {
+    return this.seriesService.rejectInvite(token, user.id);
+  }
+
   @Patch(':slug/members/:userId/role')
   @UseGuards(JwtAuthGuard)
   updateRole(
@@ -201,6 +213,15 @@ export class SeriesController {
     @Query('offset') offset?: string,
   ) {
     return this.seriesService.getPosts(slug, user?.id ?? null, Number(limit) || 50, Number(offset) || 0);
+  }
+
+  @Get(':slug/posts/pending')
+  @UseGuards(JwtAuthGuard)
+  getPendingPosts(
+    @Param('slug') slug: string,
+    @CurrentUser() user: { id: string },
+  ) {
+    return this.seriesService.getPendingPosts(slug, user.id);
   }
 
   @Post(':slug/posts/:postId')

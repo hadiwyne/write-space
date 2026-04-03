@@ -410,21 +410,77 @@ export class SeriesService {
     });
     if (existing) throw new ConflictException('User is already a member');
 
-    // Generate a single-use invite token for this specific user
+    // Generate a single-use invite token tied to the specific invited user
     const token = randomBytes(24).toString('hex');
     await this.prisma.seriesInviteToken.create({
-      data: { seriesId: s.id, token, createdById: inviterId },
+      data: { seriesId: s.id, token, createdById: inviterId, targetUserId: target.id },
     });
 
-    // Notify the target
+    // Notify the target with series context and the token for accept/reject
     await this.notifications.create({
       userId: target.id,
-      type: 'SERIES_INVITE' as any,
+      type: 'SERIES_INVITE',
       actorId: inviterId,
-      postId: undefined,
-    } as any);
+      seriesId: s.id,
+      inviteToken: token,
+    });
 
-    return { token, invitedUsername: username };
+    return { invitedUsername: username };
+  }
+
+  async acceptInvite(token: string, userId: string) {
+    const invite = await this.prisma.seriesInviteToken.findUnique({
+      where: { token },
+      include: { series: { select: { id: true, slug: true, name: true, ownerId: true } } },
+    });
+    if (!invite) throw new NotFoundException('Invalid invite token');
+    if (invite.targetUserId && invite.targetUserId !== userId) {
+      throw new ForbiddenException('This invite is not for you');
+    }
+
+    const existing = await this.prisma.seriesMember.findUnique({
+      where: { seriesId_userId: { seriesId: invite.seriesId, userId } },
+    });
+    if (!existing) {
+      await this.prisma.seriesMember.create({
+        data: { seriesId: invite.seriesId, userId, role: 'CONTRIBUTOR' },
+      });
+    }
+
+    await this.prisma.seriesInviteToken.delete({ where: { token } });
+
+    // Notify the series owner
+    await this.notifications.create({
+      userId: invite.series.ownerId,
+      type: 'SERIES_INVITE_ACCEPTED',
+      actorId: userId,
+      seriesId: invite.series.id,
+    });
+
+    return { accepted: true, series: invite.series };
+  }
+
+  async rejectInvite(token: string, userId: string) {
+    const invite = await this.prisma.seriesInviteToken.findUnique({
+      where: { token },
+      include: { series: { select: { id: true, slug: true, name: true, ownerId: true } } },
+    });
+    if (!invite) throw new NotFoundException('Invalid invite token');
+    if (invite.targetUserId && invite.targetUserId !== userId) {
+      throw new ForbiddenException('This invite is not for you');
+    }
+
+    await this.prisma.seriesInviteToken.delete({ where: { token } });
+
+    // Notify the series owner
+    await this.notifications.create({
+      userId: invite.series.ownerId,
+      type: 'SERIES_INVITE_REJECTED',
+      actorId: userId,
+      seriesId: invite.series.id,
+    });
+
+    return { rejected: true };
   }
 
   async getOrCreateInviteLink(slug: string, userId: string) {
@@ -504,32 +560,35 @@ export class SeriesService {
   async getPosts(slug: string, viewerUserId: string | null, limit = 50, offset = 0) {
     const s = await this.getSeries(slug);
 
-    const member = viewerUserId
-      ? await this.prisma.seriesMember.findUnique({
-          where: { seriesId_userId: { seriesId: s.id, userId: viewerUserId } },
-        })
-      : null;
-
-    const isEditorOrOwner = member && (member.role === 'OWNER' || member.role === 'EDITOR');
-
+    // Always return only APPROVED posts for the public series homepage
     const seriesPosts = await this.prisma.seriesPost.findMany({
-      where: {
-        seriesId: s.id,
-        // Non-editors see only approved posts
-        ...(!isEditorOrOwner ? { status: 'APPROVED' } : {}),
-      },
+      where: { seriesId: s.id, status: 'APPROVED' },
       orderBy: { order: 'asc' },
       take: limit,
       skip: offset,
-      include: {
-        post: {
-          include: postInclude(viewerUserId),
-        },
-      },
+      include: { post: { include: postInclude(viewerUserId) } },
     });
 
     return seriesPosts.map((sp) => ({
       ...mapPost(sp.post as any, viewerUserId),
+      seriesOrder: sp.order,
+      seriesStatus: sp.status,
+      series: { id: s.id, name: s.name, slug: s.slug, logoMimeType: s.logoMimeType, accentColor: s.accentColor },
+    }));
+  }
+
+  async getPendingPosts(slug: string, requesterId: string) {
+    const s = await this.getSeries(slug);
+    await this.assertMember(s.id, requesterId, 'EDITOR');
+
+    const seriesPosts = await this.prisma.seriesPost.findMany({
+      where: { seriesId: s.id, status: 'PENDING' },
+      orderBy: { addedAt: 'asc' },
+      include: { post: { include: postInclude(requesterId) } },
+    });
+
+    return seriesPosts.map((sp) => ({
+      ...mapPost(sp.post as any, requesterId),
       seriesOrder: sp.order,
       seriesStatus: sp.status,
       series: { id: s.id, name: s.name, slug: s.slug, logoMimeType: s.logoMimeType, accentColor: s.accentColor },
@@ -564,6 +623,17 @@ export class SeriesService {
       data: { seriesId: s.id, postId, order, status },
     });
 
+    // Notify the series owner when a contributor submits a post for review
+    if (status === 'PENDING' && s.ownerId !== userId) {
+      await this.notifications.create({
+        userId: s.ownerId,
+        type: 'SERIES_POST_SUBMITTED',
+        actorId: userId,
+        seriesId: s.id,
+        postId,
+      });
+    }
+
     return { added: true, status: sp.status };
   }
 
@@ -589,12 +659,16 @@ export class SeriesService {
       data: { status: 'APPROVED' },
     });
 
-    await this.notifications.create({
-      userId: sp.post.authorId,
-      type: 'SERIES_POST_APPROVED' as any,
-      actorId: userId,
-      postId,
-    } as any);
+    // Only notify if the approver is different from the author
+    if (sp.post.authorId !== userId) {
+      await this.notifications.create({
+        userId: sp.post.authorId,
+        type: 'SERIES_POST_APPROVED',
+        actorId: userId,
+        postId,
+        seriesId: s.id,
+      });
+    }
 
     return updated;
   }
@@ -608,6 +682,18 @@ export class SeriesService {
     });
     if (!sp) throw new NotFoundException('Post not in series');
     await this.prisma.seriesPost.delete({ where: { seriesId_postId: { seriesId: s.id, postId } } });
+
+    // Notify the contributor that their post was rejected
+    if (sp.post.authorId !== userId) {
+      await this.notifications.create({
+        userId: sp.post.authorId,
+        type: 'SERIES_POST_REJECTED',
+        actorId: userId,
+        postId,
+        seriesId: s.id,
+      });
+    }
+
     return { rejected: true };
   }
 
