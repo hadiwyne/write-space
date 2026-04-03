@@ -63,6 +63,7 @@ const SERIES_PUBLIC_SELECT = {
   coverBgColor: true,
   accentColor: true,
   bgColor: true,
+  bgImageMimeType: true,
   fontFamily: true,
   layoutMode: true,
   postListMode: true,
@@ -292,29 +293,35 @@ export class SeriesService {
   async uploadImage(
     slug: string,
     userId: string,
-    type: 'logo' | 'wordmark' | 'cover' | 'social-preview',
+    type: 'logo' | 'wordmark' | 'cover' | 'social-preview' | 'bg-image',
     buffer: Buffer,
     mimeType: string,
   ) {
     const s = await this.getSeries(slug);
     await this.assertMember(s.id, userId, 'EDITOR');
 
-    const MAX = 10 * 1024 * 1024;
-    if (buffer.length > MAX) throw new BadRequestException('Image too large (max 10MB)');
+    const MAX = 15 * 1024 * 1024; // 15 MB for bg images (GIFs can be large)
+    if (buffer.length > MAX) throw new BadRequestException('Image too large (max 15MB)');
 
     let processed: Buffer;
-    try {
-      let pipeline = sharp(buffer);
-      if (type === 'logo') {
-        pipeline = pipeline.resize(512, 512, { fit: 'inside', withoutEnlargement: true });
-      } else if (type === 'cover' || type === 'social-preview') {
-        pipeline = pipeline.resize(1200, null, { fit: 'inside', withoutEnlargement: true });
-      } else if (type === 'wordmark') {
-        pipeline = pipeline.resize(840, 160, { fit: 'inside', withoutEnlargement: true });
-      }
-      processed = await pipeline.toBuffer();
-    } catch {
+    // Skip sharp for GIFs (it strips animation) and bg-images (keep full quality/animation)
+    const isGif = mimeType === 'image/gif';
+    if (isGif || type === 'bg-image') {
       processed = buffer;
+    } else {
+      try {
+        let pipeline = sharp(buffer);
+        if (type === 'logo') {
+          pipeline = pipeline.resize(512, 512, { fit: 'inside', withoutEnlargement: true });
+        } else if (type === 'cover' || type === 'social-preview') {
+          pipeline = pipeline.resize(1200, null, { fit: 'inside', withoutEnlargement: true });
+        } else if (type === 'wordmark') {
+          pipeline = pipeline.resize(840, 160, { fit: 'inside', withoutEnlargement: true });
+        }
+        processed = await pipeline.toBuffer();
+      } catch {
+        processed = buffer;
+      }
     }
 
     const fieldMap = {
@@ -322,6 +329,7 @@ export class SeriesService {
       wordmark: { data: 'wordmarkData', mime: 'wordmarkMimeType' },
       cover: { data: 'coverData', mime: 'coverMimeType' },
       'social-preview': { data: 'socialPreviewData', mime: 'socialPreviewMimeType' },
+      'bg-image': { data: 'bgImageData', mime: 'bgImageMimeType' },
     } as const;
     const { data, mime } = fieldMap[type];
 
@@ -332,7 +340,7 @@ export class SeriesService {
     return { updated: true };
   }
 
-  async getImage(slug: string, type: 'logo' | 'wordmark' | 'cover' | 'social-preview') {
+  async getImage(slug: string, type: 'logo' | 'wordmark' | 'cover' | 'social-preview' | 'bg-image') {
     const s = await this.prisma.series.findUnique({
       where: { slug },
       select: {
@@ -340,6 +348,7 @@ export class SeriesService {
         wordmarkData: true, wordmarkMimeType: true,
         coverData: true, coverMimeType: true,
         socialPreviewData: true, socialPreviewMimeType: true,
+        bgImageData: true, bgImageMimeType: true,
       },
     });
     if (!s) throw new NotFoundException('Series not found');
@@ -349,13 +358,14 @@ export class SeriesService {
       wordmark: { data: s.wordmarkData, mime: s.wordmarkMimeType },
       cover: { data: s.coverData, mime: s.coverMimeType },
       'social-preview': { data: s.socialPreviewData, mime: s.socialPreviewMimeType },
+      'bg-image': { data: s.bgImageData, mime: s.bgImageMimeType },
     };
     const { data, mime } = fieldMap[type];
     if (!data) throw new NotFoundException('Image not found');
     return { data, mime: mime ?? 'image/jpeg' };
   }
 
-  async deleteImage(slug: string, userId: string, type: 'logo' | 'wordmark' | 'cover' | 'social-preview') {
+  async deleteImage(slug: string, userId: string, type: 'logo' | 'wordmark' | 'cover' | 'social-preview' | 'bg-image') {
     const s = await this.getSeries(slug);
     await this.assertMember(s.id, userId, 'EDITOR');
 
@@ -364,6 +374,7 @@ export class SeriesService {
       wordmark: { data: 'wordmarkData', mime: 'wordmarkMimeType' },
       cover: { data: 'coverData', mime: 'coverMimeType' },
       'social-preview': { data: 'socialPreviewData', mime: 'socialPreviewMimeType' },
+      'bg-image': { data: 'bgImageData', mime: 'bgImageMimeType' },
     } as const;
     const { data, mime } = fieldMap[type];
 

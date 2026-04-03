@@ -411,6 +411,8 @@ model Series {
   coverBgColor  String?          @map("cover_bg_color")
   accentColor   String?          @map("accent_color")
   bgColor       String?          @map("bg_color")
+  bgImageData   Bytes?           @map("bg_image_data")
+  bgImageMimeType String?        @map("bg_image_mime_type")
   fontFamily    String?          @map("font_family")
   layoutMode    String           @default("feature") @map("layout_mode")
   postListMode  String           @default("list") @map("post_list_mode")

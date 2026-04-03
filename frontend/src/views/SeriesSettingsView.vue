@@ -185,6 +185,24 @@
           </div>
         </div>
 
+        <!-- Background Image -->
+        <div class="field">
+          <label class="field-label">Page Background Image</label>
+          <span class="field-hint">Shown behind all page content. Supports JPEG, PNG, WebP, GIF (including animated).</span>
+          <div class="image-upload-area image-upload-area--bg-image" @click="triggerUpload('bg-image')">
+            <img v-if="series.bgImageMimeType && !imageChanged['bg-image']" :src="imgUrl('bg-image')" alt="Background" class="preview-img preview-img--bg-image" />
+            <img v-else-if="imagePreviews['bg-image']" :src="imagePreviews['bg-image']" alt="Background" class="preview-img preview-img--bg-image" />
+            <div v-else class="upload-placeholder">
+              <i class="pi pi-image"></i>
+              <span>Upload Background Image (GIF supported)</span>
+            </div>
+            <div class="upload-overlay"><i class="pi pi-upload"></i></div>
+          </div>
+          <div v-if="uploadProgress['bg-image']" class="progress-bar"><div class="progress-fill" :style="{ width: uploadProgress['bg-image'] + '%' }"></div></div>
+          <button v-if="series.bgImageMimeType || imagePreviews['bg-image']" type="button" class="btn-remove" @click.stop="removeImage('bg-image')">Remove background image</button>
+          <input ref="bgImageInput" type="file" accept="image/*" class="hidden-input" @change="onFileChange($event, 'bg-image')" />
+        </div>
+
         <!-- Font -->
         <div class="field">
           <label class="field-label">Font Family</label>
@@ -520,15 +538,16 @@ const theme = reactive({
 })
 
 // Image upload state
-type ImgType = 'logo' | 'wordmark' | 'cover' | 'social-preview'
-const imagePreviews = reactive<Record<ImgType, string | null>>({ logo: null, wordmark: null, cover: null, 'social-preview': null })
-const imageChanged = reactive<Record<ImgType, boolean>>({ logo: false, wordmark: false, cover: false, 'social-preview': false })
-const uploadProgress = reactive<Record<ImgType, number>>({ logo: 0, wordmark: 0, cover: 0, 'social-preview': 0 })
+type ImgType = 'logo' | 'wordmark' | 'cover' | 'social-preview' | 'bg-image'
+const imagePreviews = reactive<Record<ImgType, string | null>>({ logo: null, wordmark: null, cover: null, 'social-preview': null, 'bg-image': null })
+const imageChanged = reactive<Record<ImgType, boolean>>({ logo: false, wordmark: false, cover: false, 'social-preview': false, 'bg-image': false })
+const uploadProgress = reactive<Record<ImgType, number>>({ logo: 0, wordmark: 0, cover: 0, 'social-preview': 0, 'bg-image': 0 })
 const uploadError = ref('')
 const logoInput = ref<HTMLInputElement | null>(null)
 const wordmarkInput = ref<HTMLInputElement | null>(null)
 const coverInput = ref<HTMLInputElement | null>(null)
 const socialInput = ref<HTMLInputElement | null>(null)
+const bgImageInput = ref<HTMLInputElement | null>(null)
 
 // Members tab
 const inviteUsername = ref('')
@@ -693,7 +712,7 @@ function imgUrl(type: ImgType) {
 
 function triggerUpload(type: ImgType) {
   const map: Record<ImgType, typeof logoInput> = {
-    logo: logoInput, wordmark: wordmarkInput, cover: coverInput, 'social-preview': socialInput,
+    logo: logoInput, wordmark: wordmarkInput, cover: coverInput, 'social-preview': socialInput, 'bg-image': bgImageInput,
   }
   map[type].value?.click()
 }
@@ -717,7 +736,14 @@ async function onFileChange(e: Event, type: ImgType) {
     )
     uploadProgress[type] = 0
     if (series.value) {
-      (series.value as any)[type.replace('-', '') + 'MimeType'] = file.type
+      const keyMap: Record<ImgType, string> = {
+        logo: 'logoMimeType',
+        wordmark: 'wordmarkMimeType',
+        cover: 'coverMimeType',
+        'social-preview': 'socialPreviewMimeType',
+        'bg-image': 'bgImageMimeType',
+      }
+      ;(series.value as any)[keyMap[type]] = file.type
     }
   } catch (err: any) {
     uploadError.value = err?.response?.data?.message || 'Upload failed'
@@ -731,8 +757,14 @@ async function removeImage(type: ImgType) {
     imagePreviews[type] = null
     imageChanged[type] = false
     if (series.value) {
-      const key = type === 'social-preview' ? 'socialPreviewMimeType' : `${type.replace('-preview', 'Preview')}MimeType`
-      ;(series.value as any)[key] = null
+      const keyMap: Record<ImgType, string> = {
+        logo: 'logoMimeType',
+        wordmark: 'wordmarkMimeType',
+        cover: 'coverMimeType',
+        'social-preview': 'socialPreviewMimeType',
+        'bg-image': 'bgImageMimeType',
+      }
+      ;(series.value as any)[keyMap[type]] = null
     }
   } catch (err: any) {
     uploadError.value = err?.response?.data?.message || 'Failed to remove image'
@@ -1169,10 +1201,11 @@ async function doDelete() {
 .image-upload-area--wide { height: 80px; }
 .image-upload-area--cover { height: 180px; }
 .image-upload-area--social { height: 160px; }
+.image-upload-area--bg-image { height: 160px; }
 
 .preview-img { width: 100%; height: 100%; object-fit: contain; }
 .preview-img--wide { object-fit: contain; }
-.preview-img--cover, .preview-img--social { object-fit: cover; }
+.preview-img--cover, .preview-img--social, .preview-img--bg-image { object-fit: cover; }
 
 .upload-placeholder {
   display: flex; flex-direction: column; align-items: center; gap: 0.5rem;

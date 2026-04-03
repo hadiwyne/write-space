@@ -9,7 +9,7 @@
     </main>
     <template v-else>
       <AppHeader v-if="!hideLayout" />
-      <main class="main" :class="{ 'main--full': hideLayout, 'main--with-header': !hideLayout }">
+      <main class="main" :class="{ 'main--full': hideLayout || route.meta.fullWidth, 'main--with-header': !hideLayout, 'main--no-padding': route.meta.fullWidth }">
         <RouterView />
       </main>
       <FloatingActionButton v-if="!hideLayout && showFab" />
@@ -161,6 +161,7 @@ body::before {
   }
 }
 .main--full { max-width: none; }
+.main--no-padding { padding-left: 0; padding-right: 0; padding-bottom: 0; }
 a { color: var(--accent-primary); text-decoration: none; transition: color 0.2s ease; }
 a:hover { text-decoration: underline; color: var(--accent-burgundy); }
 

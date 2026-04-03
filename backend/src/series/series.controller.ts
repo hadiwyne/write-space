@@ -24,7 +24,7 @@ import { CreateSeriesDto } from './dto/create-series.dto';
 import { UpdateSeriesDto } from './dto/update-series.dto';
 
 const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
+const MAX_IMAGE_SIZE = 15 * 1024 * 1024;
 
 @Controller('series')
 export class SeriesController {
@@ -101,7 +101,7 @@ export class SeriesController {
     @UploadedFile() file: { buffer: Buffer; mimetype: string } | undefined,
   ) {
     if (!file?.buffer) throw new BadRequestException('No image file provided or unsupported format');
-    const validTypes = ['logo', 'wordmark', 'cover', 'social-preview'];
+    const validTypes = ['logo', 'wordmark', 'cover', 'social-preview', 'bg-image'];
     if (!validTypes.includes(type)) throw new BadRequestException('Invalid image type');
     return this.seriesService.uploadImage(slug, user.id, type as any, file.buffer, file.mimetype);
   }
@@ -113,7 +113,7 @@ export class SeriesController {
     @Param('slug') slug: string,
     @Param('type') type: string,
   ): Promise<StreamableFile> {
-    const validTypes = ['logo', 'wordmark', 'cover', 'social-preview'];
+    const validTypes = ['logo', 'wordmark', 'cover', 'social-preview', 'bg-image'];
     if (!validTypes.includes(type)) throw new BadRequestException('Invalid image type');
     const { data, mime } = await this.seriesService.getImage(slug, type as any);
     const { Readable } = await import('stream');
@@ -128,7 +128,7 @@ export class SeriesController {
     @Param('type') type: string,
     @CurrentUser() user: { id: string },
   ) {
-    const validTypes = ['logo', 'wordmark', 'cover', 'social-preview'];
+    const validTypes = ['logo', 'wordmark', 'cover', 'social-preview', 'bg-image'];
     if (!validTypes.includes(type)) throw new BadRequestException('Invalid image type');
     return this.seriesService.deleteImage(slug, user.id, type as any);
   }

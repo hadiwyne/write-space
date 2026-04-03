@@ -258,7 +258,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
 import { api, avatarSrc, apiBaseUrl } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
@@ -298,9 +298,42 @@ const pageStyle = computed(() => {
   return {
     '--series-accent': s.accentColor || 'var(--accent-primary)',
     '--series-bg': s.bgColor || 'var(--bg-primary)',
-    background: s.bgColor || undefined,
     fontFamily: s.fontFamily || undefined,
   }
+})
+
+// Apply bgColor + bgImage to the entire viewport (body) while on this page
+watchEffect(() => {
+  const s = series.value
+  const color = s?.bgColor || ''
+  document.body.style.backgroundColor = color
+  document.documentElement.style.backgroundColor = color
+
+  if (s?.bgImageMimeType) {
+    const base = apiBaseUrl.replace(/\/$/, '')
+    const url = `${base}/series/${encodeURIComponent(s.slug)}/images/bg-image`
+    document.body.style.backgroundImage = `url('${url}')`
+    document.body.style.backgroundSize = 'cover'
+    document.body.style.backgroundPosition = 'center'
+    document.body.style.backgroundAttachment = 'fixed'
+    document.body.style.backgroundRepeat = 'no-repeat'
+  } else {
+    document.body.style.backgroundImage = ''
+    document.body.style.backgroundSize = ''
+    document.body.style.backgroundPosition = ''
+    document.body.style.backgroundAttachment = ''
+    document.body.style.backgroundRepeat = ''
+  }
+})
+
+onUnmounted(() => {
+  document.body.style.backgroundColor = ''
+  document.documentElement.style.backgroundColor = ''
+  document.body.style.backgroundImage = ''
+  document.body.style.backgroundSize = ''
+  document.body.style.backgroundPosition = ''
+  document.body.style.backgroundAttachment = ''
+  document.body.style.backgroundRepeat = ''
 })
 
 const heroStyle = computed(() => {
@@ -417,6 +450,7 @@ watch(() => route.params.slug, loadSeries)
   --series-accent: var(--accent-primary);
   --series-bg: var(--bg-primary);
   min-height: 100vh;
+  background: transparent;
 }
 
 /* ─── Hero ─── */
