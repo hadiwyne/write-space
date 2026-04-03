@@ -30,9 +30,36 @@
           {{ series.tagline }}
         </p>
 
+        <!-- Members row: owner + contributors -->
+        <div class="series-members-row" v-if="seriesMembers.length">
+          <router-link
+            v-for="m in seriesMembers"
+            :key="m.user.id"
+            :to="'/@' + m.user.username"
+            class="series-member-chip"
+            :title="m.role === 'OWNER' ? 'Owner' : m.role === 'EDITOR' ? 'Editor' : 'Contributor'"
+          >
+            <img
+              v-if="m.user.avatarUrl"
+              :src="avatarSrc(m.user.avatarUrl)"
+              :alt="m.user.username"
+              class="series-member-avatar"
+            />
+            <span v-else class="series-member-avatar series-member-avatar--fallback">
+              {{ (m.user.displayName || m.user.username)[0].toUpperCase() }}
+            </span>
+            <span class="series-member-name">@{{ m.user.username }}</span>
+            <span v-if="m.role === 'OWNER'" class="series-member-badge">Owner</span>
+          </router-link>
+        </div>
+
         <div class="series-actions">
+          <!-- Members never see the follow button — they are part of the series -->
+          <span v-if="isMember" class="series-member-status">
+            <i class="pi pi-shield"></i> Member
+          </span>
           <button
-            v-if="auth.isLoggedIn"
+            v-else-if="auth.isLoggedIn"
             type="button"
             class="btn-follow"
             :class="{ following: isFollowing }"
@@ -42,11 +69,13 @@
           >
             <i :class="isFollowing ? 'pi pi-check' : 'pi pi-plus'"></i>
             {{ isFollowing ? 'Following' : 'Follow' }}
-            <span class="follow-count">{{ followerCount }}</span>
           </button>
-          <span v-else class="follower-count-display">
-            <i class="pi pi-users"></i> {{ followerCount }} follower{{ followerCount !== 1 ? 's' : '' }}
-          </span>
+
+          <!-- Clickable follower count -->
+          <button type="button" class="follower-count-btn" @click="openFollowersModal">
+            <i class="pi pi-users"></i>
+            <span>{{ followerCount }} follower{{ followerCount !== 1 ? 's' : '' }}</span>
+          </button>
 
           <router-link
             v-if="isMember"
@@ -236,6 +265,60 @@
         </button>
       </div>
     </div>
+
+    <!-- Followers Modal (Teleport renders to body regardless of where in the tree) -->
+    <Teleport to="body">
+    <Transition name="modal-fade">
+      <div v-if="followersModalOpen" class="followers-modal-backdrop" @click.self="closeFollowersModal">
+        <div class="followers-modal" role="dialog" aria-modal="true" aria-label="Series followers">
+          <div class="followers-modal-header">
+            <h3 class="followers-modal-title">
+              <i class="pi pi-users"></i>
+              Followers <span class="followers-modal-count">({{ followerCount }})</span>
+            </h3>
+            <button type="button" class="followers-modal-close" @click="closeFollowersModal">
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
+          <div class="followers-modal-body">
+            <div v-if="followersLoading" class="followers-loading">
+              <i class="pi pi-spin pi-spinner"></i>
+            </div>
+            <div v-else-if="!followersList.length" class="followers-empty">
+              No followers yet.
+            </div>
+            <ul v-else class="followers-list">
+              <li v-for="u in followersList" :key="u.id" class="followers-item">
+                <router-link :to="'/@' + u.username" class="followers-item-link" @click="closeFollowersModal">
+                  <img
+                    v-if="u.avatarUrl"
+                    :src="avatarSrc(u.avatarUrl)"
+                    :alt="u.username"
+                    class="followers-avatar"
+                  />
+                  <span v-else class="followers-avatar followers-avatar--fallback">
+                    {{ (u.displayName || u.username)[0].toUpperCase() }}
+                  </span>
+                  <div class="followers-user-info">
+                    <span class="followers-display-name">{{ u.displayName || u.username }}</span>
+                    <span class="followers-username">@{{ u.username }}</span>
+                  </div>
+                </router-link>
+              </li>
+            </ul>
+            <button
+              v-if="followersHasMore && !followersLoading"
+              type="button"
+              class="followers-load-more"
+              @click="loadMoreFollowers"
+            >
+              Load more
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+    </Teleport>
   </div>
 
   <!-- Loading skeleton -->
@@ -280,6 +363,52 @@ const followLoading = ref(false)
 const hasMore = ref(false)
 const offset = ref(0)
 const LIMIT = 30
+
+// Members (owner + contributors shown in header)
+const seriesMembers = computed<{ role: string; user: any }[]>(() => {
+  const s = series.value
+  if (!s) return []
+  const owner = s.owner ? [{ role: 'OWNER', user: s.owner }] : []
+  const others = (s.members ?? []).filter((m: any) => m.user?.id !== s.owner?.id)
+  return [...owner, ...others]
+})
+
+// Followers modal
+const followersModalOpen = ref(false)
+const followersList = ref<any[]>([])
+const followersLoading = ref(false)
+const followersOffset = ref(0)
+const followersHasMore = ref(false)
+const FOLLOWERS_LIMIT = 30
+
+async function openFollowersModal() {
+  followersModalOpen.value = true
+  if (followersList.value.length === 0) await fetchFollowers(true)
+}
+function closeFollowersModal() { followersModalOpen.value = false }
+
+async function fetchFollowers(reset = false) {
+  const slug = route.params.slug as string
+  followersLoading.value = true
+  try {
+    const off = reset ? 0 : followersOffset.value
+    const { data } = await api.get<{ followers: any[]; total: number }>(
+      `/series/${slug}/followers`,
+      { params: { limit: String(FOLLOWERS_LIMIT), offset: String(off) }, cache: false },
+    )
+    if (reset) {
+      followersList.value = data.followers
+      followersOffset.value = data.followers.length
+    } else {
+      followersList.value.push(...data.followers)
+      followersOffset.value += data.followers.length
+    }
+    followersHasMore.value = followersOffset.value < data.total
+  } finally {
+    followersLoading.value = false
+  }
+}
+function loadMoreFollowers() { fetchFollowers(false) }
 
 const heroPosts = computed(() => posts.value)
 const topPosts = computed(() =>
@@ -327,7 +456,12 @@ watchEffect(() => {
   }
 })
 
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') closeFollowersModal()
+}
+onMounted(() => { window.addEventListener('keydown', onKeydown) })
 onUnmounted(() => {
+  window.removeEventListener('keydown', onKeydown)
   document.body.style.backgroundColor = ''
   document.documentElement.style.backgroundColor = ''
   document.body.style.backgroundImage = ''
@@ -544,6 +678,20 @@ watch(() => route.params.slug, loadSeries)
   margin-bottom: 1rem;
 }
 
+.series-member-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.4rem 0.875rem;
+  border-radius: 24px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: rgba(255,255,255,0.15);
+  color: var(--text-primary);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255,255,255,0.25);
+}
+
 .btn-follow {
   display: inline-flex;
   align-items: center;
@@ -567,18 +715,79 @@ watch(() => route.params.slug, loadSeries)
 
 .btn-follow:disabled { opacity: 0.6; cursor: not-allowed; }
 
-.follow-count {
-  font-size: 0.8125rem;
-  opacity: 0.8;
-  margin-left: 0.125rem;
-}
-
-.follower-count-display {
-  display: flex;
+.follower-count-btn {
+  display: inline-flex;
   align-items: center;
   gap: 0.375rem;
   font-size: 0.9375rem;
+  font-weight: 600;
   color: var(--text-secondary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.375rem 0.625rem;
+  border-radius: 20px;
+  transition: background 0.15s, color 0.15s;
+  font-family: inherit;
+}
+.follower-count-btn:hover {
+  background: rgba(255,255,255,0.12);
+  color: var(--text-primary);
+}
+
+/* Members row */
+.series-members-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.series-member-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(255,255,255,0.12);
+  border-radius: 24px;
+  padding: 0.25rem 0.625rem 0.25rem 0.25rem;
+  text-decoration: none;
+  color: var(--text-primary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  transition: background 0.15s;
+  backdrop-filter: blur(4px);
+}
+.series-member-chip:hover { background: rgba(255,255,255,0.22); }
+.series-member-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.series-member-avatar--fallback {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--series-accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.series-member-name { white-space: nowrap; }
+.series-member-badge {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  background: var(--series-accent);
+  color: #fff;
+  border-radius: 10px;
+  padding: 0.1rem 0.375rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .btn-settings {
@@ -1054,4 +1263,109 @@ watch(() => route.params.slug, loadSeries)
   .series-name { font-size: 1.75rem; }
   .layout-newspaper { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ─── Followers Modal ─── */
+.followers-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+.followers-modal {
+  background: var(--bg-primary, #fff);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 420px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.followers-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.125rem 1.25rem;
+  border-bottom: 1px solid var(--border-light, #eee);
+  flex-shrink: 0;
+}
+.followers-modal-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-primary);
+}
+.followers-modal-count { color: var(--text-tertiary); font-weight: 500; }
+.followers-modal-close {
+  width: 32px; height: 32px;
+  border: none; background: none; cursor: pointer;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  transition: background 0.15s;
+}
+.followers-modal-close:hover { background: var(--bg-secondary, #f5f5f5); }
+.followers-modal-body {
+  overflow-y: auto;
+  flex: 1;
+  padding: 0.5rem 0;
+}
+.followers-loading, .followers-empty {
+  padding: 2.5rem 1.25rem;
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 0.9375rem;
+}
+.followers-list { list-style: none; margin: 0; padding: 0; }
+.followers-item-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  text-decoration: none;
+  transition: background 0.1s;
+}
+.followers-item-link:hover { background: var(--bg-secondary, #f5f5f5); }
+.followers-avatar {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.followers-avatar--fallback {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: var(--series-accent, #6366f1);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; font-weight: 700;
+  flex-shrink: 0;
+}
+.followers-user-info { display: flex; flex-direction: column; gap: 0.1rem; }
+.followers-display-name { font-size: 0.9375rem; font-weight: 600; color: var(--text-primary); }
+.followers-username { font-size: 0.8125rem; color: var(--text-tertiary); }
+.followers-load-more {
+  display: block; width: calc(100% - 2.5rem);
+  margin: 0.75rem 1.25rem;
+  padding: 0.5rem;
+  border: 1px solid var(--border-light, #eee);
+  background: none; border-radius: 8px;
+  font-size: 0.875rem; font-weight: 600;
+  cursor: pointer; color: var(--text-secondary);
+  transition: background 0.15s;
+}
+.followers-load-more:hover { background: var(--bg-secondary, #f5f5f5); }
+
+/* Modal transition */
+.modal-fade-enter-active, .modal-fade-leave-active { transition: opacity 0.18s ease; }
+.modal-fade-enter-from, .modal-fade-leave-to { opacity: 0; }
 </style>

@@ -655,15 +655,29 @@ export class SeriesService {
 
   async getFollowers(slug: string, limit = 20, offset = 0) {
     const s = await this.getSeries(slug);
+
+    // Exclude users who are already members — they own/contribute to the series
+    const memberIds = (
+      await this.prisma.seriesMember.findMany({
+        where: { seriesId: s.id },
+        select: { userId: true },
+      })
+    ).map((m) => m.userId);
+
+    const where = {
+      seriesId: s.id,
+      ...(memberIds.length ? { userId: { notIn: memberIds } } : {}),
+    };
+
     const [followers, total] = await Promise.all([
       this.prisma.seriesFollow.findMany({
-        where: { seriesId: s.id },
+        where,
         take: limit,
         skip: offset,
         include: { user: { select: AUTHOR_SELECT } },
         orderBy: { createdAt: 'desc' },
       }),
-      this.prisma.seriesFollow.count({ where: { seriesId: s.id } }),
+      this.prisma.seriesFollow.count({ where }),
     ]);
     return { followers: followers.map((f) => f.user), total };
   }
