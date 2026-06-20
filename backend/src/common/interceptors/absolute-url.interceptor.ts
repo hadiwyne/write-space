@@ -5,14 +5,18 @@ import {
   CallHandler,
   StreamableFile,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
-
-const POST_IMAGE_URL_TO_RELATIVE = /(https?:\/\/[^/]+)?(\/posts\/images\/[a-zA-Z0-9-]+)/g;
-
 @Injectable()
 export class AbsoluteUrlInterceptor implements NestInterceptor {
+  private readonly baseUrl: string;
+
+  constructor(private readonly config: ConfigService) {
+    this.baseUrl = (this.config.get<string>('API_PUBLIC_URL') || 'http://localhost:3000').replace(/\/$/, '');
+  }
+
   intercept(_context: ExecutionContext, next: CallHandler): Observable<unknown> {
     return next.handle().pipe(
       map((body) => (body == null ? body : this.normalizePostImageUrls(body))),
@@ -25,7 +29,7 @@ export class AbsoluteUrlInterceptor implements NestInterceptor {
     if (value instanceof Date) return value;
     if (typeof value === 'string') {
       if (!value.includes('/posts/images/')) return value;
-      return value.replace(POST_IMAGE_URL_TO_RELATIVE, (_match, _prefix, path) => path);
+      return value.replace(/(https?:\/\/[^/]+)?(\/posts\/images\/[a-zA-Z0-9-]+)/g, (_match, _prefix, path) => this.baseUrl + path);
     }
     if (Array.isArray(value)) {
       return value.map((item) => this.normalizePostImageUrls(item));

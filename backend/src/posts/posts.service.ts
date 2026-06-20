@@ -401,6 +401,87 @@ export class PostsService {
       await this.prisma.post.update({ where: { id: postId }, data: { linkPreview: Prisma.DbNull } });
       return;
     }
+
+    const apiPublicUrl = (this.config.get<string>('API_PUBLIC_URL') || `http://localhost:${this.config.get('PORT', 3000)}`).replace(/\/$/, '');
+
+    // 1. Check if the URL is an internal post URL (e.g. /posts/:id)
+    const postMatch = url.match(/\/posts\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+    if (postMatch) {
+      const internalPostId = postMatch[1];
+      try {
+        const post = await this.prisma.post.findUnique({
+          where: { id: internalPostId, isPublished: true },
+          select: {
+            title: true,
+            renderedHTML: true,
+            imageUrls: true,
+          },
+        });
+        if (post) {
+          const rawExcerpt = post.renderedHTML
+            ? post.renderedHTML.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200)
+            : '';
+          const preview = {
+            url,
+            title: post.title,
+            description: rawExcerpt || null,
+            image: post.imageUrls?.[0] ? (post.imageUrls[0].startsWith('http') ? post.imageUrls[0] : apiPublicUrl + (post.imageUrls[0].startsWith('/') ? post.imageUrls[0] : '/' + post.imageUrls[0])) : null,
+            siteName: 'WriteSpace',
+          };
+          await this.prisma.post.update({
+            where: { id: postId },
+            data: { linkPreview: preview as unknown as Prisma.InputJsonValue },
+          });
+          return;
+        }
+      } catch (err) {
+        // Fallback to normal HTTP preview if DB lookup fails
+      }
+    }
+
+    // 2. Check if the URL is an internal series URL (e.g. /series/:slug)
+    const seriesMatch = url.match(/\/series\/([a-zA-Z0-9_-]+)(?:\/|$)/i);
+    if (seriesMatch) {
+      const slug = seriesMatch[1];
+      const reservedSlugs = ['new', 'join', 'explore', 'settings'];
+      if (!reservedSlugs.includes(slug.toLowerCase())) {
+        try {
+          const series = await this.prisma.series.findUnique({
+            where: { slug },
+            select: {
+              name: true,
+              description: true,
+              tagline: true,
+              socialPreviewMimeType: true,
+              coverMimeType: true,
+            },
+          });
+          if (series) {
+            let image: string | null = null;
+            if (series.socialPreviewMimeType) {
+              image = `${apiPublicUrl}/series/${encodeURIComponent(slug)}/images/social-preview`;
+            } else if (series.coverMimeType) {
+              image = `${apiPublicUrl}/series/${encodeURIComponent(slug)}/images/cover`;
+            }
+            const preview = {
+              url,
+              title: series.name,
+              description: series.description || series.tagline || null,
+              image,
+              siteName: 'WriteSpace',
+            };
+            await this.prisma.post.update({
+              where: { id: postId },
+              data: { linkPreview: preview as unknown as Prisma.InputJsonValue },
+            });
+            return;
+          }
+        } catch (err) {
+          // Fallback to normal HTTP preview if DB lookup fails
+        }
+      }
+    }
+
     const preview = await fetchLinkPreview(url);
     await this.prisma.post.update({
       where: { id: postId },
