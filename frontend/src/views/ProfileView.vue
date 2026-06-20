@@ -195,10 +195,10 @@
             <PostCardSkeleton v-for="i in 2" :key="i" />
           </div>
           <div v-else-if="likedPosts.length === 0" class="empty">
-            <template v-if="isOwnProfile">No liked posts yet.</template>
+            <template v-if="isOwnProfile && profileTab === 'liked'">No liked posts yet.</template>
             <template v-else-if="(profile?.whoCanSeeLikes ?? 'PUBLIC') === 'NO_ONE'">This user has hidden their likes.</template>
             <template v-else-if="(profile?.whoCanSeeLikes ?? 'PUBLIC') === 'FOLLOWERS' && !isFollowing">This user's likes are only visible to their followers.</template>
-            <template v-else>No liked posts yet.</template>
+            <template v-else-if="profileTab === 'liked'">No liked posts yet.</template>
           </div>
           <div v-else class="post-list">
             <template v-for="(p, i) in likedPosts">
