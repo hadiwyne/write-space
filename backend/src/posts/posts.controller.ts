@@ -17,6 +17,7 @@ import {
   StreamableFile,
   Header,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { PostsService } from './posts.service';
@@ -41,6 +42,7 @@ export class PostsController {
     private readonly postsService: PostsService,
     private readonly bookmarksService: BookmarksService,
     private readonly repostsService: RepostsService,
+    private readonly config: ConfigService,
   ) {}
 
   @Post()
@@ -172,6 +174,63 @@ export class PostsController {
   @UseGuards(OptionalJwtAuthGuard)
   getPostPoll(@Param('id') id: string, @CurrentUser() user?: { id: string } | null) {
     return this.postsService.getPollForPost(id, user?.id ?? null);
+  }
+
+  /**
+   * Social-media meta endpoint. Returns a tiny HTML page with Open Graph and
+   * Twitter Card tags pre-rendered so crawlers (Facebook, Twitter, etc.) can
+   * read the post's title and thumbnail without executing JavaScript.
+   * Netlify's bot-conditional redirect in netlify.toml sends crawler requests here.
+   */
+  @Public()
+  @Get(':id/meta')
+  async getMeta(
+    @Param('id') id: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    const post = await this.postsService.getMetaForCrawlers(id);
+
+    if (!post) {
+      res.status(404).send('Not found');
+      return;
+    }
+
+    const appUrl = (this.config.get<string>('APP_PUBLIC_URL') || 'https://writespace.netlify.app').replace(/\/$/, '');
+    const postUrl = `${appUrl}/posts/${id}`;
+    const title = this.escapeHtml(post.title);
+    const description = this.escapeHtml(post.excerpt);
+    const image = this.escapeHtml(post.imageUrl || '');
+    const siteName = 'WriteSpace';
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>${title} — ${siteName}</title>
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="${siteName}" />
+  <meta property="og:title" content="${title}" />
+  <meta property="og:url" content="${postUrl}" />${description ? `\n  <meta property="og:description" content="${description}" />` : ''}${image ? `\n  <meta property="og:image" content="${image}" />\n  <meta property="og:image:width" content="1200" />\n  <meta property="og:image:height" content="630" />` : ''}
+  <meta name="twitter:card" content="${image ? 'summary_large_image' : 'summary'}" />
+  <meta name="twitter:title" content="${title}" />${description ? `\n  <meta name="twitter:description" content="${description}" />` : ''}${image ? `\n  <meta name="twitter:image" content="${image}" />` : ''}
+  <meta http-equiv="refresh" content="0; url=${postUrl}" />
+</head>
+<body>
+  <p>Redirecting to <a href="${postUrl}">${title}</a>…</p>
+</body>
+</html>`;
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.status(200).send(html);
+  }
+
+  private escapeHtml(str: string): string {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
   }
 
   @Get(':id')

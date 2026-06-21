@@ -766,6 +766,34 @@ export class PostsService {
     return this.findOne(postId, userId);
   }
 
+  /**
+   * Minimal post data for the social-media meta HTML endpoint.
+   * Returns null if the post is not found or not published.
+   */
+  async getMetaForCrawlers(id: string): Promise<{ title: string; excerpt: string; imageUrl: string | null } | null> {
+    const post = await this.prisma.post.findUnique({
+      where: { id },
+      select: { title: true, isPublished: true, archivedAt: true, renderedHTML: true, imageUrls: true },
+    });
+    if (!post || !post.isPublished || post.archivedAt) return null;
+
+    const apiPublicUrl = (this.config.get<string>('API_PUBLIC_URL') || `http://localhost:${this.config.get('PORT', 3000)}`).replace(/\/$/, '');
+
+    // Build a plain-text excerpt from the rendered HTML (strip all tags)
+    const excerpt = post.renderedHTML
+      ? post.renderedHTML.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200)
+      : '';
+
+    // Resolve the thumbnail URL to an absolute URL pointing at the API
+    let imageUrl: string | null = null;
+    const raw = post.imageUrls?.[0] ?? null;
+    if (raw) {
+      imageUrl = raw.startsWith('http') ? raw : apiPublicUrl + (raw.startsWith('/') ? raw : '/' + raw);
+    }
+
+    return { title: post.title, excerpt, imageUrl };
+  }
+
   async uploadPostImage(userId: string, buffer: Buffer, mimeType: string): Promise<{ url: string }> {
     const { buffer: compressed, mimeType: outMime } = await this.compressPostImage(buffer, mimeType);
     const image = await this.prisma.postImage.create({

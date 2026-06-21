@@ -3,6 +3,15 @@
   command = "npm run build"
   publish = "dist"
 
+# ── Social-media crawler redirects ────────────────────────────────────────────
+[[redirects]]
+  from = "/posts/:id"
+  to = "${VITE_API_URL}/posts/:id/meta"
+  status = 200
+  force = false
+  conditions = {Role = ["bot"]}
+
+# ── SPA catch-all (must come last) ────────────────────────────────────────────
 [[redirects]]
   from = "/*"
   to = "/index.html"
