@@ -2,7 +2,7 @@
   <div class="explore">
     <div class="explore-header">
       <h1 class="explore-title">Series</h1>
-      <p class="explore-subtitle">Curated publications from writers on this platform</p>
+      <p class="explore-subtitle">Curated publications from writers</p>
       <div class="explore-controls">
         <div class="search-wrap">
           <i class="pi pi-search search-icon"></i>
