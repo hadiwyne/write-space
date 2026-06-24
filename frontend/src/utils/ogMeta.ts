@@ -5,7 +5,10 @@ export function absoluteUrl(path: string): string {
   return window.location.origin + (path.startsWith('/') ? path : '/' + path)
 }
 
-const OG_PROPERTIES = ['og:title', 'og:description', 'og:image', 'og:url', 'og:type', 'twitter:card', 'twitter:title', 'twitter:description', 'twitter:image']
+const OG_PROPERTIES = [
+  'og:title', 'og:description', 'og:image', 'og:url', 'og:type', 'og:site_name',
+  'twitter:card', 'twitter:title', 'twitter:description', 'twitter:image',
+]
 
 function setTag(property: string, content: string) {
   // Handle both og: (property attr) and twitter: (name attr)
@@ -19,6 +22,12 @@ function setTag(property: string, content: string) {
   el.setAttribute('content', content)
 }
 
+function truncateWords(str: string, maxWords: number): string {
+  const words = str.trim().split(/\s+/)
+  if (words.length <= maxWords) return str
+  return words.slice(0, maxWords).join(' ') + '…'
+}
+
 export interface OgMeta {
   title: string
   description?: string
@@ -30,11 +39,12 @@ export interface OgMeta {
 export function applyOgMeta(meta: OgMeta) {
   const { title, description = '', image = '', url = window.location.href, type = 'website' } = meta
 
-   // Truncate description to 100 chars
-  const shortDesc = description.slice(0, 100)
+  const shortTitle = truncateWords(title, 5)
+  const shortDesc = description.slice(0, 50)
 
   document.title = title
 
+  // Standard meta description
   let descEl = document.querySelector('meta[name="description"]') as HTMLMetaElement | null
   if (!descEl) {
     descEl = document.createElement('meta')
@@ -43,15 +53,18 @@ export function applyOgMeta(meta: OgMeta) {
   }
   if (shortDesc) descEl.setAttribute('content', shortDesc)
 
-  setTag('og:title', title)
+  setTag('og:site_name', 'WriteSpace')
+  setTag('og:title', shortTitle)
   setTag('og:type', type)
   setTag('og:url', url)
-  if (description) setTag('og:description', description)
+  if (shortDesc) setTag('og:description', shortDesc)
   if (image) setTag('og:image', absoluteUrl(image))
+  setTag('og:image:alt', shortTitle)
 
   setTag('twitter:card', image ? 'summary_large_image' : 'summary')
-  setTag('twitter:title', title)
-  if (description) setTag('twitter:description', description)
+  setTag('twitter:site', '@WriteSpace')
+  setTag('twitter:title', shortTitle)
+  if (shortDesc) setTag('twitter:description', shortDesc)
   if (image) setTag('twitter:image', absoluteUrl(image))
 }
 
@@ -61,4 +74,6 @@ export function clearOgMeta(originalTitle = 'WriteSpace') {
     const attr = property.startsWith('twitter:') ? 'name' : 'property'
     document.querySelector(`meta[${attr}="${property}"]`)?.remove()
   }
+  // Clean up standard meta description
+  document.querySelector('meta[name="description"]')?.remove()
 }
