@@ -30,7 +30,18 @@ export interface OgMeta {
 export function applyOgMeta(meta: OgMeta) {
   const { title, description = '', image = '', url = window.location.href, type = 'website' } = meta
 
+   // Truncate description to 100 chars
+  const shortDesc = description.slice(0, 100)
+
   document.title = title
+
+  let descEl = document.querySelector('meta[name="description"]') as HTMLMetaElement | null
+  if (!descEl) {
+    descEl = document.createElement('meta')
+    descEl.setAttribute('name', 'description')
+    document.head.appendChild(descEl)
+  }
+  if (shortDesc) descEl.setAttribute('content', shortDesc)
 
   setTag('og:title', title)
   setTag('og:type', type)
