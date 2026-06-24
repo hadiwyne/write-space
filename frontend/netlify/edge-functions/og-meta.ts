@@ -25,7 +25,7 @@ export default async function handler(request: Request, context: Context): Promi
   }
 
   const postId = match[1];
-  const API_BASE = Deno.env.get("VITE_API_URL") ?? "";
+  const API_BASE = Deno.env.get("API_URL") ?? Deno.env.get("VITE_API_URL") ?? "";
 
   try {
     const metaRes = await fetch(`${API_BASE}/posts/${postId}/meta`, {
