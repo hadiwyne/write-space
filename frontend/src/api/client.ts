@@ -82,22 +82,35 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+const PUBLIC_PATH_PATTERNS = [
+  /^\/posts\/[^/]+$/,
+  /^\/u\/[^/]+$/,
+  /^\/series\/[^/]+$/,
+  /^\/collections\/[^/]+$/,
+]
+
+function isPublicPath(path: string): boolean {
+  return PUBLIC_PATH_PATTERNS.some(p => p.test(path))
+}
+
 let handling401 = false
 const AUTH_PERSIST_KEY = 'auth'
 
 api.interceptors.response.use(
   (r) => r,
   (err) => {
-    if (err.response?.status === 401 && !handling401) {
+    const path = typeof window !== 'undefined' ? window.location.pathname : ''
+
+    if (err.response?.status === 401 && !handling401 && !isPublicPath(path)) {
       handling401 = true
       localStorage.removeItem('writespace_token')
       localStorage.removeItem(AUTH_PERSIST_KEY)
-      const path = typeof window !== 'undefined' ? window.location.pathname : ''
       if (!path.startsWith('/login') && !path.startsWith('/register')) {
         window.location.assign('/login')
       }
       setTimeout(() => { handling401 = false }, 500)
     }
+
     return Promise.reject(err)
   }
 )

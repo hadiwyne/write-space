@@ -233,6 +233,7 @@ export class PostsController {
       .replace(/>/g, '&gt;');
   }
 
+  @Public()
   @Get(':id')
   @UseGuards(OptionalJwtAuthGuard)
   findOne(@Param('id') id: string, @CurrentUser() user?: { id: string; isSuperadmin?: boolean } | null) {
